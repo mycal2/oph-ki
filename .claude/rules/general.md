@@ -2,15 +2,15 @@
 
 ## Feature Tracking
 - All features are tracked in `features/INDEX.md` - read it before starting any work
-- Feature specs live in `features/PROJ-X-feature-name.md`
+- Feature specs live in `features/OPH-X-feature-name.md`
 - Feature IDs are sequential: check INDEX.md for the next available number
 - One feature per spec file (Single Responsibility)
 - Never combine multiple independent functionalities in one spec
 
 ## Git Conventions
-- Commit format: `type(PROJ-X): description`
+- Commit format: `type(OPH-X): description`
 - Types: feat, fix, refactor, test, docs, deploy, chore
-- Check existing features before creating new ones: `ls features/ | grep PROJ-`
+- Check existing features before creating new ones: `ls features/ | grep OPH-`
 - Check existing components before building: `git ls-files src/components/`
 - Check existing APIs before building: `git ls-files src/app/api/`
 

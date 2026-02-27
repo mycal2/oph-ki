@@ -1,14 +1,8 @@
-// Supabase Client Setup
-// Uncomment this file when you're ready to use Supabase
-
-/*
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
-*/
-
-// For now, export a placeholder to avoid import errors
-export const supabase = null;
+/**
+ * Re-export Supabase client factories.
+ * Use the specific imports directly for clarity:
+ *   - @/lib/supabase/client  (browser)
+ *   - @/lib/supabase/server  (server components, server actions, API routes)
+ *   - @/lib/supabase/admin   (service role, server only)
+ */
+export { createClient as createBrowserClient } from "./supabase/client";
