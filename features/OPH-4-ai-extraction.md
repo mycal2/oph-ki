@@ -1,8 +1,8 @@
 # OPH-4: KI-Datenextraktion mit Händler-Kontext (Claude API)
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-02-27
-**Last Updated:** 2026-02-27
+**Last Updated:** 2026-02-28
 
 ## Dependencies
 - Requires: OPH-3 (Händler-Erkennung) — Händler-Kontext verbessert Extraktionsqualität
@@ -88,7 +88,122 @@ Das System überführt jede Bestellung in ein einheitliches, internes JSON-Forma
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Component Structure
+
+```
+/orders/[orderId] page (existing)
++-- OrderDetailHeader (existing — extended)
+|   +-- ExtractionStatusBadge  ← NEW
+|       Shows: "In Verarbeitung" (spinner) / "Extrahiert" / "Fehler"
+|
++-- OrderDetailContent (existing — polls for status)
+|   useOrderPolling hook  ← NEW
+|   Checks every 3s while status = "processing"; stops on "extracted" or "failed"
+|
++-- ExtractionResultPreview  ← NEW (shown once extraction is done)
+    Summary card: order number, date, dealer, line item count, confidence score
+    "Zur Pruefung" button → links to OPH-5 review page (when built)
+```
+
+### Data Model
+
+New columns on the existing `orders` table (no new tables):
+
+```
+orders table gets 4 new columns:
+- extraction_status     → "pending" | "processing" | "extracted" | "failed"
+- extracted_data        → full Canonical JSON result (flexible JSONB blob)
+- extraction_attempts   → how many times the system has tried (0–3)
+- extraction_error      → last error message if status = "failed"
+```
+
+The Canonical JSON stored in `extracted_data` contains:
+- Order number, date
+- Delivery + billing address
+- Line items (article number, description, quantity, unit, price)
+- Total amount + currency + notes
+- Extraction metadata: confidence score, model used, dealer hints applied flag
+
+### API Routes
+
+| Route | Purpose |
+|-------|---------|
+| `POST /api/orders/[orderId]/extract` | Triggers extraction. Called fire-and-forget from confirm step. Also callable manually to retry a failed extraction. |
+
+Existing `GET /api/orders/[orderId]` extended to include `extraction_status` and `extracted_data`.
+
+### Server Utilities
+
+**`src/lib/claude-extraction.ts`** — AI extraction engine:
+- Downloads file from Supabase Storage
+- Routes to the right handler based on file type
+- Builds prompt: system instructions + Canonical JSON schema + dealer hints + file content
+- Calls Claude API with retry (max 3 on rate limit / timeout)
+- Parses Claude's JSON response into Canonical format
+- Returns result with confidence score
+
+**`src/lib/eml-parser.ts`** — .eml file support:
+- Extracts: subject, sender, plain-text body, HTML body
+- Identifies and lists attachments (name + type)
+- Produces clean text representation for Claude
+
+### File Type Handling
+
+| File Type | How Claude Sees It |
+|-----------|-------------------|
+| `.pdf` | Sent as binary document — Claude reads natively (multimodal, no OCR) |
+| `.eml` | Parsed first: subject + body text extracted, embedded as text in prompt |
+| `.xlsx` / `.xls` | Converted to plain-text table, embedded in prompt |
+| `.csv` | Read as text, embedded directly in prompt |
+
+### Async Trigger Flow
+
+```
+User uploads file
+→ Confirm step: file metadata saved, dealer recognized
+→ Order status set to "processing"
+→ Fire-and-forget POST to /api/orders/[orderId]/extract
+→ Confirm response returned to user immediately
+
+Background:
+→ Extract API downloads file, parses it, calls Claude
+→ On success: order updated with extracted_data, status → "extracted"
+→ On failure (3 retries): status → "failed", error message saved
+
+UI:
+→ OrderDetailHeader shows spinner + "In Verarbeitung"
+→ useOrderPolling checks every 3s
+→ Status changes: spinner replaced with result preview or error message
+```
+
+### Tech Decisions
+
+- **No background queue** — fire-and-forget HTTP call sufficient for MVP; avoids Redis/BullMQ complexity
+- **Vercel function timeout** — extraction API route uses max function duration (300s on Pro); typical extraction < 30s
+- **Claude model** — `claude-opus-4-6` for accuracy; `claude-sonnet-4-6` configurable as fallback
+- **Polling over Realtime** — simple 3s polling; no Supabase Realtime setup needed
+- **No chunking** — deferred; most dental orders < 50 positions, within Claude's context window
+
+### New Environment Variable
+
+| Variable | Purpose |
+|----------|---------|
+| `ANTHROPIC_API_KEY` | Authenticates calls to the Claude API |
+
+### New Packages
+
+| Package | Purpose |
+|---------|---------|
+| `@anthropic-ai/sdk` | Official Claude API client |
+| `mailparser` | Parse .eml files (headers, body, attachments) |
+| `xlsx` | Convert Excel files (.xlsx/.xls) to structured text |
+
+### Database Migration
+
+One new migration (`004_oph4_ai_extraction.sql`):
+- Adds 4 columns to `orders` table
+- Adds index on `extraction_status`
 
 ## QA Test Results
 _To be added by /qa_
