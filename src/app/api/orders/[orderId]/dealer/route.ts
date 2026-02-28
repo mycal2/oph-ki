@@ -140,7 +140,7 @@ export async function PATCH(
 
     // 8. Update the order with the manual override
     const now = new Date().toISOString();
-    const { error: updateError } = await adminClient
+    const { data: updatedOrder, error: updateError } = await adminClient
       .from("orders")
       .update({
         dealer_id: dealerId,
@@ -150,10 +150,12 @@ export async function PATCH(
         dealer_overridden_at: now,
         override_reason: reason?.trim() || null,
       })
-      .eq("id", orderId);
+      .eq("id", orderId)
+      .select("updated_at")
+      .single();
 
-    if (updateError) {
-      console.error("Error updating order dealer:", updateError.message);
+    if (updateError || !updatedOrder) {
+      console.error("Error updating order dealer:", updateError?.message);
       return NextResponse.json(
         { success: false, error: "Haendler-Zuweisung fehlgeschlagen." },
         { status: 500 }
@@ -181,6 +183,7 @@ export async function PATCH(
         overriddenByName,
         overriddenAt: now,
         overrideReason: reason?.trim() || null,
+        updatedAt: updatedOrder.updated_at as string,
       },
     });
   } catch (error) {

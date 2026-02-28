@@ -146,6 +146,10 @@ export async function POST(
         extraction_attempts: currentAttempts + 1,
         extraction_error: null,
         status: "processing",
+        // Clear previous review data so re-extraction starts fresh
+        reviewed_data: null,
+        reviewed_at: null,
+        reviewed_by: null,
       })
       .eq("id", orderId);
 

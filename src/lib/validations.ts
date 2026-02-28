@@ -112,3 +112,72 @@ export const dealerOverrideSchema = z.object({
 });
 
 export type DealerOverrideInput = z.infer<typeof dealerOverrideSchema>;
+
+/**
+ * OPH-5: Order Review validation schemas.
+ */
+
+/** Address sub-schema for review data. */
+const canonicalAddressSchema = z.object({
+  company: z.string().nullable(),
+  street: z.string().nullable(),
+  city: z.string().nullable(),
+  postal_code: z.string().nullable(),
+  country: z.string().nullable(),
+});
+
+/** Line item sub-schema for review data. */
+const canonicalLineItemSchema = z.object({
+  position: z.number().int().min(1),
+  article_number: z.string().nullable(),
+  description: z.string(),  // Allow empty during editing; approval validates min. 1 non-empty
+  quantity: z.number().min(0, "Menge muss mindestens 0 sein."),
+  unit: z.string().nullable(),
+  unit_price: z.number().nullable(),
+  total_price: z.number().nullable(),
+  currency: z.string().nullable(),
+});
+
+/** Schema for the order part of reviewed_data. */
+const canonicalOrderSchema = z.object({
+  order_number: z.string().nullable(),
+  order_date: z.string().nullable(),
+  dealer: z.object({
+    id: z.string().nullable(),
+    name: z.string().nullable(),
+  }),
+  delivery_address: canonicalAddressSchema.nullable(),
+  billing_address: canonicalAddressSchema.nullable(),
+  line_items: z.array(canonicalLineItemSchema),
+  total_amount: z.number().nullable(),
+  currency: z.string().nullable(),
+  notes: z.string().nullable(),
+});
+
+/** PATCH /api/orders/[orderId]/review — auto-save reviewed data. */
+export const reviewSaveSchema = z.object({
+  reviewedData: z.object({
+    order: canonicalOrderSchema,
+    extraction_metadata: z.object({
+      schema_version: z.string(),
+      confidence_score: z.number(),
+      model: z.string(),
+      extracted_at: z.string(),
+      source_files: z.array(z.string()),
+      dealer_hints_applied: z.boolean(),
+      input_tokens: z.number(),
+      output_tokens: z.number(),
+    }),
+  }),
+  /** ISO timestamp for optimistic locking. */
+  updatedAt: z.string().optional(),
+});
+
+/** POST /api/orders/[orderId]/approve — approve/release order. */
+export const reviewApproveSchema = z.object({
+  /** ISO timestamp for optimistic locking. */
+  updatedAt: z.string().optional(),
+});
+
+export type ReviewSaveInput = z.infer<typeof reviewSaveSchema>;
+export type ReviewApproveInput = z.infer<typeof reviewApproveSchema>;

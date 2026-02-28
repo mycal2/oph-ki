@@ -17,7 +17,18 @@
       "Bash(npx shadcn@latest add:*)",
       "Bash(ls:*)",
       "Bash(cat:*)",
-      "Bash(node -e \"const z = require\\(''zod''\\); console.log\\(''Zod version:'', z.ZodError ? ''has ZodError'' : ''no ZodError''\\); const err = new z.ZodError\\([]\\); console.log\\(Object.keys\\(err\\)\\); console.log\\(''issues:'', typeof err.issues\\)\")"
+      "Bash(node -e \"const z = require\\(''zod''\\); console.log\\(''Zod version:'', z.ZodError ? ''has ZodError'' : ''no ZodError''\\); const err = new z.ZodError\\([]\\); console.log\\(Object.keys\\(err\\)\\); console.log\\(''issues:'', typeof err.issues\\)\")",
+      "Bash(git add features/OPH-4-ai-extraction.md features/INDEX.md)",
+      "mcp__supabase__apply_migration",
+      "Bash(npx next lint --dir src)",
+      "Bash(git diff HEAD --name-only -- src/app/api/orders/[orderId]/extract/ src/lib/claude-extraction.ts src/lib/eml-parser.ts src/hooks/use-order-polling.ts src/components/orders/extraction-status-badge.tsx src/components/orders/extraction-result-preview.tsx supabase/migrations/004_oph4_ai_extraction.sql)",
+      "mcp__supabase__list_migrations",
+      "Bash(git add \"features/INDEX.md\" \"features/OPH-4-ai-extraction.md\")",
+      "mcp__supabase__execute_sql",
+      "Bash(npx eslint src/ --ext .ts,.tsx)"
+    ],
+    "additionalDirectories": [
+      "/Users/michaelmollath/projects/ai-coding-starter-kit/src/app/api/orders/[orderId]"
     ]
   }
 }

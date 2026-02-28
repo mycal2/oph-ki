@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { AppMetadata, ApiResponse, OrderWithDealer, CanonicalOrderData } from "@/lib/types";
+import type { AppMetadata, ApiResponse, OrderWithDealer, OrderForReview, CanonicalOrderData } from "@/lib/types";
 
 /**
  * GET /api/orders/[orderId]
@@ -14,7 +14,7 @@ import type { AppMetadata, ApiResponse, OrderWithDealer, CanonicalOrderData } fr
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ orderId: string }> }
-): Promise<NextResponse<ApiResponse<OrderWithDealer>>> {
+): Promise<NextResponse<ApiResponse<OrderForReview>>> {
   try {
     const { orderId } = await params;
 
@@ -70,7 +70,7 @@ export async function GET(
 
     const adminClient = createAdminClient();
 
-    // 4. Fetch the order with dealer join + extraction fields
+    // 4. Fetch the order with dealer join + extraction fields + review fields
     let query = adminClient
       .from("orders")
       .select(`
@@ -89,6 +89,9 @@ export async function GET(
         extraction_status,
         extracted_data,
         extraction_error,
+        reviewed_data,
+        reviewed_at,
+        reviewed_by,
         dealers ( id, name ),
         uploader:user_profiles!orders_uploaded_by_fkey ( first_name, last_name ),
         overrider:user_profiles!orders_dealer_overridden_by_fkey ( first_name, last_name )
@@ -130,7 +133,7 @@ export async function GET(
     const rawOverrider = order.overrider as unknown;
     const overriderData = Array.isArray(rawOverrider) ? (rawOverrider[0] as { first_name: string; last_name: string } | undefined) ?? null : rawOverrider as { first_name: string; last_name: string } | null;
 
-    const result: OrderWithDealer = {
+    const result: OrderForReview = {
       id: order.id as string,
       tenant_id: order.tenant_id as string,
       uploaded_by: order.uploaded_by as string | null,
@@ -164,6 +167,10 @@ export async function GET(
       extraction_status: (order.extraction_status as OrderWithDealer["extraction_status"]) ?? null,
       extracted_data: (order.extracted_data as CanonicalOrderData) ?? null,
       extraction_error: (order.extraction_error as string) ?? null,
+      // OPH-5: Review fields
+      reviewed_data: (order.reviewed_data as CanonicalOrderData) ?? null,
+      reviewed_at: (order.reviewed_at as string) ?? null,
+      reviewed_by: (order.reviewed_by as string) ?? null,
     };
 
     return NextResponse.json({ success: true, data: result });

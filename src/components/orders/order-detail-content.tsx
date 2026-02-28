@@ -219,6 +219,7 @@ export function OrderDetailContent({ orderId }: OrderDetailContentProps) {
         isPolling={isPolling}
         onRetryExtraction={handleRetryExtraction}
         isRetrying={isRetrying}
+        orderId={orderId}
       />
 
       {/* File list */}

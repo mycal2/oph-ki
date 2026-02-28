@@ -25,6 +25,7 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
   processing: "Wird verarbeitet",
   extracted: "Extrahiert",
   review: "In Pruefung",
+  approved: "Freigegeben",
   exported: "Exportiert",
   error: "Fehler",
 };
@@ -37,6 +38,7 @@ const STATUS_VARIANTS: Record<
   processing: "default",
   extracted: "outline",
   review: "default",
+  approved: "default",
   exported: "secondary",
   error: "destructive",
 };

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   Package,
   MapPin,
@@ -11,6 +12,7 @@ import {
   AlertTriangle,
   RefreshCw,
   Loader2,
+  ClipboardCheck,
 } from "lucide-react";
 import {
   Card,
@@ -41,6 +43,8 @@ interface ExtractionResultPreviewProps {
   onRetryExtraction?: () => void;
   /** Whether a retry is currently in progress. */
   isRetrying?: boolean;
+  /** Order ID for the "Zur Pruefung" link. */
+  orderId?: string;
 }
 
 function formatDate(isoDate: string | null, includeTime = false): string {
@@ -105,6 +109,7 @@ export function ExtractionResultPreview({
   isPolling = false,
   onRetryExtraction,
   isRetrying = false,
+  orderId,
 }: ExtractionResultPreviewProps) {
   // Pending or processing state: show skeleton
   if (
@@ -420,6 +425,21 @@ export function ExtractionResultPreview({
               Bitte pruefen Sie das Originaldokument.
             </AlertDescription>
           </Alert>
+        )}
+
+        {/* Review button */}
+        {orderId && (
+          <>
+            <Separator />
+            <div className="flex justify-end">
+              <Button asChild className="gap-1.5">
+                <Link href={`/orders/${orderId}/review`}>
+                  <ClipboardCheck className="h-4 w-4" />
+                  Zur Pruefung
+                </Link>
+              </Button>
+            </div>
+          </>
         )}
       </CardContent>
     </Card>

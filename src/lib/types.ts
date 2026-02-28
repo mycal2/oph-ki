@@ -66,7 +66,7 @@ export interface ApiResponse<T = undefined> {
 /**
  * OPH-2: Order Upload types.
  */
-export type OrderStatus = "uploaded" | "processing" | "extracted" | "review" | "exported" | "error";
+export type OrderStatus = "uploaded" | "processing" | "extracted" | "review" | "approved" | "exported" | "error";
 
 export interface Order {
   id: string;
@@ -190,6 +190,8 @@ export interface DealerOverrideResponse {
   overriddenByName: string;
   overriddenAt: string;
   overrideReason: string | null;
+  /** The order's actual updated_at after the override (for optimistic locking). */
+  updatedAt: string;
 }
 
 /**
@@ -242,4 +244,46 @@ export interface ExtractionMetadata {
 export interface CanonicalOrderData {
   order: CanonicalOrder;
   extraction_metadata: ExtractionMetadata;
+}
+
+/**
+ * OPH-5: Order Review & Manual Correction types.
+ */
+
+/** Auto-save status indicator states. */
+export type AutoSaveStatus = "idle" | "saving" | "saved" | "error";
+
+/** Response from PATCH /api/orders/[orderId]/review (auto-save). */
+export interface ReviewSaveResponse {
+  orderId: string;
+  updatedAt: string;
+}
+
+/** Response from POST /api/orders/[orderId]/approve. */
+export interface ReviewApproveResponse {
+  orderId: string;
+  status: OrderStatus;
+  reviewedAt: string;
+  reviewedBy: string;
+}
+
+/** Signed URL for a file preview. */
+export interface FilePreviewUrl {
+  fileId: string;
+  filename: string;
+  mimeType: string;
+  signedUrl: string;
+  expiresAt: string;
+}
+
+/** Response from GET /api/orders/[orderId]/preview-url. */
+export interface PreviewUrlResponse {
+  files: FilePreviewUrl[];
+}
+
+/** Extended order type for the review page (includes reviewed_data). */
+export interface OrderForReview extends OrderWithDealer {
+  reviewed_data: CanonicalOrderData | null;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
 }
