@@ -1,8 +1,9 @@
 # OPH-5: Bestellprüfung & manuelle Korrektur
 
-## Status: In Review
+## Status: Deployed
 **Created:** 2026-02-27
 **Last Updated:** 2026-02-28
+**Deployed:** 2026-02-28
 
 ## Dependencies
 - Requires: OPH-4 (KI-Datenextraktion) — extrahierte Daten müssen vorliegen
