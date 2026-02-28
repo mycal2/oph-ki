@@ -12,9 +12,9 @@
 
 | ID | Feature | Status | Spec | Created |
 |----|---------|--------|------|---------|
-| OPH-1 | Multi-Tenant Auth & Benutzerverwaltung | In Review | [OPH-1-multi-tenant-auth.md](OPH-1-multi-tenant-auth.md) | 2026-02-27 |
-| OPH-2 | Bestellungs-Upload (Web: .eml, PDF, Excel) | In Review | [OPH-2-order-upload.md](OPH-2-order-upload.md) | 2026-02-27 |
-| OPH-3 | Händler-Erkennung & Händler-Profile | In Review | [OPH-3-dealer-recognition.md](OPH-3-dealer-recognition.md) | 2026-02-27 |
+| OPH-1 | Multi-Tenant Auth & Benutzerverwaltung | Deployed | [OPH-1-multi-tenant-auth.md](OPH-1-multi-tenant-auth.md) | 2026-02-27 |
+| OPH-2 | Bestellungs-Upload (Web: .eml, PDF, Excel) | Deployed | [OPH-2-order-upload.md](OPH-2-order-upload.md) | 2026-02-27 |
+| OPH-3 | Händler-Erkennung & Händler-Profile | Deployed | [OPH-3-dealer-recognition.md](OPH-3-dealer-recognition.md) | 2026-02-27 |
 | OPH-4 | KI-Datenextraktion mit Händler-Kontext (Claude API) | Planned | [OPH-4-ai-extraction.md](OPH-4-ai-extraction.md) | 2026-02-27 |
 | OPH-5 | Bestellprüfung & manuelle Korrektur | Planned | [OPH-5-order-review.md](OPH-5-order-review.md) | 2026-02-27 |
 | OPH-6 | ERP-Export & Download | Planned | [OPH-6-erp-export.md](OPH-6-erp-export.md) | 2026-02-27 |

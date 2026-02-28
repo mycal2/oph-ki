@@ -1,8 +1,9 @@
 # OPH-2: Bestellungs-Upload (Web: .eml, PDF, Excel)
 
-## Status: In Review
+## Status: Deployed
 **Created:** 2026-02-27
 **Last Updated:** 2026-02-28
+**Deployed:** 2026-02-28
 
 ## Dependencies
 - Requires: OPH-1 (Multi-Tenant Auth) — Upload ist nur für authentifizierte Benutzer
@@ -441,4 +442,6 @@ _Skipped — implemented directly by /frontend skill._
   - **Backlog:** All Low-severity items
 
 ## Deployment
-_To be added by /deploy_
+- **Date:** 2026-02-28
+- **Migrations:** 001_oph1_auth_rbac, 002_oph2_order_upload, 003_oph3_dealer_recognition
+- **Cron:** Orphaned order cleanup runs hourly via Vercel Cron (`/api/cron/cleanup-orphaned-orders`)

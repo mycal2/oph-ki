@@ -1,8 +1,9 @@
 # OPH-1: Multi-Tenant Auth & Benutzerverwaltung
 
-## Status: In Review
+## Status: Deployed
 **Created:** 2026-02-27
-**Last Updated:** 2026-02-27
+**Last Updated:** 2026-02-28
+**Deployed:** 2026-02-28
 
 ## Dependencies
 - None (Basis für alle anderen Features)

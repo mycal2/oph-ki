@@ -1,8 +1,9 @@
 # OPH-3: Händler-Erkennung & Händler-Profile
 
-## Status: In Review
+## Status: Deployed
 **Created:** 2026-02-27
 **Last Updated:** 2026-02-28
+**Deployed:** 2026-02-28
 
 ## Dependencies
 - Requires: OPH-2 (Bestellungs-Upload) — Dateien müssen vorliegen, bevor Händler erkannt werden kann
