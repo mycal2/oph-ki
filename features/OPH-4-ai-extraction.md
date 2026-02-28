@@ -1,6 +1,6 @@
 # OPH-4: KI-Datenextraktion mit Händler-Kontext (Claude API)
 
-## Status: In Review
+## Status: Deployed
 **Created:** 2026-02-27
 **Last Updated:** 2026-02-28
 
@@ -235,4 +235,12 @@ One new migration (`004_oph4_ai_extraction.sql`):
 - End-to-end extraction latency cannot be verified without live Claude API calls; design target < 30s is met by architecture (single API call, 8192 max tokens)
 
 ## Deployment
-_To be added by /deploy_
+**Deployed:** 2026-02-28
+**Tag:** `v1.1.0-OPH-4`
+
+### New Environment Variables (Vercel)
+- `ANTHROPIC_API_KEY` — Claude API key for extraction
+- `EXTRACTION_MODEL` — Optional, defaults to `claude-sonnet-4-6`
+
+### Database Migration
+- `004_oph4_ai_extraction` — 4 new columns on `orders` table + index
