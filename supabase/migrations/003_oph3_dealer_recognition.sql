@@ -114,7 +114,7 @@ VALUES
   (
     'Zahn-Discount24',
     ARRAY['zahn-discount24.de'],
-    ARRAY[],
+    ARRAY[]::TEXT[],
     ARRAY['Zahn-Discount', 'ZD24'],
     ARRAY['zd24', 'zahndiscount'],
     'email_text',
