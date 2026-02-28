@@ -9,6 +9,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { OrderDetailHeader } from "./order-detail-header";
 import { OrderFileList } from "./order-file-list";
+import { ExtractionResultPreview } from "./extraction-result-preview";
+import { useOrderPolling } from "@/hooks/use-order-polling";
 import type { OrderWithDealer, DealerOverrideResponse, ApiResponse } from "@/lib/types";
 
 interface OrderDetailContentProps {
@@ -50,6 +52,8 @@ export function OrderDetailContent({ orderId }: OrderDetailContentProps) {
     fetchOrder();
   }, [fetchOrder]);
 
+  const [isRetrying, setIsRetrying] = useState(false);
+
   const handleDealerChanged = useCallback(
     (result: DealerOverrideResponse) => {
       if (order) {
@@ -68,6 +72,48 @@ export function OrderDetailContent({ orderId }: OrderDetailContentProps) {
     },
     [order]
   );
+
+  // Polling: update order state when extraction progresses
+  const handleOrderUpdated = useCallback((updatedOrder: OrderWithDealer) => {
+    setOrder(updatedOrder);
+  }, []);
+
+  const { isPolling } = useOrderPolling({
+    orderId,
+    extractionStatus: order?.extraction_status ?? null,
+    onOrderUpdated: handleOrderUpdated,
+    enabled: !!order,
+  });
+
+  // Manual retry: trigger extraction again for failed orders
+  const handleRetryExtraction = useCallback(async () => {
+    if (!order) return;
+    setIsRetrying(true);
+
+    try {
+      const res = await fetch(`/api/orders/${orderId}/extract`, {
+        method: "POST",
+      });
+      const json = (await res.json()) as ApiResponse;
+
+      if (!res.ok || !json.success) {
+        setError(json.error ?? "Extraktion konnte nicht gestartet werden.");
+        return;
+      }
+
+      // Update local state to show processing status immediately
+      setOrder({
+        ...order,
+        extraction_status: "processing",
+        extraction_error: null,
+        status: "processing",
+      });
+    } catch {
+      setError("Verbindungsfehler beim Starten der Extraktion.");
+    } finally {
+      setIsRetrying(false);
+    }
+  }, [order, orderId]);
 
   // Loading state
   if (isLoading) {
@@ -163,6 +209,16 @@ export function OrderDetailContent({ orderId }: OrderDetailContentProps) {
       <OrderDetailHeader
         order={order}
         onDealerChanged={handleDealerChanged}
+      />
+
+      {/* AI Extraction Result */}
+      <ExtractionResultPreview
+        extractionStatus={order.extraction_status}
+        extractedData={order.extracted_data}
+        extractionError={order.extraction_error}
+        isPolling={isPolling}
+        onRetryExtraction={handleRetryExtraction}
+        isRetrying={isRetrying}
       />
 
       {/* File list */}

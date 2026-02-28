@@ -177,6 +177,24 @@ export async function POST(
       originalFilename
     );
 
+    // 11. Fire-and-forget: trigger AI extraction (OPH-4)
+    // Set order status to "processing" and call extract endpoint without awaiting.
+    const cronSecret = process.env.CRON_SECRET;
+    if (cronSecret) {
+      const baseUrl = request.nextUrl.origin;
+      fetch(`${baseUrl}/api/orders/${orderId}/extract`, {
+        method: "POST",
+        headers: {
+          "x-internal-secret": cronSecret,
+          "Content-Type": "application/json",
+        },
+      }).catch((err) => {
+        console.error(`Fire-and-forget extraction trigger failed for order ${orderId}:`, err);
+      });
+    } else {
+      console.warn("CRON_SECRET not set — skipping automatic extraction trigger.");
+    }
+
     return NextResponse.json({
       success: true,
       data: {

@@ -78,6 +78,7 @@ export async function GET(
         dealer_id,
         recognition_method,
         recognition_confidence,
+        extraction_status,
         dealers ( name ),
         uploader:user_profiles!orders_uploaded_by_fkey ( first_name, last_name )
       `)
@@ -151,6 +152,7 @@ export async function GET(
         recognition_confidence: (order.recognition_confidence as number) ?? 0,
         file_count: fileInfo?.count ?? 0,
         primary_filename: fileInfo?.primaryFilename ?? null,
+        extraction_status: (order.extraction_status as OrderListItem["extraction_status"]) ?? null,
       };
     });
 

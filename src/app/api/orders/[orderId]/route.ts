@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { AppMetadata, ApiResponse, OrderWithDealer } from "@/lib/types";
+import type { AppMetadata, ApiResponse, OrderWithDealer, CanonicalOrderData } from "@/lib/types";
 
 /**
  * GET /api/orders/[orderId]
@@ -70,7 +70,7 @@ export async function GET(
 
     const adminClient = createAdminClient();
 
-    // 4. Fetch the order with dealer join
+    // 4. Fetch the order with dealer join + extraction fields
     let query = adminClient
       .from("orders")
       .select(`
@@ -86,6 +86,9 @@ export async function GET(
         dealer_overridden_by,
         dealer_overridden_at,
         override_reason,
+        extraction_status,
+        extracted_data,
+        extraction_error,
         dealers ( id, name ),
         uploader:user_profiles!orders_uploaded_by_fkey ( first_name, last_name ),
         overrider:user_profiles!orders_dealer_overridden_by_fkey ( first_name, last_name )
@@ -158,6 +161,9 @@ export async function GET(
         sha256_hash: f.sha256_hash as string,
         created_at: f.created_at as string,
       })),
+      extraction_status: (order.extraction_status as OrderWithDealer["extraction_status"]) ?? null,
+      extracted_data: (order.extracted_data as CanonicalOrderData) ?? null,
+      extraction_error: (order.extraction_error as string) ?? null,
     };
 
     return NextResponse.json({ success: true, data: result });

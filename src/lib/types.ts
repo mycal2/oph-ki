@@ -150,7 +150,7 @@ export interface OrderDealerInfo {
   overridden_by_name: string | null;
 }
 
-/** Extended order with dealer recognition data for the detail page. */
+/** Extended order with dealer recognition and extraction data for the detail page. */
 export interface OrderWithDealer extends Order {
   dealer_id: string | null;
   dealer_name: string | null;
@@ -162,6 +162,9 @@ export interface OrderWithDealer extends Order {
   overridden_by_name: string | null;
   uploaded_by_name: string | null;
   files: OrderFile[];
+  extraction_status: ExtractionStatus | null;
+  extracted_data: CanonicalOrderData | null;
+  extraction_error: string | null;
 }
 
 /** Lightweight order summary for the orders list page. */
@@ -175,6 +178,7 @@ export interface OrderListItem {
   recognition_confidence: number;
   file_count: number;
   primary_filename: string | null;
+  extraction_status: ExtractionStatus | null;
 }
 
 /** Response from PATCH /api/orders/[orderId]/dealer */
@@ -186,4 +190,56 @@ export interface DealerOverrideResponse {
   overriddenByName: string;
   overriddenAt: string;
   overrideReason: string | null;
+}
+
+/**
+ * OPH-4: AI Extraction types.
+ */
+export type ExtractionStatus = "pending" | "processing" | "extracted" | "failed";
+
+export interface CanonicalAddress {
+  company: string | null;
+  street: string | null;
+  city: string | null;
+  postal_code: string | null;
+  country: string | null;
+}
+
+export interface CanonicalLineItem {
+  position: number;
+  article_number: string | null;
+  description: string;
+  quantity: number;
+  unit: string | null;
+  unit_price: number | null;
+  total_price: number | null;
+  currency: string | null;
+}
+
+export interface CanonicalOrder {
+  order_number: string | null;
+  order_date: string | null;
+  dealer: { id: string | null; name: string | null };
+  delivery_address: CanonicalAddress | null;
+  billing_address: CanonicalAddress | null;
+  line_items: CanonicalLineItem[];
+  total_amount: number | null;
+  currency: string | null;
+  notes: string | null;
+}
+
+export interface ExtractionMetadata {
+  schema_version: string;
+  confidence_score: number;
+  model: string;
+  extracted_at: string;
+  source_files: string[];
+  dealer_hints_applied: boolean;
+  input_tokens: number;
+  output_tokens: number;
+}
+
+export interface CanonicalOrderData {
+  order: CanonicalOrder;
+  extraction_metadata: ExtractionMetadata;
 }

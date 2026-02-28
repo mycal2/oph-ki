@@ -17,6 +17,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DealerBadge } from "@/components/orders/dealer/dealer-badge";
+import { ExtractionStatusBadge } from "@/components/orders/extraction-status-badge";
 import type { OrderListItem, OrderStatus, ApiResponse } from "@/lib/types";
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
@@ -178,9 +179,17 @@ export function OrdersList() {
                 {order.uploaded_by_name ?? "-"}
               </TableCell>
               <TableCell>
-                <Badge variant={STATUS_VARIANTS[order.status]} className="text-xs">
-                  {STATUS_LABELS[order.status]}
-                </Badge>
+                <div className="flex flex-col gap-1">
+                  <Badge variant={STATUS_VARIANTS[order.status]} className="text-xs w-fit">
+                    {STATUS_LABELS[order.status]}
+                  </Badge>
+                  {order.extraction_status && order.extraction_status !== "extracted" && (
+                    <ExtractionStatusBadge
+                      status={order.extraction_status}
+                      compact
+                    />
+                  )}
+                </div>
               </TableCell>
               <TableCell className="text-right text-sm text-muted-foreground whitespace-nowrap">
                 {formatDate(order.created_at)}

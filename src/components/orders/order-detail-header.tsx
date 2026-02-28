@@ -10,6 +10,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { DealerSection } from "./dealer/dealer-section";
 import { RecognitionAuditLine } from "./dealer/recognition-audit-line";
+import { ExtractionStatusBadge } from "./extraction-status-badge";
 import type { OrderWithDealer, OrderStatus, DealerOverrideResponse } from "@/lib/types";
 
 interface OrderDetailHeaderProps {
@@ -87,12 +88,17 @@ export function OrderDetailHeader({
               )}
             </div>
           </div>
-          <Badge
-            variant={STATUS_VARIANTS[order.status]}
-            className="shrink-0 self-start"
-          >
-            {STATUS_LABELS[order.status]}
-          </Badge>
+          <div className="flex items-center gap-2 shrink-0 self-start">
+            <ExtractionStatusBadge
+              status={order.extraction_status}
+              errorMessage={order.extraction_error}
+            />
+            <Badge
+              variant={STATUS_VARIANTS[order.status]}
+            >
+              {STATUS_LABELS[order.status]}
+            </Badge>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
