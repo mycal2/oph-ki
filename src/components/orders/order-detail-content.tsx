@@ -1,0 +1,172 @@
+"use client";
+
+import { useState, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, AlertCircle, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+import { OrderDetailHeader } from "./order-detail-header";
+import { OrderFileList } from "./order-file-list";
+import type { OrderWithDealer, DealerOverrideResponse, ApiResponse } from "@/lib/types";
+
+interface OrderDetailContentProps {
+  orderId: string;
+}
+
+/**
+ * Client component for the order detail page.
+ * Fetches order data and renders the header + file list.
+ */
+export function OrderDetailContent({ orderId }: OrderDetailContentProps) {
+  const router = useRouter();
+  const [order, setOrder] = useState<OrderWithDealer | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchOrder = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch(`/api/orders/${orderId}`);
+      const json = (await res.json()) as ApiResponse<OrderWithDealer>;
+
+      if (!res.ok || !json.success || !json.data) {
+        setError(json.error ?? "Bestellung konnte nicht geladen werden.");
+        return;
+      }
+
+      setOrder(json.data);
+    } catch {
+      setError("Verbindungsfehler beim Laden der Bestellung.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [orderId]);
+
+  useEffect(() => {
+    fetchOrder();
+  }, [fetchOrder]);
+
+  const handleDealerChanged = useCallback(
+    (result: DealerOverrideResponse) => {
+      if (order) {
+        setOrder({
+          ...order,
+          dealer_id: result.dealerId,
+          dealer_name: result.dealerName,
+          recognition_method: "manual",
+          recognition_confidence: 100,
+          dealer_overridden_by: result.overriddenBy,
+          dealer_overridden_at: result.overriddenAt,
+          overridden_by_name: result.overriddenByName,
+          override_reason: result.overrideReason,
+        });
+      }
+    },
+    [order]
+  );
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-9 w-9 rounded-md" />
+          <Skeleton className="h-8 w-48" />
+        </div>
+        <Card>
+          <CardContent className="space-y-4 p-6">
+            <Skeleton className="h-6 w-3/4" />
+            <Skeleton className="h-4 w-1/2" />
+            <Skeleton className="h-8 w-40" />
+            <Skeleton className="h-px w-full" />
+            <Skeleton className="h-4 w-2/3" />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="space-y-3 p-6">
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.push("/orders")}
+          className="gap-1"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Zurueck
+        </Button>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Fehler</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+        <Button variant="outline" onClick={fetchOrder}>
+          Erneut versuchen
+        </Button>
+      </div>
+    );
+  }
+
+  // Empty state (should not normally happen)
+  if (!order) {
+    return (
+      <div className="space-y-6">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.push("/orders")}
+          className="gap-1"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Zurueck
+        </Button>
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground">
+              Bestellung nicht gefunden.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Back navigation */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => router.push("/orders")}
+        className="gap-1"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Zurueck zur Uebersicht
+      </Button>
+
+      {/* Order header with dealer info */}
+      <OrderDetailHeader
+        order={order}
+        onDealerChanged={handleDealerChanged}
+      />
+
+      {/* File list */}
+      {order.files.length > 0 && <OrderFileList files={order.files} />}
+    </div>
+  );
+}

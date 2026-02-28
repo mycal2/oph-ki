@@ -59,6 +59,9 @@ If no design specs exist, ask the user:
 - Ask: "Does the UI look right? Any changes needed?"
 - Iterate based on feedback
 
+### 6. style-guid
+- Use the IDS.online CI and Styleguide you can find it in /docs/ci-styleguide
+
 ## Context Recovery
 If your context was compacted mid-task:
 1. Re-read the feature spec you're implementing

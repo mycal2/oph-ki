@@ -33,6 +33,7 @@ Eine mandantenfähige SaaS-Plattform ("Order Intelligence Platform"), die Dental
 | P2 | OPH-11: Bestellhistorie & Dashboard | Planned |
 | P2 | OPH-12: DSGVO-Compliance & Datenaufbewahrung | Planned |
 | P1 | OPH-13: Order Submission Email Notifications | Planned |
+| P1 | OPH-14: Händler-Datentransformationen (Artikel-Mapping, Einheiten, Felder) | Planned |
 
 ## Success Metrics
 - Bearbeitungszeit pro Bestellung: von ~15 Min. manuell auf < 3 Min. mit System

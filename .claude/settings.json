@@ -16,7 +16,8 @@
       "Bash(kill:*)",
       "Bash(npx shadcn@latest add:*)",
       "Bash(ls:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(node -e \"const z = require\\(''zod''\\); console.log\\(''Zod version:'', z.ZodError ? ''has ZodError'' : ''no ZodError''\\); const err = new z.ZodError\\([]\\); console.log\\(Object.keys\\(err\\)\\); console.log\\(''issues:'', typeof err.issues\\)\")"
     ]
   }
 }
