@@ -34,6 +34,21 @@ export async function POST(
     }
 
     const appMetadata = user.app_metadata as AppMetadata | undefined;
+
+    if (appMetadata?.user_status === "inactive") {
+      return NextResponse.json(
+        { success: false, error: "Ihr Konto ist deaktiviert." },
+        { status: 403 }
+      );
+    }
+
+    if (appMetadata?.tenant_status === "inactive") {
+      return NextResponse.json(
+        { success: false, error: "Ihr Mandant ist deaktiviert." },
+        { status: 403 }
+      );
+    }
+
     const role = appMetadata?.role;
     const tenantId = appMetadata?.tenant_id;
 
@@ -140,72 +155,37 @@ export async function POST(
       const description =
         descIdx >= 0 && cols[descIdx] ? cols[descIdx].substring(0, 500) : null;
 
-      // Try to upsert: check if exists, then insert or update
-      const { data: existingRows } = await adminClient
+      // Check for existing mapping with same scope (global or tenant-specific)
+      let existingQuery = adminClient
         .from("dealer_data_mappings")
         .select("id")
         .eq("dealer_id", dealerId)
         .eq("mapping_type", mappingType)
         .eq("active", true)
-        .ilike("dealer_value", dealerValue);
+        .ilike("dealer_value", dealerValue.replace(/%/g, "\\%").replace(/_/g, "\\_"));
 
-      // Filter for matching tenant
-      const existing = (existingRows ?? []).length > 0 ? existingRows : null;
-
-      if (existing && existing.length > 0) {
-        // Check if one matches our tenant scope
-        const { data: scopedExisting } = await adminClient
-          .from("dealer_data_mappings")
-          .select("id")
-          .eq("dealer_id", dealerId)
-          .eq("mapping_type", mappingType)
-          .eq("active", true)
-          .ilike("dealer_value", dealerValue)
-          .is("tenant_id", mappingTenantId === null ? null : undefined as unknown as null);
-
-        const matchingId =
-          mappingTenantId === null
-            ? (scopedExisting ?? [])[0]?.id
-            : null;
-
-        if (matchingId) {
-          await adminClient
-            .from("dealer_data_mappings")
-            .update({
-              erp_value: erpValue,
-              conversion_factor:
-                mappingType === "unit_conversion" ? conversionFactor : null,
-              description,
-            })
-            .eq("id", matchingId as string);
-          updated++;
-        } else {
-          // Insert new tenant-specific entry
-          const { error: insertError } = await adminClient
-            .from("dealer_data_mappings")
-            .insert({
-              dealer_id: dealerId,
-              tenant_id: mappingTenantId,
-              mapping_type: mappingType,
-              dealer_value: dealerValue,
-              erp_value: erpValue,
-              conversion_factor:
-                mappingType === "unit_conversion" ? conversionFactor : null,
-              description,
-              created_by: user.id,
-            });
-
-          if (insertError) {
-            if (insertError.code === "23505") {
-              errors.push(`Zeile ${i + 1}: Duplikat fuer "${dealerValue}".`);
-            } else {
-              errors.push(`Zeile ${i + 1}: ${insertError.message}`);
-            }
-          } else {
-            created++;
-          }
-        }
+      if (mappingTenantId === null) {
+        existingQuery = existingQuery.is("tenant_id", null);
       } else {
+        existingQuery = existingQuery.eq("tenant_id", mappingTenantId);
+      }
+
+      const { data: existingRows } = await existingQuery;
+
+      if (existingRows && existingRows.length > 0) {
+        // Update existing mapping
+        await adminClient
+          .from("dealer_data_mappings")
+          .update({
+            erp_value: erpValue,
+            conversion_factor:
+              mappingType === "unit_conversion" ? conversionFactor : null,
+            description,
+          })
+          .eq("id", existingRows[0].id as string);
+        updated++;
+      } else {
+        // Insert new mapping
         const { error: insertError } = await adminClient
           .from("dealer_data_mappings")
           .insert({

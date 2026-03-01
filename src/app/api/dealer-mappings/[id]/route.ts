@@ -30,6 +30,21 @@ export async function PATCH(
     }
 
     const appMetadata = user.app_metadata as AppMetadata | undefined;
+
+    if (appMetadata?.user_status === "inactive") {
+      return NextResponse.json(
+        { success: false, error: "Ihr Konto ist deaktiviert." },
+        { status: 403 }
+      );
+    }
+
+    if (appMetadata?.tenant_status === "inactive") {
+      return NextResponse.json(
+        { success: false, error: "Ihr Mandant ist deaktiviert." },
+        { status: 403 }
+      );
+    }
+
     const role = appMetadata?.role;
     const tenantId = appMetadata?.tenant_id;
 
@@ -136,6 +151,21 @@ export async function DELETE(
     }
 
     const appMetadata = user.app_metadata as AppMetadata | undefined;
+
+    if (appMetadata?.user_status === "inactive") {
+      return NextResponse.json(
+        { success: false, error: "Ihr Konto ist deaktiviert." },
+        { status: 403 }
+      );
+    }
+
+    if (appMetadata?.tenant_status === "inactive") {
+      return NextResponse.json(
+        { success: false, error: "Ihr Mandant ist deaktiviert." },
+        { status: 403 }
+      );
+    }
+
     const role = appMetadata?.role;
     const tenantId = appMetadata?.tenant_id;
 

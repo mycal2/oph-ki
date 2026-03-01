@@ -152,6 +152,21 @@ export async function POST(
     }
 
     const appMetadata = user.app_metadata as AppMetadata | undefined;
+
+    if (appMetadata?.user_status === "inactive") {
+      return NextResponse.json(
+        { success: false, error: "Ihr Konto ist deaktiviert." },
+        { status: 403 }
+      );
+    }
+
+    if (appMetadata?.tenant_status === "inactive") {
+      return NextResponse.json(
+        { success: false, error: "Ihr Mandant ist deaktiviert." },
+        { status: 403 }
+      );
+    }
+
     const role = appMetadata?.role;
 
     if (role !== "tenant_admin" && role !== "platform_admin") {

@@ -27,6 +27,21 @@ export async function GET(
     }
 
     const appMetadata = user.app_metadata as AppMetadata | undefined;
+
+    if (appMetadata?.user_status === "inactive") {
+      return NextResponse.json(
+        { success: false, error: "Ihr Konto ist deaktiviert." },
+        { status: 403 }
+      );
+    }
+
+    if (appMetadata?.tenant_status === "inactive") {
+      return NextResponse.json(
+        { success: false, error: "Ihr Mandant ist deaktiviert." },
+        { status: 403 }
+      );
+    }
+
     const role = appMetadata?.role;
     const tenantId = appMetadata?.tenant_id;
 
@@ -75,12 +90,20 @@ export async function GET(
     }
 
     // Build CSV with semicolon separator
+    /** Escape a CSV field: wrap in quotes if it contains semicolons, quotes, or newlines. */
+    const esc = (val: string): string => {
+      if (/[;\"\n\r]/.test(val)) {
+        return `"${val.replace(/"/g, '""')}"`;
+      }
+      return val;
+    };
+
     const header = "dealer_value;erp_value;conversion_factor;description;source";
     const rows = (mappings ?? []).map((m) => {
       const source = m.tenant_id === null ? "global" : "tenant";
       const factor = m.conversion_factor != null ? String(m.conversion_factor) : "";
-      const desc = ((m.description as string) ?? "").replace(/;/g, ",");
-      return `${m.dealer_value};${m.erp_value};${factor};${desc};${source}`;
+      const desc = (m.description as string) ?? "";
+      return `${esc(m.dealer_value as string)};${esc(m.erp_value as string)};${factor};${esc(desc)};${source}`;
     });
 
     const csv = [header, ...rows].join("\n");

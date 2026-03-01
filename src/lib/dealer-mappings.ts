@@ -11,26 +11,6 @@ export async function getMappingsForDealer(
   dealerId: string,
   tenantId: string
 ): Promise<DealerDataMapping[]> {
-  const { data, error } = await adminClient.rpc("get_dealer_mappings", {
-    p_dealer_id: dealerId,
-    p_tenant_id: tenantId,
-  });
-
-  if (error) {
-    // Fallback: if RPC doesn't exist yet, use direct query
-    console.error("RPC get_dealer_mappings failed, using fallback query:", error.message);
-    return getMappingsForDealerFallback(adminClient, dealerId, tenantId);
-  }
-
-  return (data ?? []) as DealerDataMapping[];
-}
-
-/** Fallback query when the RPC is not available. */
-async function getMappingsForDealerFallback(
-  adminClient: SupabaseClient,
-  dealerId: string,
-  tenantId: string
-): Promise<DealerDataMapping[]> {
   const { data, error } = await adminClient
     .from("dealer_data_mappings")
     .select("*")
