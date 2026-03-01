@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, AlertCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, AlertCircle, AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -225,6 +225,32 @@ export function OrderDetailContent({ orderId }: OrderDetailContentProps) {
         onDealerChanged={handleDealerChanged}
         onExported={handleExported}
       />
+
+      {/* Unmapped articles warning (OPH-14) */}
+      {order.has_unmapped_articles && order.dealer_id && (
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Artikelnummern ohne ERP-Zuordnung</AlertTitle>
+          <AlertDescription className="flex flex-col sm:flex-row sm:items-center gap-2">
+            <span>
+              Diese Bestellung enthaelt Haendler-Artikelnummern, fuer die noch keine
+              ERP-Zuordnung hinterlegt ist.
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0 w-fit"
+              onClick={() =>
+                router.push(
+                  `/settings/dealer-mappings?dealer=${order.dealer_id}`
+                )
+              }
+            >
+              Zuordnungen verwalten
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* AI Extraction Result */}
       <ExtractionResultPreview

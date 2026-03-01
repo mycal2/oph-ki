@@ -54,6 +54,7 @@ export function useDealerMappings({ dealerId, mappingType }: UseDealerMappingsOp
       erpValue: string;
       conversionFactor?: number;
       description?: string;
+      isGlobal?: boolean;
     }) => {
       const res = await fetch("/api/dealer-mappings", {
         method: "POST",
@@ -107,7 +108,7 @@ export function useDealerMappings({ dealerId, mappingType }: UseDealerMappingsOp
   );
 
   const importCsv = useCallback(
-    async (csvContent: string, importDealerId: string, importMappingType: MappingType) => {
+    async (csvContent: string, importDealerId: string, importMappingType: MappingType, isGlobal?: boolean) => {
       const params = new URLSearchParams({
         dealerId: importDealerId,
         mappingType: importMappingType,
@@ -116,7 +117,7 @@ export function useDealerMappings({ dealerId, mappingType }: UseDealerMappingsOp
       const res = await fetch(`/api/dealer-mappings/import?${params}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ csvContent }),
+        body: JSON.stringify({ csvContent, isGlobal: isGlobal || undefined }),
       });
       const json = await res.json();
 

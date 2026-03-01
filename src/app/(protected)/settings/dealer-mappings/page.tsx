@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowLeftRight } from "lucide-react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { ArrowLeftRight, Globe } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -19,9 +20,13 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { MappingsTable } from "@/components/dealer-mappings/mappings-table";
 import { useDealers } from "@/hooks/use-dealers";
 import { useDealerMappings } from "@/hooks/use-dealer-mappings";
+import { useCurrentUserRole } from "@/hooks/use-current-user-role";
 import type { MappingType } from "@/lib/types";
 
 const MAPPING_TABS: { value: MappingType; label: string }[] = [
@@ -30,10 +35,15 @@ const MAPPING_TABS: { value: MappingType; label: string }[] = [
   { value: "field_label", label: "Felder" },
 ];
 
-export default function DealerMappingsPage() {
+function DealerMappingsContent() {
+  const searchParams = useSearchParams();
   const { dealers, isLoading: isDealersLoading, error: dealersError } = useDealers();
-  const [selectedDealerId, setSelectedDealerId] = useState<string | null>(null);
+  const { isPlatformAdmin } = useCurrentUserRole();
+  const [selectedDealerId, setSelectedDealerId] = useState<string | null>(
+    searchParams.get("dealer")
+  );
   const [activeTab, setActiveTab] = useState<MappingType>("article_number");
+  const [isGlobalMode, setIsGlobalMode] = useState(false);
 
   const selectedDealer = dealers.find((d) => d.id === selectedDealerId);
 
@@ -56,6 +66,27 @@ export default function DealerMappingsPage() {
           Verwalten Sie Artikelnummern-, Einheiten- und Feld-Zuordnungen fuer Ihre Haendler.
         </p>
       </div>
+
+      {/* Platform admin: global mode toggle */}
+      {isPlatformAdmin && (
+        <div className="flex items-center gap-3 p-3 border rounded-md bg-muted/30">
+          <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
+          <Label htmlFor="global-mode" className="flex-1 text-sm cursor-pointer">
+            Globale Zuordnungen verwalten
+            <span className="text-muted-foreground block text-xs">
+              Neue Eintraege gelten fuer alle Mandanten als Basis-Zuordnungen.
+            </span>
+          </Label>
+          <Switch
+            id="global-mode"
+            checked={isGlobalMode}
+            onCheckedChange={setIsGlobalMode}
+          />
+          {isGlobalMode && (
+            <Badge variant="secondary" className="shrink-0">Global</Badge>
+          )}
+        </div>
+      )}
 
       <Card>
         <CardHeader>
@@ -130,6 +161,8 @@ export default function DealerMappingsPage() {
                     onCreateMapping={createMapping}
                     onDeleteMapping={deleteMapping}
                     onImportCsv={importCsv}
+                    isGlobalMode={isGlobalMode}
+                    isPlatformAdmin={isPlatformAdmin}
                   />
                 </TabsContent>
               ))}
@@ -138,5 +171,21 @@ export default function DealerMappingsPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function DealerMappingsPage() {
+  return (
+    <Suspense fallback={
+      <div className="space-y-6">
+        <div>
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-96 mt-2" />
+        </div>
+        <Skeleton className="h-96 w-full" />
+      </div>
+    }>
+      <DealerMappingsContent />
+    </Suspense>
   );
 }

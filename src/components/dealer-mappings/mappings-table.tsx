@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Plus, Trash2, Upload, Download, Loader2 } from "lucide-react";
+import { Plus, Trash2, Upload, Download, Loader2, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -32,9 +32,14 @@ interface MappingsTableProps {
     erpValue: string;
     conversionFactor?: number;
     description?: string;
+    isGlobal?: boolean;
   }) => Promise<unknown>;
   onDeleteMapping: (id: string) => Promise<void>;
-  onImportCsv: (csvContent: string, dealerId: string, mappingType: MappingType) => Promise<{ created: number; updated: number; errors: string[] }>;
+  onImportCsv: (csvContent: string, dealerId: string, mappingType: MappingType, isGlobal?: boolean) => Promise<{ created: number; updated: number; errors: string[] }>;
+  /** Platform admin: create new entries as global (tenant_id = null). */
+  isGlobalMode?: boolean;
+  /** Whether the current user is a platform admin. */
+  isPlatformAdmin?: boolean;
 }
 
 const TYPE_LABELS: Record<MappingType, { dealerCol: string; erpCol: string; placeholder: [string, string] }> = {
@@ -65,6 +70,8 @@ export function MappingsTable({
   onCreateMapping,
   onDeleteMapping,
   onImportCsv,
+  isGlobalMode = false,
+  isPlatformAdmin = false,
 }: MappingsTableProps) {
   const [newDealerValue, setNewDealerValue] = useState("");
   const [newErpValue, setNewErpValue] = useState("");
@@ -95,6 +102,7 @@ export function MappingsTable({
         dealerValue: newDealerValue.trim(),
         erpValue: newErpValue.trim(),
         conversionFactor: isUnitType && newFactor ? parseFloat(newFactor) : undefined,
+        isGlobal: isGlobalMode || undefined,
       });
       setNewDealerValue("");
       setNewErpValue("");
@@ -104,7 +112,7 @@ export function MappingsTable({
     } finally {
       setIsCreating(false);
     }
-  }, [dealerId, mappingType, newDealerValue, newErpValue, newFactor, isUnitType, onCreateMapping]);
+  }, [dealerId, mappingType, newDealerValue, newErpValue, newFactor, isUnitType, isGlobalMode, onCreateMapping]);
 
   const handleDelete = useCallback(
     async (id: string) => {
@@ -120,10 +128,29 @@ export function MappingsTable({
     [onDeleteMapping]
   );
 
+  const handleOverride = useCallback((mapping: DealerDataMappingListItem) => {
+    setNewDealerValue(mapping.dealer_value);
+    setNewErpValue(mapping.erp_value);
+    if (isUnitType && mapping.conversion_factor != null) {
+      setNewFactor(String(mapping.conversion_factor));
+    }
+    setFormError(null);
+  }, [isUnitType]);
+
   const handleExport = useCallback(() => {
     const params = new URLSearchParams({ dealerId, mappingType });
     window.open(`/api/dealer-mappings/export?${params}`, "_blank");
   }, [dealerId, mappingType]);
+
+  /** Whether a row's action should be a delete button. */
+  const canDelete = (mapping: DealerDataMappingListItem) => {
+    if (mapping.is_global) {
+      // Platform admin in global mode can delete global rows
+      return isPlatformAdmin && isGlobalMode;
+    }
+    // Tenant rows are always deletable by the owner
+    return true;
+  };
 
   if (isLoading) {
     return (
@@ -204,7 +231,7 @@ export function MappingsTable({
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  {!mapping.is_global && (
+                  {canDelete(mapping) ? (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -219,7 +246,18 @@ export function MappingsTable({
                         <Trash2 className="h-3.5 w-3.5" />
                       )}
                     </Button>
-                  )}
+                  ) : mapping.is_global ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
+                      onClick={() => handleOverride(mapping)}
+                      aria-label="Globale Zuordnung ueberschreiben"
+                      title="Ueberschreiben"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
+                  ) : null}
                 </TableCell>
               </TableRow>
             ))}
@@ -295,6 +333,7 @@ export function MappingsTable({
         dealerName={dealerName}
         mappingType={mappingType}
         onImport={onImportCsv}
+        isGlobalMode={isGlobalMode}
       />
     </div>
   );

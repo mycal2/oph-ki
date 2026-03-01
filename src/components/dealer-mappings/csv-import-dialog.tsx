@@ -21,7 +21,8 @@ interface CsvImportDialogProps {
   dealerId: string;
   dealerName: string;
   mappingType: MappingType;
-  onImport: (csvContent: string, dealerId: string, mappingType: MappingType) => Promise<{ created: number; updated: number; errors: string[] }>;
+  onImport: (csvContent: string, dealerId: string, mappingType: MappingType, isGlobal?: boolean) => Promise<{ created: number; updated: number; errors: string[] }>;
+  isGlobalMode?: boolean;
 }
 
 const TYPE_LABELS: Record<MappingType, string> = {
@@ -37,6 +38,7 @@ export function CsvImportDialog({
   dealerName,
   mappingType,
   onImport,
+  isGlobalMode = false,
 }: CsvImportDialogProps) {
   const [csvContent, setCsvContent] = useState("");
   const [isImporting, setIsImporting] = useState(false);
@@ -51,7 +53,7 @@ export function CsvImportDialog({
     setResult(null);
 
     try {
-      const importResult = await onImport(csvContent, dealerId, mappingType);
+      const importResult = await onImport(csvContent, dealerId, mappingType, isGlobalMode || undefined);
       setResult(importResult);
       if (importResult.errors.length === 0) {
         // Auto-close after success

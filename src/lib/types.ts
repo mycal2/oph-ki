@@ -176,6 +176,7 @@ export interface OrderWithDealer extends Order {
   extraction_status: ExtractionStatus | null;
   extracted_data: CanonicalOrderData | null;
   extraction_error: string | null;
+  has_unmapped_articles: boolean;
 }
 
 /** Lightweight order summary for the orders list page. */
