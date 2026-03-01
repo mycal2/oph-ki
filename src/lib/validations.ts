@@ -138,6 +138,18 @@ const canonicalLineItemSchema = z.object({
   currency: z.string().nullable(),
 });
 
+/** Sender sub-schema for extraction/review data. */
+const canonicalSenderSchema = z.object({
+  company_name: z.string().nullable(),
+  street: z.string().nullable(),
+  city: z.string().nullable(),
+  postal_code: z.string().nullable(),
+  country: z.string().nullable(),
+  email: z.string().nullable(),
+  phone: z.string().nullable(),
+  customer_number: z.string().nullable(),
+});
+
 /** Schema for the order part of reviewed_data. */
 const canonicalOrderSchema = z.object({
   order_number: z.string().nullable(),
@@ -146,6 +158,7 @@ const canonicalOrderSchema = z.object({
     id: z.string().nullable(),
     name: z.string().nullable(),
   }),
+  sender: canonicalSenderSchema.nullable().optional(),
   delivery_address: canonicalAddressSchema.nullable(),
   billing_address: canonicalAddressSchema.nullable(),
   line_items: z.array(canonicalLineItemSchema),

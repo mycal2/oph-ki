@@ -114,6 +114,7 @@ export type RecognitionMethod =
   | "subject"
   | "filename"
   | "manual"
+  | "ai_content"
   | "none";
 
 export type DealerFormatType = "email_text" | "pdf_table" | "excel";
@@ -218,10 +219,22 @@ export interface CanonicalLineItem {
   currency: string | null;
 }
 
+export interface CanonicalSender {
+  company_name: string | null;
+  street: string | null;
+  city: string | null;
+  postal_code: string | null;
+  country: string | null;
+  email: string | null;
+  phone: string | null;
+  customer_number: string | null;
+}
+
 export interface CanonicalOrder {
   order_number: string | null;
   order_date: string | null;
   dealer: { id: string | null; name: string | null };
+  sender: CanonicalSender | null;
   delivery_address: CanonicalAddress | null;
   billing_address: CanonicalAddress | null;
   line_items: CanonicalLineItem[];

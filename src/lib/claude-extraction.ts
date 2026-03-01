@@ -16,6 +16,16 @@ const CANONICAL_JSON_SCHEMA = `{
     "order_number": "string | null",
     "order_date": "ISO 8601 date string | null",
     "dealer": { "id": "string | null", "name": "string | null" },
+    "sender": {
+      "company_name": "string | null (the company/dealer that placed or sent the order)",
+      "street": "string | null",
+      "city": "string | null",
+      "postal_code": "string | null",
+      "country": "string | null",
+      "email": "string | null",
+      "phone": "string | null",
+      "customer_number": "string | null (the sender's own order or customer reference number)"
+    } | null,
     "delivery_address": {
       "company": "string | null",
       "street": "string | null",
@@ -61,7 +71,8 @@ ${CANONICAL_JSON_SCHEMA}
 7. The confidence_score reflects your overall confidence in the extraction accuracy (0 = no confidence, 1 = fully confident).
 8. If the document contains NO order data at all, return line_items as an empty array and set confidence_score to 0.
 9. Dates should be in ISO 8601 format (YYYY-MM-DD).
-10. All text fields should preserve the original language of the document.`;
+10. All text fields should preserve the original language of the document.
+11. The "sender" is the company or dealer that placed/sent the order. This is different from the delivery address (where goods are shipped). Look for sender info in letterheads, "From" fields, company stamps, headers, or contact blocks at the top of the document.`;
 
 export interface ExtractionInput {
   orderId: string;
@@ -231,6 +242,7 @@ export async function extractOrderData(
             id: input.dealer?.id ?? null,
             name: input.dealer?.name ?? parsed.order.dealer?.name ?? null,
           },
+          sender: parsed.order.sender ?? null,
           delivery_address: parsed.order.delivery_address ?? null,
           billing_address: parsed.order.billing_address ?? null,
           line_items: (parsed.order.line_items ?? []).map((item, idx) => ({

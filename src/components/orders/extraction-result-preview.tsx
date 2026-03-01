@@ -13,6 +13,9 @@ import {
   RefreshCw,
   Loader2,
   ClipboardCheck,
+  Building2,
+  Mail,
+  Phone,
 } from "lucide-react";
 import {
   Card,
@@ -309,6 +312,51 @@ export function ExtractionResultPreview({
             </div>
           </div>
         </div>
+
+        {/* Sender / Ordering Company */}
+        {order.sender?.company_name && (
+          <>
+            <Separator />
+            <div className="flex items-start gap-2">
+              <Building2 className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+              <div className="min-w-0 space-y-1">
+                <p className="text-xs text-muted-foreground">Absender / Besteller</p>
+                <p className="text-sm font-medium">{order.sender.company_name}</p>
+                {(order.sender.street || order.sender.city) && (
+                  <p className="text-sm text-muted-foreground">
+                    {[
+                      order.sender.street,
+                      [order.sender.postal_code, order.sender.city].filter(Boolean).join(" "),
+                      order.sender.country,
+                    ]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </p>
+                )}
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                  {order.sender.email && (
+                    <span className="flex items-center gap-1">
+                      <Mail className="h-3 w-3" />
+                      {order.sender.email}
+                    </span>
+                  )}
+                  {order.sender.phone && (
+                    <span className="flex items-center gap-1">
+                      <Phone className="h-3 w-3" />
+                      {order.sender.phone}
+                    </span>
+                  )}
+                  {order.sender.customer_number && (
+                    <span className="flex items-center gap-1">
+                      <Hash className="h-3 w-3" />
+                      Kd.-Nr.: {order.sender.customer_number}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Delivery Address */}
         {deliveryAddr && (

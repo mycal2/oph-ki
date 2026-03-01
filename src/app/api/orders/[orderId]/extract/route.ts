@@ -108,7 +108,7 @@ export async function POST(
     // --- Fetch order and check concurrency ---
     const { data: order, error: orderError } = await adminClient
       .from("orders")
-      .select("id, tenant_id, status, extraction_status, extraction_attempts, dealer_id")
+      .select("id, tenant_id, status, extraction_status, extraction_attempts, dealer_id, recognition_confidence")
       .eq("id", orderId)
       .eq("tenant_id", tenantId)
       .single();
@@ -261,6 +261,54 @@ export async function POST(
         dealer: dealerInfo,
       });
 
+      // --- AI-based dealer matching from extracted sender info ---
+      const metadataConfidence = (order.recognition_confidence as number) ?? 0;
+      const senderName = result.extractedData.order.sender?.company_name;
+      let aiDealerUpdate: Record<string, unknown> = {};
+
+      if (metadataConfidence < 80 && senderName) {
+        const { data: allDealers } = await adminClient
+          .from("dealers")
+          .select("id, name")
+          .eq("active", true);
+
+        if (allDealers && allDealers.length > 0) {
+          const senderLower = senderName.toLowerCase().trim();
+          let bestMatch: { id: string; name: string; confidence: number } | null = null;
+
+          for (const dealer of allDealers) {
+            const dealerLower = (dealer.name as string).toLowerCase().trim();
+
+            if (senderLower === dealerLower) {
+              // Exact match
+              bestMatch = { id: dealer.id as string, name: dealer.name as string, confidence: 95 };
+              break;
+            }
+
+            // Substring match (either direction)
+            if (senderLower.includes(dealerLower) || dealerLower.includes(senderLower)) {
+              const confidence = 75;
+              if (!bestMatch || confidence > bestMatch.confidence) {
+                bestMatch = { id: dealer.id as string, name: dealer.name as string, confidence };
+              }
+            }
+          }
+
+          if (bestMatch) {
+            aiDealerUpdate = {
+              dealer_id: bestMatch.id,
+              recognition_method: "ai_content",
+              recognition_confidence: bestMatch.confidence,
+            };
+            // Also set dealer info in extracted data for consistency
+            result.extractedData.order.dealer = {
+              id: bestMatch.id,
+              name: bestMatch.name,
+            };
+          }
+        }
+      }
+
       // --- Save extracted data ---
       await adminClient
         .from("orders")
@@ -269,6 +317,7 @@ export async function POST(
           extracted_data: result.extractedData,
           extraction_error: null,
           status: "extracted",
+          ...aiDealerUpdate,
         })
         .eq("id", orderId);
 
