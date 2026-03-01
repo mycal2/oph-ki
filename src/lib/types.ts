@@ -117,11 +117,12 @@ export type RecognitionMethod =
   | "ai_content"
   | "none";
 
-export type DealerFormatType = "email_text" | "pdf_table" | "excel";
+export type DealerFormatType = "email_text" | "pdf_table" | "excel" | "mixed";
 
 export interface Dealer {
   id: string;
   name: string;
+  description: string | null;
   street: string | null;
   postal_code: string | null;
   city: string | null;
@@ -402,4 +403,53 @@ export interface DealerDataMapping {
 export interface DealerDataMappingListItem extends DealerDataMapping {
   dealer_name: string;
   is_global: boolean;
+}
+
+/**
+ * OPH-7: Admin Dealer Management types.
+ */
+
+/** Dealer with order stats for the admin list view. */
+export interface DealerAdminListItem {
+  id: string;
+  name: string;
+  description: string | null;
+  format_type: DealerFormatType;
+  city: string | null;
+  country: string | null;
+  active: boolean;
+  order_count: number;
+  last_order_at: string | null;
+  created_at: string;
+}
+
+/** Audit log action types. */
+export type DealerAuditAction = "created" | "updated" | "deactivated" | "reactivated";
+
+/** Single audit log entry for a dealer change. */
+export interface DealerAuditLogEntry {
+  id: string;
+  dealer_id: string;
+  changed_by: string;
+  admin_email: string;
+  action: DealerAuditAction;
+  changed_fields: Record<string, { old: unknown; new: unknown }> | null;
+  snapshot_before: Record<string, unknown> | null;
+  created_at: string;
+}
+
+/** Conflict warning returned when dealer rules overlap. */
+export interface DealerRuleConflict {
+  field: string;
+  value: string;
+  conflicting_dealer_id: string;
+  conflicting_dealer_name: string;
+}
+
+/** Test recognition result (no persistence). */
+export interface TestRecognitionResult {
+  dealer_id: string | null;
+  dealer_name: string | null;
+  recognition_method: RecognitionMethod;
+  recognition_confidence: number;
 }

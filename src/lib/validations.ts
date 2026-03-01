@@ -262,3 +262,83 @@ export const updateMappingSchema = z.object({
 
 export type CreateMappingInput = z.infer<typeof createMappingSchema>;
 export type UpdateMappingInput = z.infer<typeof updateMappingSchema>;
+
+/**
+ * OPH-7: Admin Dealer Management validation schemas.
+ */
+
+/** Validates regex patterns are syntactically correct. */
+const regexPatternArray = z
+  .array(z.string().max(500))
+  .max(50, "Maximal 50 Eintraege erlaubt.")
+  .refine(
+    (patterns) =>
+      patterns.every((p) => {
+        try { new RegExp(p); return true; } catch { return false; }
+      }),
+    { message: "Enthaelt ungueltige Regex-Pattern." }
+  );
+
+export const createDealerSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Name ist erforderlich.")
+    .max(200, "Name darf maximal 200 Zeichen lang sein.")
+    .trim(),
+  description: z
+    .string()
+    .max(2000, "Beschreibung darf maximal 2000 Zeichen lang sein.")
+    .nullable()
+    .optional(),
+  format_type: z.enum(["email_text", "pdf_table", "excel", "mixed"], {
+    message: "Ungueltiger Format-Typ.",
+  }),
+  street: z.string().max(200).nullable().optional(),
+  postal_code: z.string().max(20).nullable().optional(),
+  city: z.string().max(100).nullable().optional(),
+  country: z.string().max(10).nullable().optional(),
+  known_domains: z.array(z.string().max(200)).max(50).default([]),
+  known_sender_addresses: z.array(z.string().max(200)).max(50).default([]),
+  subject_patterns: regexPatternArray.default([]),
+  filename_patterns: regexPatternArray.default([]),
+  extraction_hints: z
+    .string()
+    .max(5000, "Extraktions-Hints duerfen maximal 5000 Zeichen lang sein.")
+    .nullable()
+    .optional(),
+  active: z.boolean().default(true),
+});
+
+export const updateDealerSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Name ist erforderlich.")
+    .max(200, "Name darf maximal 200 Zeichen lang sein.")
+    .trim()
+    .optional(),
+  description: z
+    .string()
+    .max(2000, "Beschreibung darf maximal 2000 Zeichen lang sein.")
+    .nullable()
+    .optional(),
+  format_type: z.enum(["email_text", "pdf_table", "excel", "mixed"], {
+    message: "Ungueltiger Format-Typ.",
+  }).optional(),
+  street: z.string().max(200).nullable().optional(),
+  postal_code: z.string().max(20).nullable().optional(),
+  city: z.string().max(100).nullable().optional(),
+  country: z.string().max(10).nullable().optional(),
+  known_domains: z.array(z.string().max(200)).max(50).optional(),
+  known_sender_addresses: z.array(z.string().max(200)).max(50).optional(),
+  subject_patterns: regexPatternArray.optional(),
+  filename_patterns: regexPatternArray.optional(),
+  extraction_hints: z
+    .string()
+    .max(5000, "Extraktions-Hints duerfen maximal 5000 Zeichen lang sein.")
+    .nullable()
+    .optional(),
+  active: z.boolean().optional(),
+});
+
+export type CreateDealerInput = z.infer<typeof createDealerSchema>;
+export type UpdateDealerInput = z.infer<typeof updateDealerSchema>;
