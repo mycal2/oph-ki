@@ -3,6 +3,12 @@ import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { exportFormatSchema } from "@/lib/validations";
+import {
+  getLineItemValue,
+  generateFilename,
+  escapeXml,
+  MAX_LINE_ITEMS,
+} from "@/lib/export-utils";
 import type {
   AppMetadata,
   ApiResponse,
@@ -10,64 +16,24 @@ import type {
   ExportFormat,
   ErpColumnMapping,
   CanonicalOrderData,
-  CanonicalLineItem,
 } from "@/lib/types";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_PREVIEW_ROWS = 10;
 
 /**
- * Escapes XML special characters in a string.
+ * Default column mappings used when no tenant ERP config exists.
  */
-function escapeXml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
-}
-
-/**
- * Extracts a value from a line item by source field name.
- */
-function getLineItemValue(item: CanonicalLineItem, field: string): string {
-  switch (field) {
-    case "position":
-      return String(item.position);
-    case "article_number":
-      return item.article_number ?? "";
-    case "description":
-      return item.description;
-    case "quantity":
-      return String(item.quantity);
-    case "unit":
-      return item.unit ?? "";
-    case "unit_price":
-      return item.unit_price !== null ? String(item.unit_price) : "";
-    case "total_price":
-      return item.total_price !== null ? String(item.total_price) : "";
-    case "currency":
-      return item.currency ?? "";
-    default:
-      return "";
-  }
-}
-
-/**
- * Generates a filename for the export.
- * Pattern: {tenant_slug}_{order_number}_{date}.{format}
- */
-function generateFilename(
-  tenantSlug: string,
-  orderNumber: string | null,
-  format: ExportFormat
-): string {
-  const slug = tenantSlug.replace(/[^a-z0-9-]/gi, "_");
-  const number = (orderNumber ?? "unbekannt").replace(/[^a-z0-9-]/gi, "_");
-  const date = new Date().toISOString().slice(0, 10);
-  return `${slug}_${number}_${date}.${format}`;
-}
+const DEFAULT_COLUMN_MAPPINGS: ErpColumnMapping[] = [
+  { source_field: "position", target_column_name: "Pos" },
+  { source_field: "article_number", target_column_name: "Artikelnummer" },
+  { source_field: "description", target_column_name: "Beschreibung" },
+  { source_field: "quantity", target_column_name: "Menge" },
+  { source_field: "unit", target_column_name: "Einheit" },
+  { source_field: "unit_price", target_column_name: "Einzelpreis" },
+  { source_field: "total_price", target_column_name: "Gesamtpreis" },
+  { source_field: "currency", target_column_name: "Waehrung" },
+];
 
 /**
  * GET /api/orders/[orderId]/export/preview?format=csv
@@ -181,6 +147,17 @@ export async function GET(
       );
     }
 
+    // 5a. BUG-011: Check line item count
+    if (orderData.order.line_items.length > MAX_LINE_ITEMS) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Zu viele Positionen (${orderData.order.line_items.length}). Maximal ${MAX_LINE_ITEMS} Positionen pro Export.`,
+        },
+        { status: 400 }
+      );
+    }
+
     // 6. Get tenant info for filename
     const effectiveTenantId = order.tenant_id as string;
     const { data: tenant } = await adminClient
@@ -200,19 +177,23 @@ export async function GET(
       .limit(1)
       .maybeSingle();
 
-    // If no config, use a default mapping
+    // BUG-007: Track whether we're using default config
+    const usingDefaultConfig = !erpConfig;
+
     const columnMappings: ErpColumnMapping[] = erpConfig
       ? (erpConfig.column_mappings as ErpColumnMapping[])
-      : [
-          { source_field: "position", target_column_name: "Pos" },
-          { source_field: "article_number", target_column_name: "Artikelnummer" },
-          { source_field: "description", target_column_name: "Beschreibung" },
-          { source_field: "quantity", target_column_name: "Menge" },
-          { source_field: "unit", target_column_name: "Einheit" },
-          { source_field: "unit_price", target_column_name: "Einzelpreis" },
-          { source_field: "total_price", target_column_name: "Gesamtpreis" },
-          { source_field: "currency", target_column_name: "Waehrung" },
-        ];
+      : DEFAULT_COLUMN_MAPPINGS;
+
+    // BUG-014: Get tenant's default format from erp_configs
+    const { data: defaultConfig } = await adminClient
+      .from("erp_configs")
+      .select("format")
+      .eq("tenant_id", effectiveTenantId)
+      .eq("is_default", true)
+      .limit(1)
+      .maybeSingle();
+
+    const tenantDefaultFormat = (defaultConfig?.format as ExportFormat) ?? undefined;
 
     const filename = generateFilename(tenantSlug, orderData.order.order_number, format);
     const lineItems = orderData.order.line_items;
@@ -227,7 +208,7 @@ export async function GET(
 
       return NextResponse.json({
         success: true,
-        data: { format, headers, rows, totalRows, filename },
+        data: { format, headers, rows, totalRows, filename, usingDefaultConfig, tenantDefaultFormat },
       });
     }
 
@@ -246,12 +227,13 @@ export async function GET(
           totalRows,
           filename,
           rawContent: previewContent,
+          usingDefaultConfig,
+          tenantDefaultFormat,
         },
       });
     }
 
     if (format === "xml") {
-      // Generate a simple XML preview with proper escaping
       let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<order>\n';
       xml += `  <order_number>${escapeXml(orderData.order.order_number ?? "")}</order_number>\n`;
       xml += `  <order_date>${escapeXml(orderData.order.order_date ?? "")}</order_date>\n`;
@@ -281,6 +263,8 @@ export async function GET(
           totalRows,
           filename,
           rawContent: xml,
+          usingDefaultConfig,
+          tenantDefaultFormat,
         },
       });
     }

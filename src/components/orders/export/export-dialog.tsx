@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { Download, Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import { Download, Loader2, AlertCircle, RefreshCw, Info } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -62,6 +62,7 @@ export function ExportDialog({
   onExported,
 }: ExportDialogProps) {
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>("csv");
+  const [hasAppliedDefault, setHasAppliedDefault] = useState(false);
   const {
     preview,
     isLoadingPreview,
@@ -79,10 +80,23 @@ export function ExportDialog({
     }
   }, [open, selectedFormat, fetchPreview]);
 
+  // BUG-014: Apply tenant default format from first preview response
+  useEffect(() => {
+    if (
+      preview?.tenantDefaultFormat &&
+      preview.tenantDefaultFormat !== selectedFormat &&
+      !hasAppliedDefault
+    ) {
+      setSelectedFormat(preview.tenantDefaultFormat);
+      setHasAppliedDefault(true);
+    }
+  }, [preview?.tenantDefaultFormat, selectedFormat, hasAppliedDefault]);
+
   // Reset state when dialog closes
   useEffect(() => {
     if (!open) {
       clearError();
+      setHasAppliedDefault(false);
     }
   }, [open, clearError]);
 
@@ -160,6 +174,16 @@ export function ExportDialog({
         </div>
 
         <Separator />
+
+        {/* BUG-007: Warning when using default config */}
+        {preview?.usingDefaultConfig && !isLoadingPreview && (
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              Keine ERP-Konfiguration fuer dieses Format gefunden. Es werden Standard-Zuordnungen verwendet.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Preview panel */}
         <ExportPreviewPanel

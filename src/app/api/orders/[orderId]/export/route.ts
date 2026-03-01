@@ -3,100 +3,36 @@ import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { exportFormatSchema } from "@/lib/validations";
+import {
+  getLineItemValue,
+  escapeCsvField,
+  generateFilename,
+  escapeXml,
+  contentDisposition,
+  MAX_LINE_ITEMS,
+} from "@/lib/export-utils";
 import type {
   AppMetadata,
   ExportFormat,
   ErpColumnMapping,
   CanonicalOrderData,
-  CanonicalLineItem,
 } from "@/lib/types";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * Extracts a value from a line item by source field name.
+ * Default column mappings used when no tenant ERP config exists.
  */
-function getLineItemValue(item: CanonicalLineItem, field: string): string {
-  switch (field) {
-    case "position":
-      return String(item.position);
-    case "article_number":
-      return item.article_number ?? "";
-    case "description":
-      return item.description;
-    case "quantity":
-      return String(item.quantity);
-    case "unit":
-      return item.unit ?? "";
-    case "unit_price":
-      return item.unit_price !== null ? String(item.unit_price) : "";
-    case "total_price":
-      return item.total_price !== null ? String(item.total_price) : "";
-    case "currency":
-      return item.currency ?? "";
-    default:
-      return "";
-  }
-}
-
-/**
- * Escapes a CSV field value according to the configured quote character.
- */
-function escapeCsvField(value: string, separator: string, quoteChar: string): string {
-  if (
-    value.includes(separator) ||
-    value.includes(quoteChar) ||
-    value.includes("\n") ||
-    value.includes("\r")
-  ) {
-    const escaped = value.replace(
-      new RegExp(quoteChar.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"),
-      quoteChar + quoteChar
-    );
-    return `${quoteChar}${escaped}${quoteChar}`;
-  }
-  return value;
-}
-
-/**
- * Generates a filename for the export.
- */
-function generateFilename(
-  tenantSlug: string,
-  orderNumber: string | null,
-  format: ExportFormat
-): string {
-  const slug = tenantSlug.replace(/[^a-z0-9-]/gi, "_");
-  const number = (orderNumber ?? "unbekannt").replace(/[^a-z0-9-]/gi, "_");
-  const date = new Date().toISOString().slice(0, 10);
-  return `${slug}_${number}_${date}.${format}`;
-}
-
-/**
- * Maps encoding name to content-type charset.
- */
-function getCharset(encoding: string): string {
-  switch (encoding.toUpperCase()) {
-    case "ISO-8859-1":
-      return "iso-8859-1";
-    case "WINDOWS-1252":
-      return "windows-1252";
-    default:
-      return "utf-8";
-  }
-}
-
-/**
- * Escapes XML special characters in a string.
- */
-function escapeXml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
-}
+const DEFAULT_COLUMN_MAPPINGS: ErpColumnMapping[] = [
+  { source_field: "position", target_column_name: "Pos" },
+  { source_field: "article_number", target_column_name: "Artikelnummer" },
+  { source_field: "description", target_column_name: "Beschreibung" },
+  { source_field: "quantity", target_column_name: "Menge" },
+  { source_field: "unit", target_column_name: "Einheit" },
+  { source_field: "unit_price", target_column_name: "Einzelpreis" },
+  { source_field: "total_price", target_column_name: "Gesamtpreis" },
+  { source_field: "currency", target_column_name: "Waehrung" },
+];
 
 /**
  * GET /api/orders/[orderId]/export?format=csv
@@ -211,6 +147,17 @@ export async function GET(
       );
     }
 
+    // 5a. BUG-011: Check line item count to prevent transformation timeout
+    if (orderData.order.line_items.length > MAX_LINE_ITEMS) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Zu viele Positionen (${orderData.order.line_items.length}). Maximal ${MAX_LINE_ITEMS} Positionen pro Export.`,
+        },
+        { status: 400 }
+      );
+    }
+
     // 6. Get tenant info for filename
     const effectiveTenantId = order.tenant_id as string;
     const { data: tenant } = await adminClient
@@ -230,29 +177,50 @@ export async function GET(
       .limit(1)
       .maybeSingle();
 
+    // BUG-007: Track whether we're using default config
+    const usingDefaultConfig = !erpConfig;
+
     const columnMappings: ErpColumnMapping[] = erpConfig
       ? (erpConfig.column_mappings as ErpColumnMapping[])
-      : [
-          { source_field: "position", target_column_name: "Pos" },
-          { source_field: "article_number", target_column_name: "Artikelnummer" },
-          { source_field: "description", target_column_name: "Beschreibung" },
-          { source_field: "quantity", target_column_name: "Menge" },
-          { source_field: "unit", target_column_name: "Einheit" },
-          { source_field: "unit_price", target_column_name: "Einzelpreis" },
-          { source_field: "total_price", target_column_name: "Gesamtpreis" },
-          { source_field: "currency", target_column_name: "Waehrung" },
-        ];
+      : DEFAULT_COLUMN_MAPPINGS;
 
     const separator = (erpConfig?.separator as string) ?? ";";
     const quoteChar = (erpConfig?.quote_char as string) ?? '"';
-    const encoding = (erpConfig?.encoding as string) ?? "UTF-8";
+
+    // BUG-008: Validate required fields before export
+    const requiredMappings = columnMappings.filter((m) => m.required);
+    if (requiredMappings.length > 0) {
+      const missingFields: string[] = [];
+      for (const mapping of requiredMappings) {
+        for (const item of orderData.order.line_items) {
+          const value = getLineItemValue(item, mapping.source_field);
+          if (!value) {
+            missingFields.push(
+              `Pos. ${item.position}: "${mapping.target_column_name}" ist leer`
+            );
+          }
+        }
+      }
+      if (missingFields.length > 0) {
+        const fieldList = missingFields.slice(0, 10).join(", ");
+        const more = missingFields.length > 10 ? ` (und ${missingFields.length - 10} weitere)` : "";
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Pflichtfelder fehlen: ${fieldList}${more}. Bitte in der Bestellpruefung korrigieren.`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     const filename = generateFilename(tenantSlug, orderData.order.order_number, format);
-    const charset = getCharset(encoding);
 
     let content: string;
     let contentType: string;
 
     // 8. Generate file content
+    // BUG-004: Always use UTF-8 encoding (Next.js outputs UTF-8 natively)
     if (format === "csv") {
       const headerLine = columnMappings
         .map((m) => escapeCsvField(m.target_column_name, separator, quoteChar))
@@ -265,10 +233,10 @@ export async function GET(
       );
 
       content = [headerLine, ...dataLines].join("\r\n") + "\r\n";
-      contentType = `text/csv; charset=${charset}`;
+      contentType = "text/csv; charset=utf-8";
     } else if (format === "json") {
       content = JSON.stringify(orderData, null, 2);
-      contentType = `application/json; charset=${charset}`;
+      contentType = "application/json; charset=utf-8";
     } else if (format === "xml") {
       let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<order>\n`;
       xml += `  <order_number>${escapeXml(orderData.order.order_number ?? "")}</order_number>\n`;
@@ -307,7 +275,7 @@ export async function GET(
       xml += "</order>\n";
 
       content = xml;
-      contentType = `application/xml; charset=utf-8`;
+      contentType = "application/xml; charset=utf-8";
     } else {
       return NextResponse.json(
         { success: false, error: "Unbekanntes Format." },
@@ -362,9 +330,14 @@ export async function GET(
     // 12. Stream the file as a download response
     const headers = new Headers();
     headers.set("Content-Type", contentType);
-    headers.set("Content-Disposition", `attachment; filename="${filename}"`);
+    // BUG-012: RFC 5987 filename encoding for browser compatibility
+    headers.set("Content-Disposition", contentDisposition(filename));
     headers.set("Cache-Control", "no-store");
     headers.set("X-Content-Type-Options", "nosniff");
+    // BUG-007: Inform caller if default config was used
+    if (usingDefaultConfig) {
+      headers.set("X-Export-Default-Config", "true");
+    }
 
     return new NextResponse(content, { status: 200, headers });
   } catch (error) {

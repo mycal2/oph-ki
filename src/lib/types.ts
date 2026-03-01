@@ -323,6 +323,7 @@ export type ExportFormat = "csv" | "xml" | "json";
 export interface ErpColumnMapping {
   source_field: string;
   target_column_name: string;
+  required?: boolean;
 }
 
 /** ERP export configuration for a tenant. */
@@ -363,6 +364,10 @@ export interface ExportPreviewResponse {
   filename: string;
   /** Raw preview content (for XML/JSON). */
   rawContent?: string;
+  /** True if no tenant ERP config was found and default mappings are used. */
+  usingDefaultConfig?: boolean;
+  /** The tenant's default export format (from erp_configs where is_default = true). */
+  tenantDefaultFormat?: ExportFormat;
 }
 
 /** Response metadata after an export download. */
