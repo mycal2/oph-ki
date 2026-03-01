@@ -276,18 +276,37 @@ export async function POST(
           const senderLower = senderName.toLowerCase().trim();
           let bestMatch: { id: string; name: string; confidence: number } | null = null;
 
+          /** Split a name into significant words (2+ chars, strip punctuation). */
+          const toWords = (s: string) =>
+            s.replace(/[&.,()]/g, " ").split(/\s+/).filter((w) => w.length > 1);
+
+          const senderWords = toWords(senderLower);
+
           for (const dealer of allDealers) {
             const dealerLower = (dealer.name as string).toLowerCase().trim();
 
+            // 1) Exact match
             if (senderLower === dealerLower) {
-              // Exact match
               bestMatch = { id: dealer.id as string, name: dealer.name as string, confidence: 95 };
               break;
             }
 
-            // Substring match (either direction)
+            // 2) Substring match (either direction)
             if (senderLower.includes(dealerLower) || dealerLower.includes(senderLower)) {
-              const confidence = 75;
+              if (!bestMatch || 80 > bestMatch.confidence) {
+                bestMatch = { id: dealer.id as string, name: dealer.name as string, confidence: 80 };
+              }
+              continue;
+            }
+
+            // 3) Word overlap match — e.g. "Henry Schein France" vs "Henry Schein GmbH"
+            const dealerWords = toWords(dealerLower);
+            const shorter = senderWords.length <= dealerWords.length ? senderWords : dealerWords;
+            const longer = senderWords.length <= dealerWords.length ? dealerWords : senderWords;
+            const matchCount = shorter.filter((w) => longer.includes(w)).length;
+
+            if (matchCount >= 2 && matchCount / shorter.length >= 0.5) {
+              const confidence = matchCount === shorter.length ? 75 : 65;
               if (!bestMatch || confidence > bestMatch.confidence) {
                 bestMatch = { id: dealer.id as string, name: dealer.name as string, confidence };
               }
