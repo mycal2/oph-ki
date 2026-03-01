@@ -1,6 +1,6 @@
 # OPH-6: ERP-Export & Download
 
-## Status: In Review
+## Status: Deployed
 **Created:** 2026-02-27
 **Last Updated:** 2026-03-01
 
@@ -483,4 +483,12 @@ The tech design states "Format Selector (CSV / XML / JSON -- pre-selected from t
 **Recommendation:** Fix BUG-001 immediately, then BUG-002/003/004. After that, re-test the full export flow end-to-end.
 
 ## Deployment
-_To be added by /deploy_
+
+**Deployed:** 2026-03-01
+**Production URL:** https://ai-coding-starter-ds5h4pbkb-mycal2s-projects.vercel.app
+**Git Tag:** v1.3.0-OPH-6
+
+**Migrations applied in production:**
+- 006_oph6_erp_export — erp_configs, export_logs, last_exported_at
+- 007_add_approved_status — Added 'approved' to orders.status CHECK constraint
+- 008_erp_configs_unique_format — Unique constraint on erp_configs(tenant_id, format)
