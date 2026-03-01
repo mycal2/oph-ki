@@ -267,6 +267,24 @@ export type UpdateMappingInput = z.infer<typeof updateMappingSchema>;
  * OPH-7: Admin Dealer Management validation schemas.
  */
 
+/**
+ * Strips XML-style system/instruction tags that could be used for prompt injection.
+ * Only platform_admin users write hints, but defense-in-depth is good practice.
+ */
+const sanitizeHints = (text: string): string =>
+  text
+    .replace(/<\/?system[^>]*>/gi, "")
+    .replace(/<\/?instructions?[^>]*>/gi, "")
+    .replace(/<\|[^|]*\|>/g, "");
+
+/** Extraction hints field with sanitization against prompt injection. */
+const extractionHintsField = z
+  .string()
+  .max(5000, "Extraktions-Hints duerfen maximal 5000 Zeichen lang sein.")
+  .transform(sanitizeHints)
+  .nullable()
+  .optional();
+
 /** Validates regex patterns are syntactically correct. */
 const regexPatternArray = z
   .array(z.string().max(500))
@@ -301,11 +319,7 @@ export const createDealerSchema = z.object({
   known_sender_addresses: z.array(z.string().max(200)).max(50).default([]),
   subject_patterns: regexPatternArray.default([]),
   filename_patterns: regexPatternArray.default([]),
-  extraction_hints: z
-    .string()
-    .max(5000, "Extraktions-Hints duerfen maximal 5000 Zeichen lang sein.")
-    .nullable()
-    .optional(),
+  extraction_hints: extractionHintsField,
   active: z.boolean().default(true),
 });
 
@@ -332,11 +346,7 @@ export const updateDealerSchema = z.object({
   known_sender_addresses: z.array(z.string().max(200)).max(50).optional(),
   subject_patterns: regexPatternArray.optional(),
   filename_patterns: regexPatternArray.optional(),
-  extraction_hints: z
-    .string()
-    .max(5000, "Extraktions-Hints duerfen maximal 5000 Zeichen lang sein.")
-    .nullable()
-    .optional(),
+  extraction_hints: extractionHintsField,
   active: z.boolean().optional(),
 });
 

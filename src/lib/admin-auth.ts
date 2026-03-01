@@ -59,3 +59,34 @@ export function isErrorResponse(
 ): result is NextResponse<ApiResponse> {
   return result instanceof NextResponse;
 }
+
+/**
+ * Simple in-memory rate limiter for admin endpoints.
+ * Limits requests per user to `maxRequests` within `windowMs`.
+ */
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+export function checkAdminRateLimit(
+  userId: string,
+  maxRequests = 60,
+  windowMs = 60_000
+): NextResponse<ApiResponse> | null {
+  const now = Date.now();
+  const key = userId;
+  const entry = rateLimitMap.get(key);
+
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(key, { count: 1, resetAt: now + windowMs });
+    return null;
+  }
+
+  entry.count++;
+  if (entry.count > maxRequests) {
+    return NextResponse.json(
+      { success: false, error: "Zu viele Anfragen. Bitte warten Sie einen Moment." },
+      { status: 429 }
+    );
+  }
+
+  return null;
+}

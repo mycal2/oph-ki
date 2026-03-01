@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -14,17 +14,31 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { UserMenu } from "@/components/layout/user-menu";
+import { useCurrentUserRole } from "@/hooks/use-current-user-role";
 import { cn } from "@/lib/utils";
 
-const navLinks = [
+interface NavLink {
+  href: string;
+  label: string;
+  adminOnly?: boolean;
+}
+
+const allNavLinks: NavLink[] = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/orders", label: "Bestellungen" },
   { href: "/settings/dealer-mappings", label: "Zuordnungen" },
+  { href: "/admin/dealers", label: "Haendler-Profile", adminOnly: true },
 ];
 
 export function TopNavigation() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { isPlatformAdmin } = useCurrentUserRole();
+
+  const navLinks = useMemo(
+    () => allNavLinks.filter((link) => !link.adminOnly || isPlatformAdmin),
+    [isPlatformAdmin]
+  );
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

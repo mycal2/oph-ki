@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { requirePlatformAdmin, isErrorResponse } from "@/lib/admin-auth";
+import { requirePlatformAdmin, isErrorResponse, checkAdminRateLimit } from "@/lib/admin-auth";
 import { createDealerSchema } from "@/lib/validations";
-import type { DealerAdminListItem, Dealer, DealerRuleConflict } from "@/lib/types";
+import { checkRuleConflicts } from "@/lib/dealer-rule-conflicts";
+import type { DealerAdminListItem, Dealer } from "@/lib/types";
 
 /**
  * GET /api/admin/dealers
@@ -17,69 +17,70 @@ export async function GET(): Promise<NextResponse> {
     if (isErrorResponse(auth)) return auth;
     const { adminClient } = auth;
 
-    // Fetch all dealers with order stats via a single raw query
-    const { data, error } = await adminClient.rpc("get_dealer_admin_list");
+    // Fetch all dealers
+    const { data: dealers, error: dealersError } = await adminClient
+      .from("dealers")
+      .select("id, name, description, format_type, city, country, active, created_at")
+      .order("name", { ascending: true })
+      .limit(1000);
 
-    if (error) {
-      // Fallback: if RPC doesn't exist yet, use a simpler approach
-      console.error("RPC get_dealer_admin_list failed, using fallback:", error.message);
+    if (dealersError) {
+      return NextResponse.json(
+        { success: false, error: "Haendler konnten nicht geladen werden." },
+        { status: 500 }
+      );
+    }
 
-      const { data: dealers, error: dealersError } = await adminClient
-        .from("dealers")
-        .select("id, name, description, format_type, city, country, active, created_at")
-        .order("name", { ascending: true })
-        .limit(1000);
+    // Get order stats per dealer. Try RPC first (efficient), fall back to limited query.
+    const statsByDealer = new Map<string, { count: number; lastAt: string | null }>();
 
-      if (dealersError) {
-        return NextResponse.json(
-          { success: false, error: "Haendler konnten nicht geladen werden." },
-          { status: 500 }
-        );
+    const { data: rpcStats, error: rpcError } = await adminClient.rpc("get_dealer_order_stats");
+
+    if (!rpcError && Array.isArray(rpcStats)) {
+      for (const row of rpcStats as { dealer_id: string; order_count: number; last_order_at: string | null }[]) {
+        statsByDealer.set(row.dealer_id, {
+          count: row.order_count,
+          lastAt: row.last_order_at,
+        });
       }
-
-      // Get order counts per dealer in a second query
-      const { data: orderStats } = await adminClient
+    } else {
+      // Fallback: count per dealer_id with limited rows
+      const { data: fallbackStats } = await adminClient
         .from("orders")
-        .select("dealer_id, created_at")
-        .not("dealer_id", "is", null);
+        .select("dealer_id")
+        .not("dealer_id", "is", null)
+        .limit(10000);
 
-      const statsByDealer = new Map<string, { count: number; lastAt: string | null }>();
-      if (orderStats) {
-        for (const row of orderStats) {
+      if (fallbackStats) {
+        for (const row of fallbackStats) {
           const did = row.dealer_id as string;
           const existing = statsByDealer.get(did);
-          const createdAt = row.created_at as string;
           if (!existing) {
-            statsByDealer.set(did, { count: 1, lastAt: createdAt });
+            statsByDealer.set(did, { count: 1, lastAt: null });
           } else {
             existing.count++;
-            if (!existing.lastAt || createdAt > existing.lastAt) {
-              existing.lastAt = createdAt;
-            }
           }
         }
       }
-
-      const result: DealerAdminListItem[] = (dealers ?? []).map((d) => {
-        const stats = statsByDealer.get(d.id as string);
-        return {
-          id: d.id as string,
-          name: d.name as string,
-          description: (d.description as string) ?? null,
-          format_type: d.format_type as DealerAdminListItem["format_type"],
-          city: (d.city as string) ?? null,
-          country: (d.country as string) ?? null,
-          active: d.active as boolean,
-          order_count: stats?.count ?? 0,
-          last_order_at: stats?.lastAt ?? null,
-          created_at: d.created_at as string,
-        };
-      });
-
-      return NextResponse.json({ success: true, data: result });
     }
 
-    return NextResponse.json({ success: true, data: data as DealerAdminListItem[] });
+    const result: DealerAdminListItem[] = (dealers ?? []).map((d) => {
+      const stats = statsByDealer.get(d.id as string);
+      return {
+        id: d.id as string,
+        name: d.name as string,
+        description: (d.description as string) ?? null,
+        format_type: d.format_type as DealerAdminListItem["format_type"],
+        city: (d.city as string) ?? null,
+        country: (d.country as string) ?? null,
+        active: d.active as boolean,
+        order_count: stats?.count ?? 0,
+        last_order_at: stats?.lastAt ?? null,
+        created_at: d.created_at as string,
+      };
+    });
+
+    return NextResponse.json({ success: true, data: result });
   } catch (error) {
     console.error("Error in GET /api/admin/dealers:", error);
     return NextResponse.json(
@@ -102,6 +103,9 @@ export async function POST(
     const auth = await requirePlatformAdmin();
     if (isErrorResponse(auth)) return auth;
     const { user, adminClient } = auth;
+
+    const rateLimitResponse = checkAdminRateLimit(user.id);
+    if (rateLimitResponse) return rateLimitResponse;
 
     const body = await request.json();
     const parsed = createDealerSchema.safeParse(body);
@@ -148,8 +152,8 @@ export async function POST(
       );
     }
 
-    // Write audit log
-    await adminClient.from("dealer_audit_log").insert({
+    // Write audit log (non-blocking — failure logged but does not abort the request)
+    const { error: auditError } = await adminClient.from("dealer_audit_log").insert({
       dealer_id: dealer.id,
       changed_by: user.id,
       admin_email: user.email ?? "unknown",
@@ -157,6 +161,9 @@ export async function POST(
       changed_fields: null,
       snapshot_before: null,
     });
+    if (auditError) {
+      console.error("Failed to write dealer audit log:", auditError.message);
+    }
 
     return NextResponse.json({
       success: true,
@@ -171,94 +178,3 @@ export async function POST(
   }
 }
 
-/**
- * Checks for rule conflicts between the given input and existing active dealers.
- * Returns an array of conflict warnings (not errors — save still succeeds).
- */
-async function checkRuleConflicts(
-  adminClient: SupabaseClient,
-  input: {
-    known_domains?: string[];
-    known_sender_addresses?: string[];
-    subject_patterns?: string[];
-    filename_patterns?: string[];
-  },
-  excludeDealerId: string | null
-): Promise<DealerRuleConflict[]> {
-  const warnings: DealerRuleConflict[] = [];
-
-  // Fetch all active dealers for comparison
-  const { data: dealers } = await adminClient
-    .from("dealers")
-    .select("id, name, known_domains, known_sender_addresses, subject_patterns, filename_patterns")
-    .eq("active", true);
-
-  if (!dealers) return warnings;
-
-  for (const dealer of dealers) {
-    if (excludeDealerId && dealer.id === excludeDealerId) continue;
-
-    const dealerId = dealer.id as string;
-    const dealerName = dealer.name as string;
-
-    // Check domain overlaps
-    for (const domain of input.known_domains ?? []) {
-      if ((dealer.known_domains as string[]).some(
-        (d) => d.toLowerCase() === domain.toLowerCase()
-      )) {
-        warnings.push({
-          field: "known_domains",
-          value: domain,
-          conflicting_dealer_id: dealerId,
-          conflicting_dealer_name: dealerName,
-        });
-      }
-    }
-
-    // Check sender address overlaps
-    for (const addr of input.known_sender_addresses ?? []) {
-      if ((dealer.known_sender_addresses as string[]).some(
-        (a) => a.toLowerCase() === addr.toLowerCase()
-      )) {
-        warnings.push({
-          field: "known_sender_addresses",
-          value: addr,
-          conflicting_dealer_id: dealerId,
-          conflicting_dealer_name: dealerName,
-        });
-      }
-    }
-
-    // Check subject pattern overlaps
-    for (const pattern of input.subject_patterns ?? []) {
-      if ((dealer.subject_patterns as string[]).some(
-        (p) => p.toLowerCase() === pattern.toLowerCase()
-      )) {
-        warnings.push({
-          field: "subject_patterns",
-          value: pattern,
-          conflicting_dealer_id: dealerId,
-          conflicting_dealer_name: dealerName,
-        });
-      }
-    }
-
-    // Check filename pattern overlaps
-    for (const pattern of input.filename_patterns ?? []) {
-      if ((dealer.filename_patterns as string[]).some(
-        (p) => p.toLowerCase() === pattern.toLowerCase()
-      )) {
-        warnings.push({
-          field: "filename_patterns",
-          value: pattern,
-          conflicting_dealer_id: dealerId,
-          conflicting_dealer_name: dealerName,
-        });
-      }
-    }
-  }
-
-  return warnings;
-}
-
-export { checkRuleConflicts };

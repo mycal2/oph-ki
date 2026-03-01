@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { requirePlatformAdmin, isErrorResponse } from "@/lib/admin-auth";
+import { requirePlatformAdmin, isErrorResponse, checkAdminRateLimit } from "@/lib/admin-auth";
 import { updateDealerSchema } from "@/lib/validations";
-import type { Dealer, DealerRuleConflict, DealerAuditAction } from "@/lib/types";
+import { checkRuleConflicts } from "@/lib/dealer-rule-conflicts";
+import type { Dealer, DealerAuditAction } from "@/lib/types";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -74,6 +74,9 @@ export async function PATCH(
     const auth = await requirePlatformAdmin();
     if (isErrorResponse(auth)) return auth;
     const { user, adminClient } = auth;
+
+    const rateLimitResponse = checkAdminRateLimit(user.id);
+    if (rateLimitResponse) return rateLimitResponse;
 
     const body = await request.json();
     const parsed = updateDealerSchema.safeParse(body);
@@ -157,7 +160,7 @@ export async function PATCH(
 
     // Write audit log (only if something actually changed)
     if (Object.keys(changedFields).length > 0) {
-      await adminClient.from("dealer_audit_log").insert({
+      const { error: auditError } = await adminClient.from("dealer_audit_log").insert({
         dealer_id: id,
         changed_by: user.id,
         admin_email: user.email ?? "unknown",
@@ -165,6 +168,9 @@ export async function PATCH(
         changed_fields: changedFields,
         snapshot_before: current,
       });
+      if (auditError) {
+        console.error("Failed to write dealer audit log:", auditError.message);
+      }
     }
 
     return NextResponse.json({
@@ -202,6 +208,9 @@ export async function DELETE(
     if (isErrorResponse(auth)) return auth;
     const { user, adminClient } = auth;
 
+    const rateLimitResponse = checkAdminRateLimit(user.id);
+    if (rateLimitResponse) return rateLimitResponse;
+
     // Fetch current state
     const { data: current, error: fetchError } = await adminClient
       .from("dealers")
@@ -231,7 +240,7 @@ export async function DELETE(
     }
 
     // Write audit log
-    await adminClient.from("dealer_audit_log").insert({
+    const { error: auditError } = await adminClient.from("dealer_audit_log").insert({
       dealer_id: id,
       changed_by: user.id,
       admin_email: user.email ?? "unknown",
@@ -239,6 +248,9 @@ export async function DELETE(
       changed_fields: { active: { old: true, new: false } },
       snapshot_before: current,
     });
+    if (auditError) {
+      console.error("Failed to write dealer audit log:", auditError.message);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -250,66 +262,3 @@ export async function DELETE(
   }
 }
 
-/**
- * Checks for rule conflicts between the given input and existing active dealers.
- */
-async function checkRuleConflicts(
-  adminClient: SupabaseClient,
-  input: {
-    known_domains?: string[];
-    known_sender_addresses?: string[];
-    subject_patterns?: string[];
-    filename_patterns?: string[];
-  },
-  excludeDealerId: string | null
-): Promise<DealerRuleConflict[]> {
-  const warnings: DealerRuleConflict[] = [];
-
-  const { data: dealers } = await adminClient
-    .from("dealers")
-    .select("id, name, known_domains, known_sender_addresses, subject_patterns, filename_patterns")
-    .eq("active", true);
-
-  if (!dealers) return warnings;
-
-  for (const dealer of dealers) {
-    if (excludeDealerId && dealer.id === excludeDealerId) continue;
-
-    const dealerId = dealer.id as string;
-    const dealerName = dealer.name as string;
-
-    for (const domain of input.known_domains ?? []) {
-      if ((dealer.known_domains as string[]).some(
-        (d) => d.toLowerCase() === domain.toLowerCase()
-      )) {
-        warnings.push({ field: "known_domains", value: domain, conflicting_dealer_id: dealerId, conflicting_dealer_name: dealerName });
-      }
-    }
-
-    for (const addr of input.known_sender_addresses ?? []) {
-      if ((dealer.known_sender_addresses as string[]).some(
-        (a) => a.toLowerCase() === addr.toLowerCase()
-      )) {
-        warnings.push({ field: "known_sender_addresses", value: addr, conflicting_dealer_id: dealerId, conflicting_dealer_name: dealerName });
-      }
-    }
-
-    for (const pattern of input.subject_patterns ?? []) {
-      if ((dealer.subject_patterns as string[]).some(
-        (p) => p.toLowerCase() === pattern.toLowerCase()
-      )) {
-        warnings.push({ field: "subject_patterns", value: pattern, conflicting_dealer_id: dealerId, conflicting_dealer_name: dealerName });
-      }
-    }
-
-    for (const pattern of input.filename_patterns ?? []) {
-      if ((dealer.filename_patterns as string[]).some(
-        (p) => p.toLowerCase() === pattern.toLowerCase()
-      )) {
-        warnings.push({ field: "filename_patterns", value: pattern, conflicting_dealer_id: dealerId, conflicting_dealer_name: dealerName });
-      }
-    }
-  }
-
-  return warnings;
-}

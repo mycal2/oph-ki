@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { requirePlatformAdmin, isErrorResponse } from "@/lib/admin-auth";
+import { safeMatchesPattern } from "@/lib/safe-regex";
 import type { RecognitionMethod } from "@/lib/types";
+
+/** Maximum file size for test recognition (10 MB). */
+const MAX_TEST_FILE_SIZE = 10 * 1024 * 1024;
 
 /**
  * POST /api/admin/dealers/test-recognition
@@ -27,6 +31,14 @@ export async function POST(
     if (!file) {
       return NextResponse.json(
         { success: false, error: "Keine Datei hochgeladen." },
+        { status: 400 }
+      );
+    }
+
+    // BUG-009: Enforce file size limit
+    if (file.size > MAX_TEST_FILE_SIZE) {
+      return NextResponse.json(
+        { success: false, error: "Datei ist zu gross. Maximum: 10 MB." },
         { status: 400 }
       );
     }
@@ -87,9 +99,9 @@ export async function POST(
       const subjectPatterns = dealer.subject_patterns as string[];
       const filenamePatterns = dealer.filename_patterns as string[];
 
-      // Exact sender address match → 100%
+      // Sender address match → 100% (supports *@domain wildcards)
       if (senderEmail && knownSenders.length > 0) {
-        if (knownSenders.some((a) => a.toLowerCase() === senderEmail!)) {
+        if (knownSenders.some((a) => matchesSenderAddress(senderEmail!, a))) {
           confidence += 100;
           if (100 > bestMethodConfidence) {
             bestMethod = "address";
@@ -109,9 +121,9 @@ export async function POST(
         }
       }
 
-      // Subject pattern match → 70%
+      // Subject pattern match via regex → 70%
       if (emailSubject && subjectPatterns.length > 0) {
-        if (subjectPatterns.some((p) => emailSubject!.toLowerCase().includes(p.toLowerCase()))) {
+        if (subjectPatterns.some((p) => safeMatchesPattern(emailSubject!, p))) {
           confidence += 70;
           if (70 > bestMethodConfidence) {
             bestMethod = "subject";
@@ -120,9 +132,9 @@ export async function POST(
         }
       }
 
-      // Filename pattern match → 55%
+      // Filename pattern match via regex → 55%
       if (filenamePatterns.length > 0) {
-        if (filenamePatterns.some((p) => originalFilename.toLowerCase().includes(p.toLowerCase()))) {
+        if (filenamePatterns.some((p) => safeMatchesPattern(originalFilename, p))) {
           confidence += 55;
           if (55 > bestMethodConfidence) {
             bestMethod = "filename";
@@ -177,7 +189,18 @@ export async function POST(
   }
 }
 
-// --- Helper functions (duplicated from dealer-recognition.ts to avoid storage dependency) ---
+// --- Matching helpers ---
+
+function matchesSenderAddress(senderEmail: string, knownAddress: string): boolean {
+  const lower = knownAddress.toLowerCase();
+  if (lower.startsWith("*@")) {
+    const domain = lower.slice(2);
+    return senderEmail.endsWith("@" + domain);
+  }
+  return lower === senderEmail;
+}
+
+// --- Email parsing helpers (duplicated from dealer-recognition.ts to avoid storage dependency) ---
 
 function decodeRfc2047(headerValue: string): string {
   return headerValue.replace(

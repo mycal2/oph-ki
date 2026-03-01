@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { RecognitionMethod } from "@/lib/types";
+import { safeMatchesPattern } from "@/lib/safe-regex";
 
 /**
  * OPH-3: Rule-based dealer recognition engine.
@@ -140,10 +141,16 @@ function extractDomain(email: string): string | null {
 }
 
 /**
- * Case-insensitive check if a text contains a pattern.
+ * Tests if a sender email matches a known address.
+ * Supports wildcard format: *@domain.com matches any address at that domain.
  */
-function containsPattern(text: string, pattern: string): boolean {
-  return text.toLowerCase().includes(pattern.toLowerCase());
+function matchesSenderAddress(senderEmail: string, knownAddress: string): boolean {
+  const lower = knownAddress.toLowerCase();
+  if (lower.startsWith("*@")) {
+    const domain = lower.slice(2);
+    return senderEmail.endsWith("@" + domain);
+  }
+  return lower === senderEmail;
 }
 
 /**
@@ -208,10 +215,10 @@ export async function recognizeDealer(
       let bestMethod: RecognitionMethod = "none";
       let bestMethodConfidence = 0;
 
-      // Check exact sender address (highest priority: 100%)
+      // Check sender address (highest priority: 100%) — supports *@domain wildcards
       if (senderEmail && dealer.known_sender_addresses.length > 0) {
         const addressMatch = dealer.known_sender_addresses.some(
-          (addr) => addr.toLowerCase() === senderEmail
+          (addr) => matchesSenderAddress(senderEmail, addr)
         );
         if (addressMatch) {
           confidence += 100;
@@ -236,10 +243,10 @@ export async function recognizeDealer(
         }
       }
 
-      // Check subject patterns (70%)
+      // Check subject patterns via regex (70%)
       if (emailSubject && dealer.subject_patterns.length > 0) {
         const subjectMatch = dealer.subject_patterns.some((pattern) =>
-          containsPattern(emailSubject, pattern)
+          safeMatchesPattern(emailSubject, pattern)
         );
         if (subjectMatch) {
           confidence += 70;
@@ -250,10 +257,10 @@ export async function recognizeDealer(
         }
       }
 
-      // Check filename patterns (55%)
+      // Check filename patterns via regex (55%)
       if (dealer.filename_patterns.length > 0) {
         const filenameMatch = dealer.filename_patterns.some((pattern) =>
-          containsPattern(originalFilename, pattern)
+          safeMatchesPattern(originalFilename, pattern)
         );
         if (filenameMatch) {
           confidence += 55;
