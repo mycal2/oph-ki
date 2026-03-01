@@ -286,4 +286,65 @@ export interface OrderForReview extends OrderWithDealer {
   reviewed_data: CanonicalOrderData | null;
   reviewed_at: string | null;
   reviewed_by: string | null;
+  last_exported_at: string | null;
+}
+
+/**
+ * OPH-6: ERP-Export & Download types.
+ */
+
+export type ExportFormat = "csv" | "xml" | "json";
+
+/** Column mapping entry for ERP export configuration. */
+export interface ErpColumnMapping {
+  source_field: string;
+  target_column_name: string;
+}
+
+/** ERP export configuration for a tenant. */
+export interface ErpConfig {
+  id: string;
+  tenant_id: string;
+  format: ExportFormat;
+  column_mappings: ErpColumnMapping[];
+  separator: string;
+  quote_char: string;
+  encoding: string;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Export log entry (audit trail). */
+export interface ExportLog {
+  id: string;
+  order_id: string;
+  tenant_id: string;
+  user_id: string;
+  format: ExportFormat;
+  filename: string;
+  exported_at: string;
+}
+
+/** Response from GET /api/orders/[orderId]/export/preview. */
+export interface ExportPreviewResponse {
+  format: ExportFormat;
+  /** Column headers for CSV format. */
+  headers: string[];
+  /** First 10 rows of data. */
+  rows: string[][];
+  /** Total number of rows. */
+  totalRows: number;
+  /** Filename that will be used for download. */
+  filename: string;
+  /** Raw preview content (for XML/JSON). */
+  rawContent?: string;
+}
+
+/** Response metadata after an export download. */
+export interface ExportDownloadResponse {
+  orderId: string;
+  format: ExportFormat;
+  filename: string;
+  exportedAt: string;
 }

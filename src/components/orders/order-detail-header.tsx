@@ -11,12 +11,17 @@ import { Badge } from "@/components/ui/badge";
 import { DealerSection } from "./dealer/dealer-section";
 import { RecognitionAuditLine } from "./dealer/recognition-audit-line";
 import { ExtractionStatusBadge } from "./extraction-status-badge";
+import { ExportButton } from "./export/export-button";
 import type { OrderWithDealer, OrderStatus, DealerOverrideResponse } from "@/lib/types";
 
 interface OrderDetailHeaderProps {
   order: OrderWithDealer;
+  /** Whether this order was previously exported (has last_exported_at). */
+  wasExported?: boolean;
   /** Called after a successful dealer override with the full response. */
   onDealerChanged?: (result: DealerOverrideResponse) => void;
+  /** Called after a successful export. */
+  onExported?: () => void;
 }
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
@@ -57,7 +62,9 @@ function formatDate(iso: string): string {
  */
 export function OrderDetailHeader({
   order,
+  wasExported = false,
   onDealerChanged,
+  onExported,
 }: OrderDetailHeaderProps) {
   const primaryFile = order.files[0];
   const fileName = primaryFile?.original_filename ?? "Unbekannte Datei";
@@ -91,6 +98,12 @@ export function OrderDetailHeader({
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0 self-start">
+            <ExportButton
+              orderId={order.id}
+              orderStatus={order.status}
+              wasExported={wasExported}
+              onExported={onExported}
+            />
             <ExtractionStatusBadge
               status={order.extraction_status}
               errorMessage={order.extraction_error}

@@ -25,10 +25,16 @@
       "mcp__supabase__list_migrations",
       "Bash(git add \"features/INDEX.md\" \"features/OPH-4-ai-extraction.md\")",
       "mcp__supabase__execute_sql",
-      "Bash(npx eslint src/ --ext .ts,.tsx)"
+      "Bash(npx eslint src/ --ext .ts,.tsx)",
+      "Bash(git remote get-url origin)",
+      "Bash(git add \"features/INDEX.md\" \"features/OPH-5-order-review.md\")",
+      "mcp__supabase__get_logs",
+      "Bash(npx tsc --noEmit)",
+      "Bash(npx next build)"
     ],
     "additionalDirectories": [
-      "/Users/michaelmollath/projects/ai-coding-starter-kit/src/app/api/orders/[orderId]"
+      "/Users/michaelmollath/projects/ai-coding-starter-kit/src/app/api/orders/[orderId]",
+      "/Users/michaelmollath/projects/ai-coding-starter-kit/src/app/api/orders/[orderId]/export"
     ]
   }
 }

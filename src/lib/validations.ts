@@ -181,3 +181,13 @@ export const reviewApproveSchema = z.object({
 
 export type ReviewSaveInput = z.infer<typeof reviewSaveSchema>;
 export type ReviewApproveInput = z.infer<typeof reviewApproveSchema>;
+
+/**
+ * OPH-6: Export validation schemas.
+ */
+
+export const exportFormatSchema = z.enum(["csv", "xml", "json"], {
+  message: "Ungueltiges Format. Erlaubt: csv, xml, json",
+});
+
+export type ExportFormatInput = z.infer<typeof exportFormatSchema>;

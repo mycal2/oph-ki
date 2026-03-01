@@ -92,6 +92,7 @@ export async function GET(
         reviewed_data,
         reviewed_at,
         reviewed_by,
+        last_exported_at,
         dealers ( id, name ),
         uploader:user_profiles!orders_uploaded_by_fkey ( first_name, last_name ),
         overrider:user_profiles!orders_dealer_overridden_by_fkey ( first_name, last_name )
@@ -171,6 +172,8 @@ export async function GET(
       reviewed_data: (order.reviewed_data as CanonicalOrderData) ?? null,
       reviewed_at: (order.reviewed_at as string) ?? null,
       reviewed_by: (order.reviewed_by as string) ?? null,
+      // OPH-6: Export fields
+      last_exported_at: (order.last_exported_at as string) ?? null,
     };
 
     return NextResponse.json({ success: true, data: result });

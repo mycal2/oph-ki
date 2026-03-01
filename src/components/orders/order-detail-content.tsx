@@ -11,7 +11,7 @@ import { OrderDetailHeader } from "./order-detail-header";
 import { OrderFileList } from "./order-file-list";
 import { ExtractionResultPreview } from "./extraction-result-preview";
 import { useOrderPolling } from "@/hooks/use-order-polling";
-import type { OrderWithDealer, DealerOverrideResponse, ApiResponse } from "@/lib/types";
+import type { OrderForReview, OrderWithDealer, DealerOverrideResponse, ApiResponse } from "@/lib/types";
 
 interface OrderDetailContentProps {
   orderId: string;
@@ -23,7 +23,7 @@ interface OrderDetailContentProps {
  */
 export function OrderDetailContent({ orderId }: OrderDetailContentProps) {
   const router = useRouter();
-  const [order, setOrder] = useState<OrderWithDealer | null>(null);
+  const [order, setOrder] = useState<OrderForReview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,7 +33,7 @@ export function OrderDetailContent({ orderId }: OrderDetailContentProps) {
 
     try {
       const res = await fetch(`/api/orders/${orderId}`);
-      const json = (await res.json()) as ApiResponse<OrderWithDealer>;
+      const json = (await res.json()) as ApiResponse<OrderForReview>;
 
       if (!res.ok || !json.success || !json.data) {
         setError(json.error ?? "Bestellung konnte nicht geladen werden.");
@@ -74,9 +74,21 @@ export function OrderDetailContent({ orderId }: OrderDetailContentProps) {
   );
 
   // Polling: update order state when extraction progresses
+  // The API returns OrderForReview; the polling hook types it as OrderWithDealer.
   const handleOrderUpdated = useCallback((updatedOrder: OrderWithDealer) => {
-    setOrder(updatedOrder);
+    setOrder(updatedOrder as OrderForReview);
   }, []);
+
+  // OPH-6: Handle successful export — update local state to reflect "exported" status
+  const handleExported = useCallback(() => {
+    if (order) {
+      setOrder({
+        ...order,
+        status: "exported",
+        last_exported_at: new Date().toISOString(),
+      });
+    }
+  }, [order]);
 
   const { isPolling } = useOrderPolling({
     orderId,
@@ -205,10 +217,12 @@ export function OrderDetailContent({ orderId }: OrderDetailContentProps) {
         Zurueck zur Uebersicht
       </Button>
 
-      {/* Order header with dealer info */}
+      {/* Order header with dealer info + export button */}
       <OrderDetailHeader
         order={order}
+        wasExported={!!order.last_exported_at}
         onDealerChanged={handleDealerChanged}
+        onExported={handleExported}
       />
 
       {/* AI Extraction Result */}
