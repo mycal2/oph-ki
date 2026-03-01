@@ -341,6 +341,39 @@ export async function POST(
             };
           }
         }
+
+        // --- Auto-create dealer if no match found ---
+        if (Object.keys(aiDealerUpdate).length === 0) {
+          const sender = result.extractedData.order.sender;
+          if (sender?.company_name) {
+            const { data: newDealer } = await adminClient
+              .from("dealers")
+              .insert({
+                name: sender.company_name,
+                street: sender.street ?? null,
+                postal_code: sender.postal_code ?? null,
+                city: sender.city ?? null,
+                country: sender.country ?? null,
+                format_type: "pdf_table",
+                active: true,
+              })
+              .select("id, name")
+              .single();
+
+            if (newDealer) {
+              aiDealerUpdate = {
+                dealer_id: newDealer.id as string,
+                recognition_method: "ai_content",
+                recognition_confidence: 70,
+              };
+              result.extractedData.order.dealer = {
+                id: newDealer.id as string,
+                name: newDealer.name as string,
+              };
+              console.log(`Auto-created dealer "${newDealer.name}" (${newDealer.id}) for order ${orderId}`);
+            }
+          }
+        }
       }
 
       // --- Save extracted data ---
