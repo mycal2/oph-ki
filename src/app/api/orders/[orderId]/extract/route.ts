@@ -269,44 +269,59 @@ export async function POST(
       if (metadataConfidence < 80 && senderName) {
         const { data: allDealers } = await adminClient
           .from("dealers")
-          .select("id, name")
+          .select("id, name, city, country")
           .eq("active", true);
 
         if (allDealers && allDealers.length > 0) {
           const senderLower = senderName.toLowerCase().trim();
+          const senderCity = result.extractedData.order.sender?.city?.toLowerCase().trim() ?? null;
+          const senderCountry = result.extractedData.order.sender?.country?.toLowerCase().trim() ?? null;
           let bestMatch: { id: string; name: string; confidence: number } | null = null;
 
           /** Split a name into significant words (2+ chars, strip punctuation). */
           const toWords = (s: string) =>
             s.replace(/[&.,()]/g, " ").split(/\s+/).filter((w) => w.length > 1);
 
+          /** Check if dealer address matches the sender address. */
+          const addressMatches = (dealer: { city: unknown; country: unknown }): boolean => {
+            const dCity = (dealer.city as string | null)?.toLowerCase().trim() ?? null;
+            const dCountry = (dealer.country as string | null)?.toLowerCase().trim() ?? null;
+            if (senderCountry && dCountry && senderCountry === dCountry) return true;
+            if (senderCity && dCity && senderCity === dCity) return true;
+            return false;
+          };
+
           const senderWords = toWords(senderLower);
 
           for (const dealer of allDealers) {
             const dealerLower = (dealer.name as string).toLowerCase().trim();
+            const hasAddressMatch = addressMatches(dealer);
 
-            // 1) Exact match
+            // 1) Exact name match
             if (senderLower === dealerLower) {
               bestMatch = { id: dealer.id as string, name: dealer.name as string, confidence: 95 };
               break;
             }
 
-            // 2) Substring match (either direction)
+            // 2) Substring match (either direction) + address boost
             if (senderLower.includes(dealerLower) || dealerLower.includes(senderLower)) {
-              if (!bestMatch || 80 > bestMatch.confidence) {
-                bestMatch = { id: dealer.id as string, name: dealer.name as string, confidence: 80 };
+              const confidence = hasAddressMatch ? 90 : 80;
+              if (!bestMatch || confidence > bestMatch.confidence) {
+                bestMatch = { id: dealer.id as string, name: dealer.name as string, confidence };
               }
               continue;
             }
 
             // 3) Word overlap match — e.g. "Henry Schein France" vs "Henry Schein GmbH"
+            //    Address match is critical here to distinguish regional subsidiaries.
             const dealerWords = toWords(dealerLower);
             const shorter = senderWords.length <= dealerWords.length ? senderWords : dealerWords;
             const longer = senderWords.length <= dealerWords.length ? dealerWords : senderWords;
             const matchCount = shorter.filter((w) => longer.includes(w)).length;
 
             if (matchCount >= 2 && matchCount / shorter.length >= 0.5) {
-              const confidence = matchCount === shorter.length ? 75 : 65;
+              // With address match → high confidence; without → low (could be a different subsidiary)
+              const confidence = hasAddressMatch ? 85 : 55;
               if (!bestMatch || confidence > bestMatch.confidence) {
                 bestMatch = { id: dealer.id as string, name: dealer.name as string, confidence };
               }

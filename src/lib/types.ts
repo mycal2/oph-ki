@@ -122,6 +122,10 @@ export type DealerFormatType = "email_text" | "pdf_table" | "excel";
 export interface Dealer {
   id: string;
   name: string;
+  street: string | null;
+  postal_code: string | null;
+  city: string | null;
+  country: string | null;
   known_domains: string[];
   known_sender_addresses: string[];
   subject_patterns: string[];
@@ -138,6 +142,8 @@ export interface DealerListItem {
   id: string;
   name: string;
   format_type: DealerFormatType;
+  city: string | null;
+  country: string | null;
 }
 
 /** Dealer recognition result attached to an order. */
@@ -155,6 +161,10 @@ export interface OrderDealerInfo {
 export interface OrderWithDealer extends Order {
   dealer_id: string | null;
   dealer_name: string | null;
+  dealer_street: string | null;
+  dealer_postal_code: string | null;
+  dealer_city: string | null;
+  dealer_country: string | null;
   recognition_method: RecognitionMethod;
   recognition_confidence: number;
   dealer_overridden_by: string | null;

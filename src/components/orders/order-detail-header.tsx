@@ -129,6 +129,17 @@ export function OrderDetailHeader({
             orderUpdatedAt={order.updated_at}
             onDealerChanged={onDealerChanged}
           />
+          {(order.dealer_street || order.dealer_city || order.dealer_country) && (
+            <p className="text-xs text-muted-foreground ml-0.5">
+              {[
+                order.dealer_street,
+                [order.dealer_postal_code, order.dealer_city].filter(Boolean).join(" "),
+                order.dealer_country,
+              ]
+                .filter(Boolean)
+                .join(", ")}
+            </p>
+          )}
         </div>
 
         {/* Recognition Audit */}

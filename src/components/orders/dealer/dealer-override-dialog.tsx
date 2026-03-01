@@ -150,7 +150,7 @@ export function DealerOverrideDialog({
                         {dealers.map((dealer) => (
                           <CommandItem
                             key={dealer.id}
-                            value={dealer.name}
+                            value={[dealer.name, dealer.city, dealer.country].filter(Boolean).join(" ")}
                             onSelect={() => handleSelect(dealer)}
                             className="gap-2"
                           >
@@ -163,9 +163,16 @@ export function DealerOverrideDialog({
                               )}
                             />
                             <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
-                            <span className="truncate">{dealer.name}</span>
+                            <div className="flex flex-col min-w-0">
+                              <span className="truncate">{dealer.name}</span>
+                              {(dealer.city || dealer.country) && (
+                                <span className="text-xs text-muted-foreground truncate">
+                                  {[dealer.city, dealer.country].filter(Boolean).join(", ")}
+                                </span>
+                              )}
+                            </div>
                             {dealer.id === currentDealerId && (
-                              <span className="ml-auto text-xs text-muted-foreground">
+                              <span className="ml-auto text-xs text-muted-foreground shrink-0">
                                 aktuell
                               </span>
                             )}

@@ -93,7 +93,7 @@ export async function GET(
         reviewed_at,
         reviewed_by,
         last_exported_at,
-        dealers ( id, name ),
+        dealers ( id, name, street, postal_code, city, country ),
         uploader:user_profiles!orders_uploaded_by_fkey ( first_name, last_name ),
         overrider:user_profiles!orders_dealer_overridden_by_fkey ( first_name, last_name )
       `)
@@ -128,7 +128,7 @@ export async function GET(
     // Supabase returns joined data as arrays when using generated types without a schema.
     // Since dealer_id is a FK to a single row, we extract the first element.
     const rawDealer = order.dealers as unknown;
-    const dealerData = Array.isArray(rawDealer) ? (rawDealer[0] as { id: string; name: string } | undefined) ?? null : rawDealer as { id: string; name: string } | null;
+    const dealerData = Array.isArray(rawDealer) ? (rawDealer[0] as { id: string; name: string; street: string | null; postal_code: string | null; city: string | null; country: string | null } | undefined) ?? null : rawDealer as { id: string; name: string; street: string | null; postal_code: string | null; city: string | null; country: string | null } | null;
     const rawUploader = order.uploader as unknown;
     const uploaderData = Array.isArray(rawUploader) ? (rawUploader[0] as { first_name: string; last_name: string } | undefined) ?? null : rawUploader as { first_name: string; last_name: string } | null;
     const rawOverrider = order.overrider as unknown;
@@ -143,6 +143,10 @@ export async function GET(
       updated_at: order.updated_at as string,
       dealer_id: order.dealer_id as string | null,
       dealer_name: dealerData?.name ?? null,
+      dealer_street: dealerData?.street ?? null,
+      dealer_postal_code: dealerData?.postal_code ?? null,
+      dealer_city: dealerData?.city ?? null,
+      dealer_country: dealerData?.country ?? null,
       recognition_method: (order.recognition_method as OrderWithDealer["recognition_method"]) ?? "none",
       recognition_confidence: (order.recognition_confidence as number) ?? 0,
       dealer_overridden_by: order.dealer_overridden_by as string | null,

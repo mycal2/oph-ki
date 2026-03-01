@@ -46,7 +46,7 @@ export async function GET(): Promise<NextResponse<ApiResponse<DealerListItem[]>>
     const adminClient = createAdminClient();
     const { data: dealers, error: dealersError } = await adminClient
       .from("dealers")
-      .select("id, name, format_type")
+      .select("id, name, format_type, city, country")
       .eq("active", true)
       .order("name", { ascending: true })
       .limit(500);
