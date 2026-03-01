@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { FileText, Upload, Loader2, AlertCircle } from "lucide-react";
 import {
@@ -61,8 +61,8 @@ export function OrdersList() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchOrders = useCallback(async () => {
-    setIsLoading(true);
+  const fetchOrders = useCallback(async (silent = false) => {
+    if (!silent) setIsLoading(true);
     setError(null);
 
     try {
@@ -70,21 +70,42 @@ export function OrdersList() {
       const json = (await res.json()) as ApiResponse<OrderListItem[]>;
 
       if (!res.ok || !json.success) {
-        setError(json.error ?? "Bestellungen konnten nicht geladen werden.");
+        if (!silent) setError(json.error ?? "Bestellungen konnten nicht geladen werden.");
         return;
       }
 
       setOrders(json.data ?? []);
     } catch {
-      setError("Verbindungsfehler beim Laden der Bestellungen.");
+      if (!silent) setError("Verbindungsfehler beim Laden der Bestellungen.");
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
     fetchOrders();
   }, [fetchOrders]);
+
+  // Auto-refresh every 5s when orders are being processed
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const hasProcessingOrders = orders.some(
+    (o) => o.status === "uploaded" || o.status === "processing"
+  );
+
+  useEffect(() => {
+    if (hasProcessingOrders) {
+      pollRef.current = setInterval(() => fetchOrders(true), 5000);
+    } else if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+  }, [hasProcessingOrders, fetchOrders]);
 
   if (isLoading) {
     return (
@@ -109,7 +130,7 @@ export function OrdersList() {
           <AlertTitle>Fehler</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
-        <Button variant="outline" onClick={fetchOrders}>
+        <Button variant="outline" onClick={() => fetchOrders()}>
           <Loader2 className="h-4 w-4 mr-2" />
           Erneut versuchen
         </Button>
@@ -182,7 +203,10 @@ export function OrdersList() {
               </TableCell>
               <TableCell>
                 <div className="flex flex-col gap-1">
-                  <Badge variant={STATUS_VARIANTS[order.status]} className="text-xs w-fit">
+                  <Badge variant={STATUS_VARIANTS[order.status]} className="text-xs w-fit gap-1">
+                    {(order.status === "uploaded" || order.status === "processing") && (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    )}
                     {STATUS_LABELS[order.status]}
                   </Badge>
                   {order.extraction_status && order.extraction_status !== "extracted" && (

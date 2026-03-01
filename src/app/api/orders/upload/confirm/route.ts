@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -177,19 +177,35 @@ export async function POST(
       originalFilename
     );
 
-    // 11. Fire-and-forget: trigger AI extraction (OPH-4)
-    // Set order status to "processing" and call extract endpoint without awaiting.
+    // 11. Trigger AI extraction (OPH-4) via Next.js after() API.
+    // after() runs reliably on Vercel Serverless after the response is sent,
+    // unlike fire-and-forget fetch() which gets killed when the function terminates.
     const cronSecret = process.env.CRON_SECRET;
     if (cronSecret) {
-      const baseUrl = request.nextUrl.origin;
-      fetch(`${baseUrl}/api/orders/${orderId}/extract`, {
-        method: "POST",
-        headers: {
-          "x-internal-secret": cronSecret,
-          "Content-Type": "application/json",
-        },
-      }).catch((err) => {
-        console.error(`Fire-and-forget extraction trigger failed for order ${orderId}:`, err);
+      const baseUrl =
+        process.env.NEXT_PUBLIC_SITE_URL ||
+        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : request.nextUrl.origin);
+
+      after(async () => {
+        try {
+          const res = await fetch(`${baseUrl}/api/orders/${orderId}/extract`, {
+            method: "POST",
+            headers: {
+              "x-internal-secret": cronSecret,
+              "Content-Type": "application/json",
+            },
+          });
+          if (!res.ok) {
+            console.error(
+              `Background extraction trigger got ${res.status} for order ${orderId}`
+            );
+          }
+        } catch (err) {
+          console.error(
+            `Background extraction trigger failed for order ${orderId}:`,
+            err
+          );
+        }
       });
     } else {
       console.warn("CRON_SECRET not set — skipping automatic extraction trigger.");

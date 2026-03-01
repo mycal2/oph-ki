@@ -13,6 +13,8 @@ interface UseOrderPollingOptions {
   orderId: string;
   /** Current extraction status. Polling only runs while status is pending/processing. */
   extractionStatus: ExtractionStatus | null;
+  /** Current order status. Polling also runs for "uploaded" orders awaiting extraction. */
+  orderStatus?: string | null;
   /** Called when the order data is refreshed from the server. */
   onOrderUpdated: (order: OrderWithDealer) => void;
   /** Called if a polling request fails. */
@@ -23,11 +25,13 @@ interface UseOrderPollingOptions {
 
 /**
  * Polls GET /api/orders/[orderId] every 3 seconds while extraction is in progress.
+ * Also polls for "uploaded" orders where extraction hasn't started yet.
  * Automatically stops when extraction_status becomes "extracted" or "failed".
  */
 export function useOrderPolling({
   orderId,
   extractionStatus,
+  orderStatus,
   onOrderUpdated,
   onError,
   enabled = true,
@@ -35,10 +39,12 @@ export function useOrderPolling({
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isFetchingRef = useRef(false);
 
-  const shouldPoll =
-    enabled &&
-    extractionStatus !== null &&
-    POLLING_STATUSES.includes(extractionStatus);
+  const isExtractionInProgress =
+    extractionStatus !== null && POLLING_STATUSES.includes(extractionStatus);
+  const isAwaitingExtraction =
+    orderStatus === "uploaded" || orderStatus === "processing";
+
+  const shouldPoll = enabled && (isExtractionInProgress || isAwaitingExtraction);
 
   const fetchOrder = useCallback(async () => {
     // Prevent overlapping requests

@@ -263,6 +263,15 @@ export function useFileUpload() {
               }
             : undefined,
         });
+
+        // Trigger AI extraction from the client as a reliable backup.
+        // The server also triggers via after(), but this ensures extraction
+        // starts even if the server-side trigger fails.
+        fetch(`/api/orders/${presignData.orderId}/extract`, {
+          method: "POST",
+        }).catch(() => {
+          // Silently ignore — server-side after() should also trigger extraction
+        });
       } catch {
         updateFileState(entry.id, {
           status: "error",

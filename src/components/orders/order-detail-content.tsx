@@ -93,6 +93,7 @@ export function OrderDetailContent({ orderId }: OrderDetailContentProps) {
   const { isPolling } = useOrderPolling({
     orderId,
     extractionStatus: order?.extraction_status ?? null,
+    orderStatus: order?.status ?? null,
     onOrderUpdated: handleOrderUpdated,
     enabled: !!order,
   });
@@ -234,6 +235,7 @@ export function OrderDetailContent({ orderId }: OrderDetailContentProps) {
         onRetryExtraction={handleRetryExtraction}
         isRetrying={isRetrying}
         orderId={orderId}
+        orderStatus={order.status}
       />
 
       {/* File list */}

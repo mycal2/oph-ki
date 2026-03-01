@@ -45,6 +45,8 @@ interface ExtractionResultPreviewProps {
   isRetrying?: boolean;
   /** Order ID for the "Zur Pruefung" link. */
   orderId?: string;
+  /** Current order status — used to show waiting state for freshly uploaded orders. */
+  orderStatus?: string | null;
 }
 
 function formatDate(isoDate: string | null, includeTime = false): string {
@@ -110,7 +112,43 @@ export function ExtractionResultPreview({
   onRetryExtraction,
   isRetrying = false,
   orderId,
+  orderStatus,
 }: ExtractionResultPreviewProps) {
+  // Waiting state: order uploaded but extraction hasn't started yet
+  if (!extractionStatus && (orderStatus === "uploaded" || orderStatus === "processing")) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+            Extraktion wird gestartet...
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Das System bereitet die KI-Extraktion vor. Dies kann einige Sekunden dauern.
+          </p>
+          {onRetryExtraction && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onRetryExtraction}
+              disabled={isRetrying}
+              className="gap-2"
+            >
+              {isRetrying ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              Extraktion manuell starten
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+
   // Pending or processing state: show skeleton
   if (
     extractionStatus === "pending" ||

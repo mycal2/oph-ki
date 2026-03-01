@@ -68,6 +68,12 @@ export default function UploadPage() {
                   : `${errorCount} ${errorCount === 1 ? "Datei konnte" : "Dateien konnten"} nicht hochgeladen werden.`}
               </p>
             </div>
+            {allSucceeded && (
+              <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>KI-Extraktion laeuft im Hintergrund...</span>
+              </div>
+            )}
             {/* Per-file results with dealer badges */}
             <div className="w-full text-left space-y-2 mt-1">
               {files.map((f) => (
