@@ -87,6 +87,8 @@ export interface ExtractionInput {
     name: string | null;
     extractionHints: string | null;
   } | null;
+  /** Formatted mapping context for the prompt (from OPH-14 dealer-mappings). */
+  mappingsContext?: string;
 }
 
 export interface ExtractionResult {
@@ -125,7 +127,9 @@ export async function extractOrderData(
     if (input.dealer.extractionHints) {
       dealerContext += `\n## Dealer-Specific Extraction Hints\n${input.dealer.extractionHints}\n`;
     }
-    // OPH-14 hook: dealer data mappings would be added here
+    if (input.mappingsContext) {
+      dealerContext += `\n${input.mappingsContext}\n`;
+    }
     contentBlocks.push({ type: "text", text: dealerContext });
   }
 

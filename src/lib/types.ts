@@ -371,3 +371,29 @@ export interface ExportDownloadResponse {
   filename: string;
   exportedAt: string;
 }
+
+/**
+ * OPH-14: Dealer Data Transformation types.
+ */
+export type MappingType = "article_number" | "unit_conversion" | "field_label";
+
+export interface DealerDataMapping {
+  id: string;
+  dealer_id: string;
+  tenant_id: string | null;
+  mapping_type: MappingType;
+  dealer_value: string;
+  erp_value: string;
+  conversion_factor: number | null;
+  description: string | null;
+  active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Mapping with resolved dealer name and global flag for display. */
+export interface DealerDataMappingListItem extends DealerDataMapping {
+  dealer_name: string;
+  is_global: boolean;
+}

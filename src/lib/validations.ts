@@ -204,3 +204,61 @@ export const exportFormatSchema = z.enum(["csv", "xml", "json"], {
 });
 
 export type ExportFormatInput = z.infer<typeof exportFormatSchema>;
+
+/**
+ * OPH-14: Dealer Data Mapping validation schemas.
+ */
+
+export const createMappingSchema = z.object({
+  dealerId: z.string().uuid("Ungueltige Haendler-ID."),
+  mappingType: z.enum(["article_number", "unit_conversion", "field_label"], {
+    message: "Ungueltiger Mapping-Typ.",
+  }),
+  dealerValue: z
+    .string()
+    .min(1, "Haendler-Wert ist erforderlich.")
+    .max(200, "Haendler-Wert darf maximal 200 Zeichen lang sein.")
+    .trim(),
+  erpValue: z
+    .string()
+    .min(1, "ERP-Wert ist erforderlich.")
+    .max(200, "ERP-Wert darf maximal 200 Zeichen lang sein.")
+    .trim(),
+  conversionFactor: z
+    .number()
+    .positive("Umrechnungsfaktor muss positiv sein.")
+    .optional(),
+  description: z
+    .string()
+    .max(500, "Beschreibung darf maximal 500 Zeichen lang sein.")
+    .optional(),
+});
+
+export const updateMappingSchema = z.object({
+  dealerValue: z
+    .string()
+    .min(1, "Haendler-Wert ist erforderlich.")
+    .max(200, "Haendler-Wert darf maximal 200 Zeichen lang sein.")
+    .trim()
+    .optional(),
+  erpValue: z
+    .string()
+    .min(1, "ERP-Wert ist erforderlich.")
+    .max(200, "ERP-Wert darf maximal 200 Zeichen lang sein.")
+    .trim()
+    .optional(),
+  conversionFactor: z
+    .number()
+    .positive("Umrechnungsfaktor muss positiv sein.")
+    .nullable()
+    .optional(),
+  description: z
+    .string()
+    .max(500, "Beschreibung darf maximal 500 Zeichen lang sein.")
+    .nullable()
+    .optional(),
+  active: z.boolean().optional(),
+});
+
+export type CreateMappingInput = z.infer<typeof createMappingSchema>;
+export type UpdateMappingInput = z.infer<typeof updateMappingSchema>;

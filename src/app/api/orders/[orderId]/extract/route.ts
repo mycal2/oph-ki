@@ -4,6 +4,7 @@ import { timingSafeEqual } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { extractOrderData } from "@/lib/claude-extraction";
+import { getMappingsForDealer, applyMappings, formatMappingsForPrompt } from "@/lib/dealer-mappings";
 import type { AppMetadata, ApiResponse } from "@/lib/types";
 
 /** Max extraction attempts per order before rejecting further retries. */
@@ -253,12 +254,22 @@ export async function POST(
       }
     }
 
+    // --- Fetch dealer mappings for prompt context (OPH-14) ---
+    let mappingsContext: string | undefined;
+    if (order.dealer_id && tenantId) {
+      const mappings = await getMappingsForDealer(adminClient, order.dealer_id as string, tenantId);
+      if (mappings.length > 0) {
+        mappingsContext = formatMappingsForPrompt(mappings);
+      }
+    }
+
     // --- Call Claude extraction ---
     try {
       const result = await extractOrderData({
         orderId,
         files: fileContents,
         dealer: dealerInfo,
+        mappingsContext,
       });
 
       // --- AI-based dealer matching from extracted sender info ---
@@ -376,14 +387,29 @@ export async function POST(
         }
       }
 
+      // --- Apply dealer data mappings post-extraction (OPH-14) ---
+      let finalExtractedData = result.extractedData;
+      let hasUnmappedArticles = false;
+
+      const resolvedDealerId = (aiDealerUpdate.dealer_id as string) ?? (order.dealer_id as string);
+      if (resolvedDealerId && tenantId) {
+        const postMappings = await getMappingsForDealer(adminClient, resolvedDealerId, tenantId);
+        if (postMappings.length > 0) {
+          const mapped = applyMappings(finalExtractedData, postMappings);
+          finalExtractedData = mapped.data;
+          hasUnmappedArticles = mapped.unmappedArticles.length > 0;
+        }
+      }
+
       // --- Save extracted data ---
       await adminClient
         .from("orders")
         .update({
           extraction_status: "extracted",
-          extracted_data: result.extractedData,
+          extracted_data: finalExtractedData,
           extraction_error: null,
           status: "extracted",
+          has_unmapped_articles: hasUnmappedArticles,
           ...aiDealerUpdate,
         })
         .eq("id", orderId);

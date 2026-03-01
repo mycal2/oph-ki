@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 const navLinks = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/orders", label: "Bestellungen" },
+  { href: "/settings/dealer-mappings", label: "Zuordnungen" },
 ];
 
 export function TopNavigation() {
