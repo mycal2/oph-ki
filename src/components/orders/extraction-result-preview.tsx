@@ -399,6 +399,11 @@ export function ExtractionResultPreview({
               Haendler-Hinweise angewandt
             </Badge>
           )}
+          {meta.column_mapping_applied && (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+              Spalten-Mapping angewandt
+            </Badge>
+          )}
           <span>
             Tokens: {meta.input_tokens.toLocaleString("de-DE")} ein / {meta.output_tokens.toLocaleString("de-DE")} aus
           </span>

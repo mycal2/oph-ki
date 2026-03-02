@@ -4,34 +4,36 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { exportFormatSchema } from "@/lib/validations";
 import {
-  getLineItemValue,
-  escapeCsvField,
   generateFilename,
-  escapeXml,
   contentDisposition,
   MAX_LINE_ITEMS,
 } from "@/lib/export-utils";
+import {
+  generateExportContent,
+  validateRequiredFields,
+} from "@/lib/erp-transformations";
 import type {
   AppMetadata,
   ExportFormat,
-  ErpColumnMapping,
+  ErpColumnMappingExtended,
   CanonicalOrderData,
 } from "@/lib/types";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * Default column mappings used when no tenant ERP config exists.
+ * Default column mappings used when fallback_mode is "fallback_csv"
+ * or for backward-compatible tenants without an OPH-9 config.
  */
-const DEFAULT_COLUMN_MAPPINGS: ErpColumnMapping[] = [
-  { source_field: "position", target_column_name: "Pos" },
-  { source_field: "article_number", target_column_name: "Artikelnummer" },
-  { source_field: "description", target_column_name: "Beschreibung" },
-  { source_field: "quantity", target_column_name: "Menge" },
-  { source_field: "unit", target_column_name: "Einheit" },
-  { source_field: "unit_price", target_column_name: "Einzelpreis" },
-  { source_field: "total_price", target_column_name: "Gesamtpreis" },
-  { source_field: "currency", target_column_name: "Waehrung" },
+const DEFAULT_COLUMN_MAPPINGS: ErpColumnMappingExtended[] = [
+  { source_field: "position", target_column_name: "Pos", required: false, transformations: [] },
+  { source_field: "article_number", target_column_name: "Artikelnummer", required: false, transformations: [] },
+  { source_field: "description", target_column_name: "Beschreibung", required: false, transformations: [] },
+  { source_field: "quantity", target_column_name: "Menge", required: false, transformations: [] },
+  { source_field: "unit", target_column_name: "Einheit", required: false, transformations: [] },
+  { source_field: "unit_price", target_column_name: "Einzelpreis", required: false, transformations: [] },
+  { source_field: "total_price", target_column_name: "Gesamtpreis", required: false, transformations: [] },
+  { source_field: "currency", target_column_name: "Waehrung", required: false, transformations: [] },
 ];
 
 /**
@@ -39,6 +41,8 @@ const DEFAULT_COLUMN_MAPPINGS: ErpColumnMapping[] = [
  *
  * Generates the export file, streams it as a download response,
  * updates order status to "exported", and logs the export.
+ *
+ * OPH-9: Now uses the transformation engine and respects fallback_mode.
  */
 export async function GET(
   request: NextRequest,
@@ -147,7 +151,6 @@ export async function GET(
       );
     }
 
-    // 5a. BUG-011: Check line item count to prevent transformation timeout
     if (orderData.order.line_items.length > MAX_LINE_ITEMS) {
       return NextResponse.json(
         {
@@ -168,120 +171,72 @@ export async function GET(
 
     const tenantSlug = (tenant?.slug as string) ?? "export";
 
-    // 7. Get ERP config
+    // 7. Get ERP config (OPH-9: one config per tenant, format stored in config)
     const { data: erpConfig } = await adminClient
       .from("erp_configs")
       .select("*")
       .eq("tenant_id", effectiveTenantId)
-      .eq("format", format)
-      .limit(1)
       .maybeSingle();
 
-    // BUG-007: Track whether we're using default config
     const usingDefaultConfig = !erpConfig;
+    const fallbackMode = (erpConfig?.fallback_mode as string) ?? "block";
 
-    const columnMappings: ErpColumnMapping[] = erpConfig
-      ? (erpConfig.column_mappings as ErpColumnMapping[])
+    // OPH-9 AC-3: Enforce fallback mode
+    if (usingDefaultConfig && fallbackMode === "block") {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Kein ERP-Mapping konfiguriert fuer diesen Mandanten.",
+        },
+        { status: 409 }
+      );
+    }
+
+    // Determine effective format: use config's format if available, else the requested format
+    const effectiveFormat: ExportFormat = erpConfig
+      ? (erpConfig.format as ExportFormat)
+      : format;
+
+    // Build extended mappings
+    const columnMappings: ErpColumnMappingExtended[] = erpConfig
+      ? (erpConfig.column_mappings as ErpColumnMappingExtended[])
       : DEFAULT_COLUMN_MAPPINGS;
 
     const separator = (erpConfig?.separator as string) ?? ";";
     const quoteChar = (erpConfig?.quote_char as string) ?? '"';
+    const lineEnding = (erpConfig?.line_ending as string) ?? "CRLF";
+    const decimalSeparator = (erpConfig?.decimal_separator as string) ?? ".";
+    const xmlTemplate = (erpConfig?.xml_template as string) ?? null;
 
-    // BUG-008: Validate required fields before export
-    const requiredMappings = columnMappings.filter((m) => m.required);
-    if (requiredMappings.length > 0) {
-      const missingFields: string[] = [];
-      for (const mapping of requiredMappings) {
-        for (const item of orderData.order.line_items) {
-          const value = getLineItemValue(item, mapping.source_field);
-          if (!value) {
-            missingFields.push(
-              `Pos. ${item.position}: "${mapping.target_column_name}" ist leer`
-            );
-          }
-        }
-      }
-      if (missingFields.length > 0) {
-        const fieldList = missingFields.slice(0, 10).join(", ");
-        const more = missingFields.length > 10 ? ` (und ${missingFields.length - 10} weitere)` : "";
-        return NextResponse.json(
-          {
-            success: false,
-            error: `Pflichtfelder fehlen: ${fieldList}${more}. Bitte in der Bestellpruefung korrigieren.`,
-          },
-          { status: 400 }
-        );
-      }
-    }
-
-    const filename = generateFilename(tenantSlug, orderData.order.order_number, format);
-
-    let content: string;
-    let contentType: string;
-
-    // 8. Generate file content
-    // BUG-004: Always use UTF-8 encoding (Next.js outputs UTF-8 natively)
-    if (format === "csv") {
-      const headerLine = columnMappings
-        .map((m) => escapeCsvField(m.target_column_name, separator, quoteChar))
-        .join(separator);
-
-      const dataLines = orderData.order.line_items.map((item) =>
-        columnMappings
-          .map((m) => escapeCsvField(getLineItemValue(item, m.source_field), separator, quoteChar))
-          .join(separator)
-      );
-
-      content = [headerLine, ...dataLines].join("\r\n") + "\r\n";
-      contentType = "text/csv; charset=utf-8";
-    } else if (format === "json") {
-      content = JSON.stringify(orderData, null, 2);
-      contentType = "application/json; charset=utf-8";
-    } else if (format === "xml") {
-      let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<order>\n`;
-      xml += `  <order_number>${escapeXml(orderData.order.order_number ?? "")}</order_number>\n`;
-      xml += `  <order_date>${escapeXml(orderData.order.order_date ?? "")}</order_date>\n`;
-
-      if (orderData.order.dealer.name) {
-        xml += `  <dealer>${escapeXml(orderData.order.dealer.name)}</dealer>\n`;
-      }
-
-      if (orderData.order.delivery_address) {
-        const addr = orderData.order.delivery_address;
-        xml += "  <delivery_address>\n";
-        xml += `    <company>${escapeXml(addr.company ?? "")}</company>\n`;
-        xml += `    <street>${escapeXml(addr.street ?? "")}</street>\n`;
-        xml += `    <city>${escapeXml(addr.city ?? "")}</city>\n`;
-        xml += `    <postal_code>${escapeXml(addr.postal_code ?? "")}</postal_code>\n`;
-        xml += `    <country>${escapeXml(addr.country ?? "")}</country>\n`;
-        xml += "  </delivery_address>\n";
-      }
-
-      xml += "  <line_items>\n";
-      for (const item of orderData.order.line_items) {
-        xml += "    <item>\n";
-        for (const mapping of columnMappings) {
-          const value = getLineItemValue(item, mapping.source_field);
-          xml += `      <${mapping.target_column_name}>${escapeXml(value)}</${mapping.target_column_name}>\n`;
-        }
-        xml += "    </item>\n";
-      }
-      xml += "  </line_items>\n";
-      xml += `  <total_amount>${escapeXml(String(orderData.order.total_amount ?? ""))}</total_amount>\n`;
-      xml += `  <currency>${escapeXml(orderData.order.currency ?? "")}</currency>\n`;
-      if (orderData.order.notes) {
-        xml += `  <notes>${escapeXml(orderData.order.notes)}</notes>\n`;
-      }
-      xml += "</order>\n";
-
-      content = xml;
-      contentType = "application/xml; charset=utf-8";
-    } else {
+    // OPH-9 AC-8: Validate required fields before export
+    const missingFields = validateRequiredFields(orderData.order.line_items, columnMappings);
+    if (missingFields.length > 0) {
+      const fieldList = missingFields.slice(0, 10).join(", ");
+      const more = missingFields.length > 10 ? ` (und ${missingFields.length - 10} weitere)` : "";
       return NextResponse.json(
-        { success: false, error: "Unbekanntes Format." },
+        {
+          success: false,
+          error: `Pflichtfelder fehlen: ${fieldList}${more}. Bitte in der Bestellpruefung korrigieren.`,
+        },
         { status: 400 }
       );
     }
+
+    const filename = generateFilename(tenantSlug, orderData.order.order_number, effectiveFormat);
+
+    // 8. Generate file content using transformation engine
+    const { content, contentType } = generateExportContent(
+      orderData,
+      effectiveFormat,
+      columnMappings,
+      {
+        separator,
+        quoteChar,
+        lineEnding,
+        decimalSeparator,
+        xmlTemplate,
+      }
+    );
 
     // 9. Update order status to "exported" and set last_exported_at
     const now = new Date().toISOString();
@@ -302,7 +257,7 @@ export async function GET(
       order_id: orderId,
       tenant_id: effectiveTenantId,
       user_id: user.id,
-      format,
+      format: effectiveFormat,
       filename,
       exported_at: now,
     });
@@ -330,11 +285,9 @@ export async function GET(
     // 12. Stream the file as a download response
     const headers = new Headers();
     headers.set("Content-Type", contentType);
-    // BUG-012: RFC 5987 filename encoding for browser compatibility
     headers.set("Content-Disposition", contentDisposition(filename));
     headers.set("Cache-Control", "no-store");
     headers.set("X-Content-Type-Options", "nosniff");
-    // BUG-007: Inform caller if default config was used
     if (usingDefaultConfig) {
       headers.set("X-Export-Default-Config", "true");
     }

@@ -29,6 +29,7 @@ const allNavLinks: NavLink[] = [
   { href: "/settings/dealer-mappings", label: "Zuordnungen" },
   { href: "/admin/dealers", label: "Haendler-Profile", adminOnly: true },
   { href: "/admin/tenants", label: "Mandanten", adminOnly: true },
+  { href: "/admin/erp-configs", label: "ERP-Mapping", adminOnly: true },
 ];
 
 export function TopNavigation() {

@@ -479,3 +479,100 @@ export const columnMappingProfileSchema = z.object({
 
 export type ColumnMappingEntryInput = z.infer<typeof columnMappingEntrySchema>;
 export type ColumnMappingProfileInput = z.infer<typeof columnMappingProfileSchema>;
+
+/**
+ * OPH-9: Admin ERP-Mapping-Konfiguration validation schemas.
+ */
+
+const erpTransformationStepSchema = z.object({
+  type: z.enum(
+    ["to_uppercase", "to_lowercase", "trim", "round", "multiply", "date_format", "default"],
+    { message: "Ungueltiger Transformationstyp." }
+  ),
+  param: z.string().max(200, "Parameter darf maximal 200 Zeichen lang sein.").optional(),
+}).refine(
+  (step) => {
+    // Parameterized transforms require a param
+    if (["round", "multiply", "date_format", "default"].includes(step.type)) {
+      return step.param !== undefined && step.param.trim().length > 0;
+    }
+    return true;
+  },
+  { message: "Dieser Transformationstyp benoetigt einen Parameter.", path: ["param"] }
+);
+
+const erpColumnMappingExtendedSchema = z.object({
+  source_field: z
+    .string()
+    .min(1, "Quellfeld ist erforderlich.")
+    .max(200, "Quellfeld darf maximal 200 Zeichen lang sein.")
+    .trim(),
+  target_column_name: z
+    .string()
+    .min(1, "Ausgabe-Spaltenname ist erforderlich.")
+    .max(200, "Ausgabe-Spaltenname darf maximal 200 Zeichen lang sein.")
+    .trim(),
+  required: z.boolean().default(false),
+  transformations: z
+    .array(erpTransformationStepSchema)
+    .max(10, "Maximal 10 Transformationen pro Spalte.")
+    .default([]),
+});
+
+export const erpConfigSaveSchema = z.object({
+  format: z.enum(["csv", "xml", "json"], {
+    message: "Ungueltiges Format. Erlaubt: csv, xml, json",
+  }),
+  column_mappings: z
+    .array(erpColumnMappingExtendedSchema)
+    .max(100, "Maximal 100 Spalten-Zuordnungen erlaubt.")
+    .default([]),
+  separator: z.string().max(5).default(";"),
+  quote_char: z.string().max(5).default('"'),
+  encoding: z.enum(["utf-8", "latin-1", "windows-1252"], {
+    message: "Ungueltiger Zeichensatz.",
+  }).default("utf-8"),
+  line_ending: z.enum(["LF", "CRLF"], {
+    message: "Ungueltiges Zeilenende.",
+  }).default("LF"),
+  decimal_separator: z.enum([".", ","], {
+    message: "Ungueltiges Dezimaltrennzeichen.",
+  }).default("."),
+  fallback_mode: z.enum(["block", "fallback_csv"], {
+    message: "Ungueltiger Fallback-Modus.",
+  }).default("block"),
+  xml_template: z
+    .string()
+    .max(50000, "XML-Template darf maximal 50000 Zeichen lang sein.")
+    .nullable()
+    .default(null),
+  comment: z
+    .string()
+    .max(500, "Kommentar darf maximal 500 Zeichen lang sein.")
+    .optional(),
+});
+
+export const erpConfigTestSchema = z.object({
+  /** Either a raw JSON string or an order ID to test against. */
+  mode: z.enum(["json", "order"], {
+    message: "Ungueltiger Testmodus.",
+  }),
+  /** Raw canonical JSON for mode=json. */
+  jsonInput: z.string().max(100000).optional(),
+  /** Order ID for mode=order. */
+  orderId: z.string().uuid("Ungueltige Bestell-ID.").optional(),
+  /** The config to test (same shape as save payload, minus comment). */
+  config: erpConfigSaveSchema.omit({ comment: true }),
+}).refine(
+  (data) => {
+    if (data.mode === "json") return !!data.jsonInput?.trim();
+    if (data.mode === "order") return !!data.orderId;
+    return false;
+  },
+  { message: "Bitte geben Sie entweder JSON-Daten oder eine Bestellung an.", path: ["jsonInput"] }
+);
+
+export type ErpConfigSaveInput = z.infer<typeof erpConfigSaveSchema>;
+export type ErpConfigTestInput = z.infer<typeof erpConfigTestSchema>;
+export type ErpTransformationStepInput = z.infer<typeof erpTransformationStepSchema>;
+export type ErpColumnMappingExtendedInput = z.infer<typeof erpColumnMappingExtendedSchema>;

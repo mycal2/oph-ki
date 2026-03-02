@@ -510,3 +510,102 @@ export interface TestRecognitionResult {
   recognition_method: RecognitionMethod;
   recognition_confidence: number;
 }
+
+/**
+ * OPH-9: Admin ERP-Mapping-Konfiguration types.
+ */
+
+export type ErpEncoding = "utf-8" | "latin-1" | "windows-1252";
+export type ErpDecimalSeparator = "." | ",";
+export type ErpLineEnding = "LF" | "CRLF";
+export type ErpFallbackMode = "block" | "fallback_csv";
+
+/** Transformation step on an ERP column mapping. */
+export interface ErpTransformationStep {
+  type: "to_uppercase" | "to_lowercase" | "trim" | "round" | "multiply" | "date_format" | "default";
+  /** Parameter for parameterized transforms: n for round/multiply, pattern for date_format, value for default. */
+  param?: string;
+}
+
+/** Extended column mapping with transformations and required flag. */
+export interface ErpColumnMappingExtended {
+  source_field: string;
+  target_column_name: string;
+  required: boolean;
+  transformations: ErpTransformationStep[];
+}
+
+/** Full ERP config for a tenant as used in the admin UI. */
+export interface ErpConfigAdmin {
+  id: string;
+  tenant_id: string;
+  format: ExportFormat;
+  column_mappings: ErpColumnMappingExtended[];
+  separator: string;
+  quote_char: string;
+  encoding: ErpEncoding;
+  line_ending: ErpLineEnding;
+  decimal_separator: ErpDecimalSeparator;
+  fallback_mode: ErpFallbackMode;
+  xml_template: string | null;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Version snapshot for an ERP config. */
+export interface ErpConfigVersion {
+  id: string;
+  erp_config_id: string;
+  version_number: number;
+  snapshot: Record<string, unknown>;
+  comment: string | null;
+  created_by: string | null;
+  created_by_email: string | null;
+  created_at: string;
+}
+
+/** Tenant with ERP config summary for the list view. */
+export interface ErpConfigListItem {
+  tenant_id: string;
+  tenant_name: string;
+  tenant_status: TenantStatus;
+  erp_type: ErpType;
+  has_config: boolean;
+  format: ExportFormat | null;
+  fallback_mode: ErpFallbackMode | null;
+  version_count: number;
+  last_updated: string | null;
+}
+
+/** Full config data returned from GET /api/admin/erp-configs/[tenantId]. */
+export interface ErpConfigDetail {
+  config: ErpConfigAdmin | null;
+  versions: ErpConfigVersion[];
+  tenant: {
+    id: string;
+    name: string;
+    erp_type: ErpType;
+  };
+}
+
+/** Test result from the ERP config test endpoint. */
+export interface ErpConfigTestResult {
+  output: string;
+  warnings: string[];
+  format: ExportFormat;
+}
+
+/** Payload for saving an ERP config. */
+export interface ErpConfigSavePayload {
+  format: ExportFormat;
+  column_mappings: ErpColumnMappingExtended[];
+  separator: string;
+  quote_char: string;
+  encoding: ErpEncoding;
+  line_ending: ErpLineEnding;
+  decimal_separator: ErpDecimalSeparator;
+  fallback_mode: ErpFallbackMode;
+  xml_template: string | null;
+  comment?: string;
+}
