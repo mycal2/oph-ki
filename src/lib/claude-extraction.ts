@@ -89,6 +89,8 @@ export interface ExtractionInput {
   } | null;
   /** Formatted mapping context for the prompt (from OPH-14 dealer-mappings). */
   mappingsContext?: string;
+  /** Formatted column mapping context for the prompt (from OPH-15 column-mapping profiles). */
+  columnMappingContext?: string;
 }
 
 export interface ExtractionResult {
@@ -129,6 +131,9 @@ export async function extractOrderData(
     }
     if (input.mappingsContext) {
       dealerContext += `\n${input.mappingsContext}\n`;
+    }
+    if (input.columnMappingContext) {
+      dealerContext += `\n${input.columnMappingContext}\n`;
     }
     contentBlocks.push({ type: "text", text: dealerContext });
   }
@@ -270,6 +275,7 @@ export async function extractOrderData(
           extracted_at: new Date().toISOString(),
           source_files: sourceFiles,
           dealer_hints_applied: !!input.dealer?.extractionHints,
+          column_mapping_applied: !!input.columnMappingContext,
           input_tokens: message.usage.input_tokens,
           output_tokens: message.usage.output_tokens,
         },

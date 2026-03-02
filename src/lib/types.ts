@@ -262,6 +262,7 @@ export interface ExtractionMetadata {
   extracted_at: string;
   source_files: string[];
   dealer_hints_applied: boolean;
+  column_mapping_applied: boolean;
   input_tokens: number;
   output_tokens: number;
 }
@@ -473,6 +474,33 @@ export interface DealerRuleConflict {
   value: string;
   conflicting_dealer_id: string;
   conflicting_dealer_name: string;
+}
+
+/**
+ * OPH-15: Dealer Column Mapping for Extraction types.
+ */
+
+export type ColumnMappingMatchType = "position" | "header" | "both";
+
+/** Format types that support column mapping (excludes "mixed"). */
+export type ColumnMappingFormatType = "pdf_table" | "excel" | "email_text";
+
+/** A single column-to-field mapping entry. */
+export interface ColumnMappingEntry {
+  match_type: ColumnMappingMatchType;
+  position: number | null;
+  header_text: string | null;
+  target_field: string;
+}
+
+/** A column mapping profile for a specific dealer + format type. */
+export interface ColumnMappingProfile {
+  id: string;
+  dealer_id: string;
+  format_type: ColumnMappingFormatType;
+  mappings: ColumnMappingEntry[];
+  created_at: string;
+  updated_at: string;
 }
 
 /** Test recognition result (no persistence). */

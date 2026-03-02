@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { extractOrderData } from "@/lib/claude-extraction";
 import { getMappingsForDealer, applyMappings, formatMappingsForPrompt } from "@/lib/dealer-mappings";
+import { mimeTypeToFormatType, getColumnMappingProfile, formatColumnMappingForPrompt } from "@/lib/column-mappings";
 import type { AppMetadata, ApiResponse } from "@/lib/types";
 
 /** Max extraction attempts per order before rejecting further retries. */
@@ -263,6 +264,25 @@ export async function POST(
       }
     }
 
+    // --- Fetch column mapping profile for prompt context (OPH-15) ---
+    let columnMappingContext: string | undefined;
+    if (order.dealer_id && fileContents.length > 0) {
+      // Determine format type from the primary file's MIME type
+      const primaryMimeType = fileContents[0].mimeType;
+      const formatType = mimeTypeToFormatType(primaryMimeType);
+
+      if (formatType) {
+        const profile = await getColumnMappingProfile(
+          adminClient,
+          order.dealer_id as string,
+          formatType
+        );
+        if (profile && profile.mappings.length > 0) {
+          columnMappingContext = formatColumnMappingForPrompt(profile);
+        }
+      }
+    }
+
     // --- Call Claude extraction ---
     try {
       const result = await extractOrderData({
@@ -270,6 +290,7 @@ export async function POST(
         files: fileContents,
         dealer: dealerInfo,
         mappingsContext,
+        columnMappingContext,
       });
 
       // --- AI-based dealer matching from extracted sender info ---

@@ -27,6 +27,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TagInput } from "@/components/admin/tag-input";
+import { DealerColumnMappingTab } from "@/components/admin/dealer-column-mapping-tab";
 import type {
   Dealer,
   DealerFormatType,
@@ -270,6 +271,11 @@ export function DealerFormSheet({
                     Hints
                   </TabsTrigger>
                   {!isNew && (
+                    <TabsTrigger value="columns" className="flex-1">
+                      Spalten
+                    </TabsTrigger>
+                  )}
+                  {!isNew && (
                     <TabsTrigger value="audit" className="flex-1">
                       Verlauf
                     </TabsTrigger>
@@ -462,6 +468,13 @@ export function DealerFormSheet({
                     </p>
                   </div>
                 </TabsContent>
+
+                {/* Tab: Column Mapping (OPH-15) */}
+                {!isNew && dealerId && (
+                  <TabsContent value="columns" className="mt-0">
+                    <DealerColumnMappingTab dealerId={dealerId} />
+                  </TabsContent>
+                )}
 
                 {/* Tab: Audit Log */}
                 {!isNew && (

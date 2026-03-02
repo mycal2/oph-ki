@@ -178,6 +178,7 @@ export const reviewSaveSchema = z.object({
       extracted_at: z.string(),
       source_files: z.array(z.string()),
       dealer_hints_applied: z.boolean(),
+      column_mapping_applied: z.boolean().optional().default(false),
       input_tokens: z.number(),
       output_tokens: z.number(),
     }),
@@ -420,3 +421,61 @@ export const adminInviteUserSchema = z.object({
 export type CreateTenantInput = z.infer<typeof createTenantSchema>;
 export type UpdateTenantInput = z.infer<typeof updateTenantSchema>;
 export type AdminInviteUserInput = z.infer<typeof adminInviteUserSchema>;
+
+/**
+ * OPH-15: Dealer Column Mapping validation schemas.
+ */
+
+const columnMappingEntrySchema = z.object({
+  match_type: z.enum(["position", "header", "both"], {
+    message: "Ungueltiger Match-Typ.",
+  }),
+  position: z
+    .number()
+    .int()
+    .min(1, "Position muss mindestens 1 sein.")
+    .max(100, "Position darf maximal 100 sein.")
+    .nullable(),
+  header_text: z
+    .string()
+    .max(200, "Header-Text darf maximal 200 Zeichen lang sein.")
+    .nullable(),
+  target_field: z
+    .string()
+    .min(1, "Zielfeld ist erforderlich.")
+    .max(200, "Zielfeld darf maximal 200 Zeichen lang sein.")
+    .trim(),
+}).refine(
+  (entry) => {
+    if (entry.match_type === "position" || entry.match_type === "both") {
+      return entry.position !== null;
+    }
+    return true;
+  },
+  { message: "Position ist erforderlich fuer diesen Match-Typ.", path: ["position"] }
+).refine(
+  (entry) => {
+    if (entry.match_type === "header" || entry.match_type === "both") {
+      return entry.header_text !== null && entry.header_text.trim().length > 0;
+    }
+    return true;
+  },
+  { message: "Header-Text ist erforderlich fuer diesen Match-Typ.", path: ["header_text"] }
+);
+
+export const columnMappingProfileSchema = z.object({
+  mappings: z
+    .array(columnMappingEntrySchema)
+    .min(1, "Mindestens eine Spalten-Zuordnung ist erforderlich.")
+    .max(50, "Maximal 50 Spalten-Zuordnungen erlaubt.")
+    .refine(
+      (mappings) => {
+        const targets = mappings.map((m) => m.target_field.toLowerCase());
+        return new Set(targets).size === targets.length;
+      },
+      { message: "Doppelte Zielfelder sind nicht erlaubt." }
+    ),
+});
+
+export type ColumnMappingEntryInput = z.infer<typeof columnMappingEntrySchema>;
+export type ColumnMappingProfileInput = z.infer<typeof columnMappingProfileSchema>;
