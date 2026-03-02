@@ -209,7 +209,7 @@ export async function GET(
     const xmlTemplate = (erpConfig?.xml_template as string) ?? null;
 
     // OPH-9 AC-8: Validate required fields before export
-    const missingFields = validateRequiredFields(orderData.order.line_items, columnMappings);
+    const missingFields = validateRequiredFields(orderData.order.line_items, columnMappings, orderData);
     if (missingFields.length > 0) {
       const fieldList = missingFields.slice(0, 10).join(", ");
       const more = missingFields.length > 10 ? ` (und ${missingFields.length - 10} weitere)` : "";

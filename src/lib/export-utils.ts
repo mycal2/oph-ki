@@ -1,7 +1,7 @@
 /**
  * Shared utility functions for ERP export (used by export and preview routes).
  */
-import type { CanonicalLineItem, ExportFormat } from "@/lib/types";
+import type { CanonicalLineItem, CanonicalOrder, ExportFormat } from "@/lib/types";
 
 /**
  * Maximum number of line items allowed in a single export.
@@ -33,6 +33,55 @@ export function getLineItemValue(item: CanonicalLineItem, field: string): string
     default:
       return "";
   }
+}
+
+/**
+ * Resolves a value from the order-level data by dot-path.
+ * Handles paths like "order_number", "dealer.name", "sender.company_name",
+ * "delivery_address.company", "billing_address.street", etc.
+ */
+export function getOrderFieldValue(order: CanonicalOrder, fieldPath: string): string {
+  const parts = fieldPath.split(".");
+
+  if (parts.length === 1) {
+    switch (parts[0]) {
+      case "order_number": return order.order_number ?? "";
+      case "order_date": return order.order_date ?? "";
+      case "currency": return order.currency ?? "";
+      case "total_amount": return order.total_amount !== null ? String(order.total_amount) : "";
+      case "notes": return order.notes ?? "";
+      default: return "";
+    }
+  }
+
+  if (parts.length === 2) {
+    const [parent, child] = parts;
+    switch (parent) {
+      case "dealer":
+        if (child === "name") return order.dealer?.name ?? "";
+        if (child === "id") return order.dealer?.id ?? "";
+        return "";
+      case "sender": {
+        if (!order.sender) return "";
+        const val = (order.sender as unknown as Record<string, unknown>)[child];
+        return val !== null && val !== undefined ? String(val) : "";
+      }
+      case "delivery_address": {
+        if (!order.delivery_address) return "";
+        const val = (order.delivery_address as unknown as Record<string, unknown>)[child];
+        return val !== null && val !== undefined ? String(val) : "";
+      }
+      case "billing_address": {
+        if (!order.billing_address) return "";
+        const val = (order.billing_address as unknown as Record<string, unknown>)[child];
+        return val !== null && val !== undefined ? String(val) : "";
+      }
+      default:
+        return "";
+    }
+  }
+
+  return "";
 }
 
 /**

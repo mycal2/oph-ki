@@ -123,21 +123,42 @@ export async function POST(
     const warnings: string[] = [];
 
     // Validate required fields
-    const requiredErrors = validateRequiredFields(orderData.order.line_items, mappings);
+    const requiredErrors = validateRequiredFields(orderData.order.line_items, mappings, orderData);
     if (requiredErrors.length > 0) {
       warnings.push(...requiredErrors.map((e) => `Pflichtfeld: ${e}`));
     }
 
-    // Check for unknown source fields (normalize items[]. prefix first)
-    const knownFields = new Set([
+    // Check for unknown source fields
+    const knownItemFields = new Set([
       "position", "article_number", "description", "quantity",
       "unit", "unit_price", "total_price", "currency",
       "discount", "notes", "delivery_date", "ean", "supplier_sku",
     ]);
+    const knownOrderFields = new Set([
+      "order.order_number", "order.order_date", "order.currency",
+      "order.total_amount", "order.notes",
+      "order.dealer.name", "order.dealer.id",
+      "order.sender.company_name", "order.sender.customer_number",
+      "order.sender.email", "order.sender.phone",
+      "order.sender.street", "order.sender.city",
+      "order.sender.postal_code", "order.sender.country",
+      "order.delivery_address.company", "order.delivery_address.street",
+      "order.delivery_address.city", "order.delivery_address.postal_code",
+      "order.delivery_address.country",
+      "order.billing_address.company", "order.billing_address.street",
+      "order.billing_address.city", "order.billing_address.postal_code",
+      "order.billing_address.country",
+    ]);
     for (const m of mappings) {
-      const normalized = m.source_field.replace(/^items\[\]\./, "");
-      if (!knownFields.has(normalized)) {
-        warnings.push(`Unbekanntes Quellfeld: "${m.source_field}"`);
+      if (m.source_field.startsWith("order.")) {
+        if (!knownOrderFields.has(m.source_field)) {
+          warnings.push(`Unbekanntes Quellfeld: "${m.source_field}"`);
+        }
+      } else {
+        const normalized = m.source_field.replace(/^items\[\]\./, "");
+        if (!knownItemFields.has(normalized)) {
+          warnings.push(`Unbekanntes Quellfeld: "${m.source_field}"`);
+        }
       }
     }
 

@@ -203,7 +203,7 @@ export async function GET(
     if (effectiveFormat === "csv") {
       const headers = columnMappings.map((m) => m.target_column_name);
       const rows = previewItems.map((item) =>
-        columnMappings.map((m) => getTransformedValue(item, m, decimalSeparator))
+        columnMappings.map((m) => getTransformedValue(item, m, decimalSeparator, orderData))
       );
 
       return NextResponse.json({

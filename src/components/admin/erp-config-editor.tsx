@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Save,
   Loader2,
@@ -171,7 +171,7 @@ export function ErpConfigEditor({
   // Sync state when detail changes (e.g. after rollback/copy)
   const configId = config?.id;
   const configUpdatedAt = config?.updated_at;
-  useMemo(() => {
+  useEffect(() => {
     if (config) {
       setFormat(config.format);
       setColumnMappings(config.column_mappings);

@@ -18,6 +18,7 @@ import {
   escapeCsvField,
   escapeXml,
   getLineItemValue,
+  getOrderFieldValue,
 } from "@/lib/export-utils";
 
 // Register Handlebars helpers once at module level (BUG-006 fix)
@@ -102,10 +103,19 @@ function formatDecimal(value: string, decimalSeparator: string): string {
 }
 
 /**
- * Normalizes a source field path by stripping common prefixes.
+ * Checks whether a source field is an order-level field (e.g. "order.order_number").
+ */
+function isOrderField(field: string): boolean {
+  return field.startsWith("order.");
+}
+
+/**
+ * Normalizes a source field path by stripping the items[] prefix.
  * e.g. "items[].article_number" → "article_number"
+ * Order-level fields (e.g. "order.order_number") are left as-is.
  */
 function normalizeSourceField(field: string): string {
+  if (isOrderField(field)) return field;
   return field.replace(/^items\[\]\./, "");
 }
 
@@ -123,16 +133,31 @@ export function normalizeMapping(mapping: ErpColumnMappingExtended): ErpColumnMa
 }
 
 /**
- * Gets a transformed line item value, applying column-level transformations
+ * Gets a transformed value for a mapping, applying column-level transformations
  * and decimal separator formatting.
+ *
+ * Resolves both line-item fields (e.g. "article_number", "items[].quantity")
+ * and order-level fields (e.g. "order.order_number", "order.dealer.name").
  */
 export function getTransformedValue(
   item: CanonicalLineItem,
   mapping: ErpColumnMappingExtended,
-  decimalSeparator: string
+  decimalSeparator: string,
+  orderData?: CanonicalOrderData
 ): string {
   const normalized = normalizeMapping(mapping);
-  let value = getLineItemValue(item, normalized.source_field);
+  let value: string;
+
+  if (isOrderField(normalized.source_field) && orderData) {
+    // Strip "order." prefix and resolve from order data
+    const orderPath = normalized.source_field.replace(/^order\./, "");
+    value = getOrderFieldValue(orderData.order, orderPath);
+  } else if (isOrderField(normalized.source_field)) {
+    // Order field requested but no orderData provided — return empty
+    value = "";
+  } else {
+    value = getLineItemValue(item, normalized.source_field);
+  }
 
   // Apply transformations pipeline
   if (normalized.transformations.length > 0) {
@@ -140,8 +165,8 @@ export function getTransformedValue(
   }
 
   // Apply decimal separator for numeric fields
-  const numericFields = ["quantity", "unit_price", "total_price"];
-  if (numericFields.includes(normalized.source_field)) {
+  const numericFields = ["quantity", "unit_price", "total_price", "total_amount"];
+  if (numericFields.includes(normalized.source_field.replace(/^order\./, ""))) {
     value = formatDecimal(value, decimalSeparator);
   }
 
@@ -170,7 +195,7 @@ export function generateCsvContent(
   const dataLines = orderData.order.line_items.map((item) =>
     mappings
       .map((m) =>
-        escapeCsvField(getTransformedValue(item, m, decimalSeparator), separator, quoteChar)
+        escapeCsvField(getTransformedValue(item, m, decimalSeparator, orderData), separator, quoteChar)
       )
       .join(separator)
   );
@@ -233,7 +258,7 @@ export function generateXmlContent(
   for (const item of orderData.order.line_items) {
     xml += "    <item>\n";
     for (const mapping of mappings) {
-      const value = getTransformedValue(item, mapping, decimalSeparator);
+      const value = getTransformedValue(item, mapping, decimalSeparator, orderData);
       xml += `      <${mapping.target_column_name}>${escapeXml(value)}</${mapping.target_column_name}>\n`;
     }
     xml += "    </item>\n";
@@ -250,12 +275,13 @@ export function generateXmlContent(
 }
 
 /**
- * Validates required fields across all line items.
+ * Validates required fields across all line items (and order-level fields).
  * Returns an array of human-readable error messages.
  */
 export function validateRequiredFields(
   lineItems: CanonicalLineItem[],
-  mappings: ErpColumnMappingExtended[]
+  mappings: ErpColumnMappingExtended[],
+  orderData?: CanonicalOrderData
 ): string[] {
   const requiredMappings = mappings.filter((m) => (m.required ?? false));
   if (requiredMappings.length === 0) return [];
@@ -263,12 +289,21 @@ export function validateRequiredFields(
   const errors: string[] = [];
   for (const mapping of requiredMappings) {
     const normalized = normalizeMapping(mapping);
-    for (const item of lineItems) {
-      const value = getLineItemValue(item, normalized.source_field);
+
+    if (isOrderField(normalized.source_field) && orderData) {
+      const orderPath = normalized.source_field.replace(/^order\./, "");
+      const value = getOrderFieldValue(orderData.order, orderPath);
       if (!value || value.trim() === "") {
-        errors.push(
-          `Pos. ${item.position}: "${mapping.target_column_name}" ist leer`
-        );
+        errors.push(`"${mapping.target_column_name}" ist leer`);
+      }
+    } else if (!isOrderField(normalized.source_field)) {
+      for (const item of lineItems) {
+        const value = getLineItemValue(item, normalized.source_field);
+        if (!value || value.trim() === "") {
+          errors.push(
+            `Pos. ${item.position}: "${mapping.target_column_name}" ist leer`
+          );
+        }
       }
     }
   }
