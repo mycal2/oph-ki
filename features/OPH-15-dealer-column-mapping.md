@@ -1,6 +1,6 @@
 # OPH-15: Dealer Column Mapping for Extraction
 
-## Status: In Review
+## Status: Deployed
 **Created:** 2026-03-02
 **Last Updated:** 2026-03-02
 
@@ -422,4 +422,21 @@ Note: Code-level review only.
 - **Recommendation:** Deploy. All 5 bugs are low severity and can be addressed in a future iteration. No blocking issues found.
 
 ## Deployment
-_To be added by /deploy_
+
+**Deployed:** 2026-03-02
+**Production URL:** https://ai-coding-starter-kit.vercel.app
+**Git tag:** v1.15.0-OPH-15
+
+### Pre-Deployment Checks
+- [x] `npm run build` passes
+- [x] `npm run lint` passes
+- [x] QA approved (10/10 AC, 0 critical/high bugs)
+- [x] No new environment variables required
+- [x] DB migration `015_oph15_dealer_column_mapping_profiles` applied via Supabase MCP
+- [x] All code committed and pushed to main
+
+### Changes Deployed
+- New table: `dealer_column_mapping_profiles` with RLS
+- API routes: GET/PUT/DELETE `/api/admin/dealers/[id]/column-mappings/[formatType]`
+- Admin UI: "Spalten" tab in dealer edit sheet
+- Extraction: column mapping context injected into Claude prompt
