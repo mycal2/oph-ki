@@ -352,3 +352,71 @@ export const updateDealerSchema = z.object({
 
 export type CreateDealerInput = z.infer<typeof createDealerSchema>;
 export type UpdateDealerInput = z.infer<typeof updateDealerSchema>;
+
+/**
+ * OPH-8: Admin Tenant Management validation schemas.
+ */
+
+/** Slug must be lowercase letters, numbers, and hyphens only. */
+const slugField = z
+  .string()
+  .min(2, "Slug muss mindestens 2 Zeichen lang sein.")
+  .max(50, "Slug darf maximal 50 Zeichen lang sein.")
+  .regex(
+    /^[a-z0-9-]+$/,
+    "Slug darf nur Kleinbuchstaben, Zahlen und Bindestriche enthalten."
+  );
+
+export const createTenantSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Name ist erforderlich.")
+    .max(200, "Name darf maximal 200 Zeichen lang sein.")
+    .trim(),
+  slug: slugField,
+  contact_email: z
+    .string()
+    .min(1, "Kontakt-E-Mail ist erforderlich.")
+    .email("Bitte geben Sie eine gueltige E-Mail-Adresse ein."),
+  erp_type: z.enum(["SAP", "Dynamics365", "Sage", "Custom"], {
+    message: "Bitte waehlen Sie einen gueltigen ERP-Typ.",
+  }),
+  status: z.enum(["active", "inactive", "trial"], {
+    message: "Ungueltiger Status.",
+  }).default("active"),
+});
+
+export const updateTenantSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Name ist erforderlich.")
+    .max(200, "Name darf maximal 200 Zeichen lang sein.")
+    .trim()
+    .optional(),
+  contact_email: z
+    .string()
+    .min(1, "Kontakt-E-Mail ist erforderlich.")
+    .email("Bitte geben Sie eine gueltige E-Mail-Adresse ein.")
+    .optional(),
+  erp_type: z.enum(["SAP", "Dynamics365", "Sage", "Custom"], {
+    message: "Bitte waehlen Sie einen gueltigen ERP-Typ.",
+  }).optional(),
+  status: z.enum(["active", "inactive", "trial"], {
+    message: "Ungueltiger Status.",
+  }).optional(),
+});
+
+/** Invite user on behalf of a specific tenant (platform admin). */
+export const adminInviteUserSchema = z.object({
+  email: z
+    .string()
+    .min(1, "E-Mail-Adresse ist erforderlich.")
+    .email("Bitte geben Sie eine gueltige E-Mail-Adresse ein."),
+  role: z.enum(["tenant_user", "tenant_admin"], {
+    message: "Bitte waehlen Sie eine gueltige Rolle.",
+  }),
+});
+
+export type CreateTenantInput = z.infer<typeof createTenantSchema>;
+export type UpdateTenantInput = z.infer<typeof updateTenantSchema>;
+export type AdminInviteUserInput = z.infer<typeof adminInviteUserSchema>;

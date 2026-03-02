@@ -406,6 +406,35 @@ export interface DealerDataMappingListItem extends DealerDataMapping {
 }
 
 /**
+ * OPH-8: Admin Tenant Management types.
+ */
+
+/** Tenant with usage stats for the admin list view. */
+export interface TenantAdminListItem {
+  id: string;
+  name: string;
+  slug: string;
+  status: TenantStatus;
+  erp_type: ErpType;
+  contact_email: string;
+  order_count: number;
+  orders_last_month: number;
+  last_upload_at: string | null;
+  created_at: string;
+}
+
+/** User belonging to a tenant, shown in the admin user tab. */
+export interface TenantUserListItem {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: UserRole;
+  status: UserStatus;
+  last_sign_in_at: string | null;
+}
+
+/**
  * OPH-7: Admin Dealer Management types.
  */
 

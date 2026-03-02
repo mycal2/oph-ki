@@ -1,0 +1,149 @@
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { requirePlatformAdmin, isErrorResponse, checkAdminRateLimit } from "@/lib/admin-auth";
+import { createTenantSchema } from "@/lib/validations";
+import type { TenantAdminListItem, Tenant } from "@/lib/types";
+
+/**
+ * GET /api/admin/tenants
+ *
+ * Returns all tenants with usage statistics (order count, last upload).
+ * Platform admin only.
+ */
+export async function GET(): Promise<NextResponse> {
+  try {
+    const auth = await requirePlatformAdmin();
+    if (isErrorResponse(auth)) return auth;
+    const { adminClient } = auth;
+
+    // Fetch all tenants
+    const { data: tenants, error: tenantsError } = await adminClient
+      .from("tenants")
+      .select("id, name, slug, status, erp_type, contact_email, created_at")
+      .order("name", { ascending: true })
+      .limit(1000);
+
+    if (tenantsError) {
+      console.error("Error fetching tenants:", tenantsError.message);
+      return NextResponse.json(
+        { success: false, error: "Mandanten konnten nicht geladen werden." },
+        { status: 500 }
+      );
+    }
+
+    // Get order stats per tenant via RPC (efficient GROUP BY aggregation)
+    const statsByTenant = new Map<string, { count: number; lastMonth: number; lastUploadAt: string | null }>();
+
+    const { data: rpcStats, error: rpcError } = await adminClient.rpc("get_tenant_order_stats");
+
+    if (!rpcError && Array.isArray(rpcStats)) {
+      for (const row of rpcStats as { tenant_id: string; order_count: number; orders_last_month: number; last_upload_at: string | null }[]) {
+        statsByTenant.set(row.tenant_id, {
+          count: row.order_count,
+          lastMonth: row.orders_last_month,
+          lastUploadAt: row.last_upload_at,
+        });
+      }
+    }
+
+    const result: TenantAdminListItem[] = (tenants ?? []).map((t) => {
+      const stats = statsByTenant.get(t.id as string);
+      return {
+        id: t.id as string,
+        name: t.name as string,
+        slug: t.slug as string,
+        status: t.status as TenantAdminListItem["status"],
+        erp_type: t.erp_type as TenantAdminListItem["erp_type"],
+        contact_email: t.contact_email as string,
+        order_count: stats?.count ?? 0,
+        orders_last_month: stats?.lastMonth ?? 0,
+        last_upload_at: stats?.lastUploadAt ?? null,
+        created_at: t.created_at as string,
+      };
+    });
+
+    return NextResponse.json({ success: true, data: result });
+  } catch (error) {
+    console.error("Error in GET /api/admin/tenants:", error);
+    return NextResponse.json(
+      { success: false, error: "Interner Serverfehler." },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * POST /api/admin/tenants
+ *
+ * Creates a new tenant. Platform admin only.
+ */
+export async function POST(request: NextRequest): Promise<NextResponse> {
+  try {
+    const auth = await requirePlatformAdmin();
+    if (isErrorResponse(auth)) return auth;
+    const { user, adminClient } = auth;
+
+    const rateLimitResponse = checkAdminRateLimit(user.id);
+    if (rateLimitResponse) return rateLimitResponse;
+
+    const body = await request.json();
+    const parsed = createTenantSchema.safeParse(body);
+
+    if (!parsed.success) {
+      const firstError = parsed.error.issues[0]?.message ?? "Ungueltige Eingabe.";
+      return NextResponse.json(
+        { success: false, error: firstError },
+        { status: 400 }
+      );
+    }
+
+    const input = parsed.data;
+
+    // Check slug uniqueness
+    const { data: existing } = await adminClient
+      .from("tenants")
+      .select("id")
+      .eq("slug", input.slug)
+      .limit(1)
+      .maybeSingle();
+
+    if (existing) {
+      return NextResponse.json(
+        { success: false, error: "Dieser Slug ist bereits vergeben." },
+        { status: 409 }
+      );
+    }
+
+    // Insert the tenant
+    const { data: tenant, error: insertError } = await adminClient
+      .from("tenants")
+      .insert({
+        name: input.name,
+        slug: input.slug,
+        contact_email: input.contact_email,
+        erp_type: input.erp_type,
+        status: input.status,
+      })
+      .select()
+      .single();
+
+    if (insertError || !tenant) {
+      console.error("Failed to create tenant:", insertError?.message);
+      return NextResponse.json(
+        { success: false, error: "Mandant konnte nicht erstellt werden." },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(
+      { success: true, data: tenant as unknown as Tenant },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Error in POST /api/admin/tenants:", error);
+    return NextResponse.json(
+      { success: false, error: "Interner Serverfehler." },
+      { status: 500 }
+    );
+  }
+}
