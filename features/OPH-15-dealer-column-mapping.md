@@ -84,7 +84,93 @@ Da ein Händler verschiedene Bestellformate nutzen kann (z.B. PDF-Tabelle vs. Ex
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Component Structure
+
+```
+DealerFormSheet (already exists — extended with new tab)
++-- Tab: Profil (existing, unchanged)
++-- Tab: Erkennungsregeln (existing, unchanged)
++-- Tab: Spalten-Mapping (NEW)
+|   +-- FormatTypeTabs (pdf_table / excel / email_text)
+|   |   +-- "Neues Profil" button (if format type has no profile yet)
+|   |   +-- ColumnMappingTable (per selected format type)
+|   |       +-- ColumnMappingRow (repeating)
+|   |       |   +-- Match-Typ selector (position / header / both)
+|   |       |   +-- Position input (1-based number, shown if type = position/both)
+|   |       |   +-- Header-Text input (shown if type = header/both)
+|   |       |   +-- Target field input (free-text canonical JSON path)
+|   |       |   +-- Delete row button
+|   |       +-- "Zeile hinzufügen" button
+|   |       +-- "Profil löschen" button (danger zone)
+|   +-- "Spalten-Mapping speichern" button (independent of dealer profile save)
++-- Tab: Verlauf (existing, unchanged)
+```
+
+### Data Model
+
+**New table: `dealer_column_mapping_profiles`**
+
+| Field | Description |
+|-------|-------------|
+| `id` | Unique identifier |
+| `dealer_id` | Links to `dealers` table (global, not tenant-scoped) |
+| `format_type` | One of: `pdf_table`, `excel`, `email_text` |
+| `mappings` | JSON array of column rules (see below) |
+| `created_at` / `updated_at` | Audit timestamps |
+
+Constraint: maximum one profile per `(dealer_id, format_type)` combination.
+
+**Each column rule (inside `mappings` array):**
+
+| Field | Description |
+|-------|-------------|
+| `match_type` | `"position"`, `"header"`, or `"both"` |
+| `position` | Column number (1-based), present when match_type = position or both |
+| `header_text` | Expected column header label (case-insensitive), present when match_type = header or both |
+| `target_field` | Canonical JSON field path, e.g. `items[].product_code`, `order_number` |
+
+**RLS:** Platform-admins write; all authenticated users read (same as `dealers` table).
+
+### New API Routes
+
+| Route | Purpose |
+|-------|---------|
+| `GET /api/admin/dealers/[id]/column-mappings` | Load all mapping profiles for a dealer |
+| `PUT /api/admin/dealers/[id]/column-mappings/[formatType]` | Upsert a profile for one format type (full replacement) |
+| `DELETE /api/admin/dealers/[id]/column-mappings/[formatType]` | Remove a profile entirely |
+
+Column mappings are saved independently (their own "Speichern" button) — not bundled into the existing dealer PATCH endpoint.
+
+### AI Extraction Integration
+
+The existing extract route (`/api/orders/[orderId]/extract`) already builds two context blocks for Claude:
+1. `extraction_hints` — free-text notes on the dealer
+2. `mappingsContext` — OPH-14 field label and article number translations
+
+OPH-15 adds a **third context block**: `columnMappingContext`
+
+**How the right profile is selected:** The file's MIME type (already stored on `order_files`) is mapped to a format type: PDF → `pdf_table`, Excel → `excel`, plain text/email → `email_text`. The extract route fetches the matching `dealer_column_mapping_profiles` row and formats it into natural language inserted into the Claude prompt.
+
+**Example prompt addition:**
+> "Spalten-Zuordnung für diesen Händler: Spalte 1 = ISO-Nummer (items[].iso_number), Spalte 2 = Artikelnummer (items[].product_code), Spalte 3 = Menge (items[].quantity)."
+
+If no matching profile exists, extraction continues as today with no additional context.
+
+### Tech Decisions
+
+| Decision | Why |
+|----------|-----|
+| Separate table, not JSONB on `dealers` | A dealer can have up to 3 independent profiles (one per format type); a join table allows atomic upsert per format type without overwriting other profiles |
+| `PUT` (full replace) not `PATCH` | Admin edits the complete rule set for a format type in one shot — partial update adds unnecessary complexity |
+| Independent save button in the tab | Column mapping changes are separate from dealer profile changes; avoids entangling two different data sets in one save action |
+| File MIME type → format type mapping | MIME type is already stored on `order_files` at upload time — no new file inspection needed at extraction |
+| Platform-admin read + write, all-auth read | Same RLS pattern as `dealers` — mappings are global and read during extraction for any tenant's orders |
+| No version history | Out of scope by design; consistent with keeping this a fast-iteration internal tool |
+
+### New Packages Required
+
+None — uses existing Supabase, shadcn/ui (Tabs, Table, Select, Input, Button), and Next.js.
 
 ## QA Test Results
 _To be added by /qa_
