@@ -1,8 +1,9 @@
 # OPH-8: Admin: Mandanten-Management
 
-## Status: In Review
+## Status: Deployed
 **Created:** 2026-02-27
 **Last Updated:** 2026-03-02
+**Deployed:** 2026-03-02
 
 ## Dependencies
 - Requires: OPH-1 (Multi-Tenant Auth) — Mandanten-Tabelle und User-Profile-Struktur bereits vorhanden

@@ -19,7 +19,7 @@
 | OPH-5 | Bestellprüfung & manuelle Korrektur | Deployed | [OPH-5-order-review.md](OPH-5-order-review.md) | 2026-02-27 |
 | OPH-6 | ERP-Export & Download | Deployed | [OPH-6-erp-export.md](OPH-6-erp-export.md) | 2026-02-27 |
 | OPH-7 | Admin: Händler-Regelwerk-Verwaltung | Deployed | [OPH-7-admin-dealer-rules.md](OPH-7-admin-dealer-rules.md) | 2026-02-27 |
-| OPH-8 | Admin: Mandanten-Management | In Review | [OPH-8-admin-tenant-management.md](OPH-8-admin-tenant-management.md) | 2026-02-27 |
+| OPH-8 | Admin: Mandanten-Management | Deployed | [OPH-8-admin-tenant-management.md](OPH-8-admin-tenant-management.md) | 2026-02-27 |
 | OPH-9 | Admin: ERP-Mapping-Konfiguration | Planned | [OPH-9-admin-erp-mapping.md](OPH-9-admin-erp-mapping.md) | 2026-02-27 |
 | OPH-10 | E-Mail-Weiterleitungs-Ingestion | Planned | [OPH-10-email-ingestion.md](OPH-10-email-ingestion.md) | 2026-02-27 |
 | OPH-11 | Bestellhistorie & Dashboard | Planned | [OPH-11-order-history-dashboard.md](OPH-11-order-history-dashboard.md) | 2026-02-27 |
