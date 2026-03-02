@@ -1,8 +1,8 @@
 # OPH-10: E-Mail-Weiterleitungs-Ingestion
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-02-27
-**Last Updated:** 2026-02-27
+**Last Updated:** 2026-03-02
 
 ## Dependencies
 - Requires: OPH-4 (KI-Datenextraktion) — E-Mail-Inhalte werden gleich verarbeitet wie Web-Uploads
@@ -45,7 +45,126 @@ Jeder Mandant erhält eine dedizierte Weiterleitungs-E-Mail-Adresse (z.B. `kunde
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Email Provider: Postmark Inbound
+Postmark receives emails sent to `{tenant_slug}@inbound.{domain}`, parses them fully (headers, body, attachments as Base64), and delivers the result as a single JSON payload to our webhook. No polling needed. Postmark signs every webhook request with an HMAC token so we can verify it is genuine.
+
+### How the Email Flow Works (Step by Step)
+
+```
+Employee's Email Client
+        |
+        | forwards to acme@inbound.orders-platform.de
+        ▼
+Postmark Inbound (parses email, extracts attachments)
+        |
+        | POST JSON webhook (signed with HMAC)
+        ▼
+POST /api/inbound/email  ←── No user login required; secured by HMAC signature
+        |
+        ├─ 1. Verify Postmark HMAC signature → reject if invalid
+        ├─ 2. Look up tenant by "To" address slug
+        ├─ 3. Check for duplicate (same Message-ID already processed)
+        ├─ 4. Check sender authorization (is sender in tenant's team?)
+        │        └─ If NOT authorized → save to email_quarantine table
+        │                              → notify tenant admin
+        │                              → return 200 OK to Postmark (don't retry)
+        ├─ 5. Upload attachments + archived .eml to Supabase Storage
+        ├─ 6. Create order record (status: "pending", source: "email_inbound")
+        ├─ 7. Trigger dealer recognition + AI extraction pipeline (same as web upload)
+        └─ 8. Send confirmation email to sender via Postmark API
+```
+
+### Component Structure
+
+```
+Settings Page (/settings)
++-- Eingangs-E-Mail Card (new tab)
+    +-- Inbound address display (copy-to-clipboard button)
+    +-- Setup instructions (how to forward, which file types work)
+    +-- Link to email client setup guides
+
+Admin Pages
++-- /admin/email-quarantine (new page)
+    +-- Quarantine Table
+    |   +-- Email row (sender, subject, received_at, tenant)
+    |   +-- "Freigeben" button → creates order from quarantined email
+    |   +-- "Ablehnen" button → marks as rejected
+    +-- Empty State (no quarantined emails)
+```
+
+### Data Model
+
+**Existing tables — new columns:**
+
+`tenants` table gets:
+- `inbound_email_address` — auto-generated as `{slug}@inbound.{domain}` (set when tenant is created or on first email received)
+
+`orders` table gets:
+- `source` — "web_upload" or "email_inbound" (for filtering and display)
+- `message_id` — the email's Message-ID header (for duplicate detection)
+- `sender_email` — the forwarding employee's email address
+
+**New table: `email_quarantine`**
+```
+Each quarantined email stores:
+- Unique ID
+- Tenant (which company's inbound address was targeted)
+- Sender email and name
+- Subject line
+- Message-ID (for deduplication)
+- Received timestamp
+- Storage path (the raw .eml file in Supabase Storage)
+- Review status: "pending" | "approved" | "rejected"
+- Reviewed by (admin user ID), reviewed at
+- Action taken (if approved, the resulting order ID)
+```
+
+### API Routes
+
+| Route | Method | Who calls it | Purpose |
+|-------|--------|-------------|---------|
+| `/api/inbound/email` | POST | Postmark webhook | Receives inbound email payload |
+| `/api/settings/inbound-email` | GET | Tenant user (Settings page) | Returns tenant's inbound address |
+| `/api/admin/email-quarantine` | GET | Admin | Lists all quarantined emails |
+| `/api/admin/email-quarantine/[id]` | PATCH | Admin | Approve or reject a quarantined email |
+| `/api/admin/email-quarantine/[id]/reprocess` | POST | Admin | Re-run pipeline on approved email → create order |
+
+### Security
+
+- **Webhook authentication**: Every Postmark webhook includes an `X-Postmark-Signature` header (HMAC-SHA256). The endpoint rejects any request without a valid signature — no way to fake an email submission without knowing the secret.
+- **No user session required**: The webhook endpoint is intentionally public but cryptographically secured. This is the standard pattern for all webhook receivers.
+- **Sender allowlist**: Only users in the tenant's active team may trigger order creation. Others land in quarantine — platform admin reviews before orders are created.
+- **Size limits**: Payloads > 25 MB per attachment are rejected before file upload.
+- **Duplicate guard**: Message-ID checked against existing orders + quarantine before any processing.
+
+### Tech Decisions
+
+| Decision | Choice | Why |
+|----------|--------|-----|
+| Email provider | Postmark Inbound | Simplest setup, reliable delivery, great docs, EU-compatible |
+| Parsing | Already built (`eml-parser.ts`) | `mailparser` library already in project |
+| Confirmation email | Postmark API (existing sending) | Same service, no extra dependency |
+| Archive format | .eml file in Supabase Storage | Exactly like web-uploaded .eml files — consistent |
+| Duplicate detection | Message-ID header | Industry standard, unique per email globally |
+
+### New Environment Variables
+
+```
+POSTMARK_INBOUND_WEBHOOK_TOKEN=   # HMAC secret from Postmark dashboard
+POSTMARK_SERVER_API_TOKEN=        # For sending confirmation emails
+INBOUND_EMAIL_DOMAIN=             # e.g. inbound.your-domain.com
+```
+
+### Dependencies to Install
+
+- `@postmark/postmark` — official Postmark Node.js client for sending confirmation emails
+
+### DNS Setup Required (one-time, outside codebase)
+
+- Add MX record for subdomain `inbound.your-domain.com` pointing to Postmark's inbound servers
+- Verify domain in Postmark Dashboard
+- Set webhook URL to `https://your-app.vercel.app/api/inbound/email`
 
 ## QA Test Results
 _To be added by /qa_
