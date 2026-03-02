@@ -408,11 +408,68 @@ export async function POST(
         }
       }
 
+      // --- Re-extract with column mapping if dealer was resolved by AI matching ---
+      // When the dealer wasn't known before extraction (no metadata-based recognition),
+      // AI matching may have identified the dealer from extracted content. If column
+      // mappings exist for that dealer, re-extract with the mapping context so the AI
+      // can correctly interpret ambiguous/unlabeled columns.
+      const resolvedDealerId = (aiDealerUpdate.dealer_id as string) ?? (order.dealer_id as string);
+      let finalResult = result;
+
+      if (resolvedDealerId && !columnMappingContext && fileContents.length > 0) {
+        const primaryMimeType = fileContents[0].mimeType;
+        const resolvedFormatType = mimeTypeToFormatType(primaryMimeType);
+
+        if (resolvedFormatType) {
+          const resolvedProfile = await getColumnMappingProfile(
+            adminClient,
+            resolvedDealerId,
+            resolvedFormatType
+          );
+
+          if (resolvedProfile && resolvedProfile.mappings.length > 0) {
+            const resolvedColumnCtx = formatColumnMappingForPrompt(resolvedProfile);
+            console.log(
+              `Re-extracting order ${orderId} with column mapping for dealer ${resolvedDealerId} (${resolvedFormatType})`
+            );
+
+            // Fetch dealer hints for the resolved dealer (may differ from initial)
+            let resolvedDealerInfo = dealerInfo;
+            if (!resolvedDealerInfo || resolvedDealerInfo.id !== resolvedDealerId) {
+              const { data: rDealer } = await adminClient
+                .from("dealers")
+                .select("id, name, extraction_hints")
+                .eq("id", resolvedDealerId)
+                .single();
+              if (rDealer) {
+                resolvedDealerInfo = {
+                  id: rDealer.id as string,
+                  name: rDealer.name as string,
+                  extractionHints: (rDealer.extraction_hints as string) ?? null,
+                };
+              }
+            }
+
+            finalResult = await extractOrderData({
+              orderId,
+              files: fileContents,
+              dealer: resolvedDealerInfo,
+              mappingsContext,
+              columnMappingContext: resolvedColumnCtx,
+            });
+
+            // Preserve the AI-matched dealer info in the re-extracted data
+            if (aiDealerUpdate.dealer_id) {
+              finalResult.extractedData.order.dealer = result.extractedData.order.dealer;
+            }
+          }
+        }
+      }
+
       // --- Apply dealer data mappings post-extraction (OPH-14) ---
-      let finalExtractedData = result.extractedData;
+      let finalExtractedData = finalResult.extractedData;
       let hasUnmappedArticles = false;
 
-      const resolvedDealerId = (aiDealerUpdate.dealer_id as string) ?? (order.dealer_id as string);
       if (resolvedDealerId && tenantId) {
         const postMappings = await getMappingsForDealer(adminClient, resolvedDealerId, tenantId);
         if (postMappings.length > 0) {
