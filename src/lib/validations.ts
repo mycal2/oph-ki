@@ -576,3 +576,15 @@ export type ErpConfigSaveInput = z.infer<typeof erpConfigSaveSchema>;
 export type ErpConfigTestInput = z.infer<typeof erpConfigTestSchema>;
 export type ErpTransformationStepInput = z.infer<typeof erpTransformationStepSchema>;
 export type ErpColumnMappingExtendedInput = z.infer<typeof erpColumnMappingExtendedSchema>;
+
+/**
+ * OPH-10: Email Quarantine validation schemas.
+ */
+
+export const quarantineActionSchema = z.object({
+  action: z.enum(["approved", "rejected"], {
+    message: "Ungueltige Aktion. Erlaubt: approved, rejected",
+  }),
+});
+
+export type QuarantineActionInput = z.infer<typeof quarantineActionSchema>;

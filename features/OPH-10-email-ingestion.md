@@ -58,11 +58,11 @@ Employee's Email Client
         ▼
 Postmark Inbound (parses email, extracts attachments)
         |
-        | POST JSON webhook (signed with HMAC)
+        | POST JSON webhook to URL with secret token
         ▼
-POST /api/inbound/email  ←── No user login required; secured by HMAC signature
+POST /api/inbound/email?token=SECRET  ←── No user login; secured by URL token
         |
-        ├─ 1. Verify Postmark HMAC signature → reject if invalid
+        ├─ 1. Verify webhook token → reject if invalid
         ├─ 2. Look up tenant by "To" address slug
         ├─ 3. Check for duplicate (same Message-ID already processed)
         ├─ 4. Check sender authorization (is sender in tenant's team?)
@@ -132,8 +132,8 @@ Each quarantined email stores:
 
 ### Security
 
-- **Webhook authentication**: Every Postmark webhook includes an `X-Postmark-Signature` header (HMAC-SHA256). The endpoint rejects any request without a valid signature — no way to fake an email submission without knowing the secret.
-- **No user session required**: The webhook endpoint is intentionally public but cryptographically secured. This is the standard pattern for all webhook receivers.
+- **Webhook authentication**: Postmark does not support HMAC signatures. Instead, the webhook URL includes a secret token as a query parameter (`?token=SECRET`). The endpoint rejects any request without a valid token. Generate with `openssl rand -base64 32`.
+- **No user session required**: The webhook endpoint is intentionally public but secured by the shared secret token. This is the standard pattern for Postmark inbound webhooks.
 - **Sender allowlist**: Only users in the tenant's active team may trigger order creation. Others land in quarantine — platform admin reviews before orders are created.
 - **Size limits**: Payloads > 25 MB per attachment are rejected before file upload.
 - **Duplicate guard**: Message-ID checked against existing orders + quarantine before any processing.
@@ -151,20 +151,20 @@ Each quarantined email stores:
 ### New Environment Variables
 
 ```
-POSTMARK_INBOUND_WEBHOOK_TOKEN=   # HMAC secret from Postmark dashboard
-POSTMARK_SERVER_API_TOKEN=        # For sending confirmation emails
+POSTMARK_INBOUND_WEBHOOK_TOKEN=   # Your own secret (openssl rand -base64 32)
+POSTMARK_SERVER_API_TOKEN=        # Server API Token from Postmark dashboard
 INBOUND_EMAIL_DOMAIN=             # e.g. inbound.your-domain.com
 ```
 
 ### Dependencies to Install
 
-- `@postmark/postmark` — official Postmark Node.js client for sending confirmation emails
+- `postmark` — Postmark Node.js client for sending confirmation emails
 
 ### DNS Setup Required (one-time, outside codebase)
 
 - Add MX record for subdomain `inbound.your-domain.com` pointing to Postmark's inbound servers
 - Verify domain in Postmark Dashboard
-- Set webhook URL to `https://your-app.vercel.app/api/inbound/email`
+- Set webhook URL to `https://your-app.vercel.app/api/inbound/email?token=YOUR_TOKEN`
 
 ## QA Test Results
 _To be added by /qa_

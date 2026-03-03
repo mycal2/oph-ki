@@ -609,3 +609,37 @@ export interface ErpConfigSavePayload {
   xml_template: string | null;
   comment?: string;
 }
+
+/**
+ * OPH-10: Email Ingestion types.
+ */
+
+export type OrderSource = "web_upload" | "email_inbound";
+export type QuarantineReviewStatus = "pending" | "approved" | "rejected";
+
+/** Quarantined email entry for admin review. */
+export interface EmailQuarantineEntry {
+  id: string;
+  tenant_id: string;
+  sender_email: string;
+  sender_name: string | null;
+  subject: string | null;
+  message_id: string | null;
+  received_at: string;
+  storage_path: string | null;
+  review_status: QuarantineReviewStatus;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  order_id: string | null;
+  created_at: string;
+}
+
+/** Quarantine list item with tenant name for admin display. */
+export interface EmailQuarantineListItem extends EmailQuarantineEntry {
+  tenant_name: string;
+}
+
+/** Response from GET /api/settings/inbound-email. */
+export interface InboundEmailSettingsResponse {
+  inboundEmailAddress: string | null;
+}
