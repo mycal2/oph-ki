@@ -114,6 +114,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
+    // Generate inbound email address from slug + configured domain
+    const inboundDomain = process.env.INBOUND_EMAIL_DOMAIN;
+    const inboundEmailAddress = inboundDomain
+      ? `${input.slug}@${inboundDomain}`
+      : null;
+
     // Insert the tenant
     const { data: tenant, error: insertError } = await adminClient
       .from("tenants")
@@ -123,6 +129,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         contact_email: input.contact_email,
         erp_type: input.erp_type,
         status: input.status,
+        ...(inboundEmailAddress ? { inbound_email_address: inboundEmailAddress } : {}),
       })
       .select()
       .single();

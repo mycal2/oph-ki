@@ -8,8 +8,9 @@ import {
   extractSlugFromEmail,
   filterAttachments,
   sendConfirmationEmail,
+  sendQuarantineNotification,
+  postmarkInboundPayloadSchema,
 } from "@/lib/postmark";
-import type { PostmarkInboundPayload } from "@/lib/postmark";
 import type { ApiResponse } from "@/lib/types";
 
 /**
@@ -24,6 +25,12 @@ import type { ApiResponse } from "@/lib/types";
  *   https://your-app.vercel.app/api/inbound/email?token=YOUR_SECRET
  *
  * Flow: verify → lookup tenant → check dedup → check sender → upload files → create order → trigger extraction
+ *
+ * Rate limiting: The URL token provides access control. In serverless (Vercel),
+ * in-memory rate limiting doesn't persist across invocations. Postmark's own
+ * retry logic (max 10 retries over ~2 days) and 25MB payload limit provide
+ * sufficient protection. For additional rate limiting, use Vercel's WAF or
+ * an upstream reverse proxy.
  */
 export async function POST(
   request: NextRequest
@@ -47,17 +54,35 @@ export async function POST(
       );
     }
 
-    // 2. Read and parse the JSON payload
+    // 2. Read, parse, and validate the JSON payload (reject oversized payloads)
+    const contentLength = request.headers.get("content-length");
+    if (contentLength && parseInt(contentLength, 10) > 30 * 1024 * 1024) {
+      return NextResponse.json(
+        { success: false, error: "Payload too large." },
+        { status: 413 }
+      );
+    }
+
     const rawBody = await request.text();
-    let payload: PostmarkInboundPayload;
+    let rawJson: unknown;
     try {
-      payload = JSON.parse(rawBody) as PostmarkInboundPayload;
+      rawJson = JSON.parse(rawBody);
     } catch {
       return NextResponse.json(
         { success: false, error: "Invalid JSON payload." },
         { status: 400 }
       );
     }
+
+    const parsed = postmarkInboundPayloadSchema.safeParse(rawJson);
+    if (!parsed.success) {
+      console.error("Postmark payload validation failed:", parsed.error.issues);
+      return NextResponse.json(
+        { success: false, error: "Invalid payload structure." },
+        { status: 400 }
+      );
+    }
+    const payload = parsed.data;
 
     const adminClient = createAdminClient();
 
@@ -124,41 +149,22 @@ export async function POST(
     const senderEmail = payload.FromFull?.Email ?? payload.From;
     const senderName = payload.FromFull?.Name ?? payload.FromName ?? "";
 
-    const { data: senderProfile } = await adminClient
+    // Get active user profiles for this specific tenant (typically < 20 users)
+    const { data: tenantProfiles } = await adminClient
       .from("user_profiles")
       .select("id")
       .eq("tenant_id", tenant.id)
-      .limit(1)
-      .maybeSingle();
+      .eq("status", "active");
 
-    // Also check by email in auth.users table
     let authorizedUserId: string | null = null;
-    if (senderProfile) {
-      // Tenant has users — check if sender's email matches any team member
-      const { data: authUsers } = await adminClient.auth.admin.listUsers({
-        perPage: 1000,
-      });
-
-      if (authUsers?.users) {
-        // Get all user IDs belonging to this tenant
-        const { data: tenantProfiles } = await adminClient
-          .from("user_profiles")
-          .select("id")
-          .eq("tenant_id", tenant.id)
-          .eq("status", "active");
-
-        const tenantUserIds = new Set(
-          (tenantProfiles ?? []).map((p: { id: string }) => p.id)
-        );
-
-        // Find the auth user whose email matches the sender
-        const matchingUser = authUsers.users.find(
-          (u) =>
-            tenantUserIds.has(u.id) &&
-            u.email?.toLowerCase() === senderEmail.toLowerCase()
-        );
-
-        authorizedUserId = matchingUser?.id ?? null;
+    if (tenantProfiles && tenantProfiles.length > 0) {
+      // Check each tenant member's auth email — avoids listing ALL system users
+      for (const profile of tenantProfiles) {
+        const { data: { user: authUser } } = await adminClient.auth.admin.getUserById(profile.id);
+        if (authUser?.email?.toLowerCase() === senderEmail.toLowerCase()) {
+          authorizedUserId = authUser.id;
+          break;
+        }
       }
     }
 
@@ -198,6 +204,43 @@ export async function POST(
         console.error("Failed to insert quarantine record:", quarantineError.message);
       }
 
+      // Notify tenant admins about the quarantined email
+      const serverApiToken = process.env.POSTMARK_SERVER_API_TOKEN;
+      if (serverApiToken && tenantProfiles && tenantProfiles.length > 0) {
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+        after(async () => {
+          try {
+            // Collect emails of tenant_admin users
+            const adminEmails: string[] = [];
+            const { data: adminProfiles } = await adminClient
+              .from("user_profiles")
+              .select("id")
+              .eq("tenant_id", tenant.id)
+              .eq("status", "active")
+              .eq("role", "tenant_admin");
+
+            for (const profile of adminProfiles ?? []) {
+              const { data: { user: adminUser } } = await adminClient.auth.admin.getUserById(profile.id);
+              if (adminUser?.email) {
+                adminEmails.push(adminUser.email);
+              }
+            }
+
+            await sendQuarantineNotification({
+              serverApiToken,
+              adminEmails,
+              senderEmail,
+              subject: payload.Subject || "",
+              tenantName: tenant.name,
+              siteUrl,
+            });
+          } catch (err) {
+            console.error("Failed to send quarantine notification:", err);
+          }
+        });
+      }
+
       // Return 200 — processed (quarantined), don't retry
       return NextResponse.json({ success: true });
     }
@@ -211,7 +254,7 @@ export async function POST(
       console.info("Attachment warnings for email from", senderEmail, ":", warnings);
     }
 
-    // 9. Create order record
+    // 9. Create order record (include ingestion warnings if any)
     const { data: order, error: orderError } = await adminClient
       .from("orders")
       .insert({
@@ -221,6 +264,7 @@ export async function POST(
         source: "email_inbound",
         message_id: messageId,
         sender_email: senderEmail,
+        ...(warnings.length > 0 ? { ingestion_notes: warnings } : {}),
       })
       .select("id")
       .single();
@@ -310,7 +354,7 @@ export async function POST(
       }
     }
 
-    // 12. Archive the original email as .eml (raw JSON from Postmark)
+    // 12. Archive the original Postmark JSON payload for reference
     try {
       const archivePath = `${tenant.id}/${orderId}/original_email.json`;
       await adminClient.storage

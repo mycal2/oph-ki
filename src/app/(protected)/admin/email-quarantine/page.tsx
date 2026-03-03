@@ -266,7 +266,7 @@ export default function EmailQuarantinePage() {
                       </TableCell>
                       <TableCell className="text-right">
                         {entry.review_status === "pending" ? (
-                          <div className="flex items-center justify-end gap-1">
+                          <div className="flex flex-col sm:flex-row items-end sm:items-center justify-end gap-1">
                             <Button
                               size="sm"
                               variant="outline"
