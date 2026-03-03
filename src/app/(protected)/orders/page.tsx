@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OrdersList } from "@/components/orders/orders-list";
+import { DashboardStats } from "@/components/orders/dashboard-stats";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -27,6 +28,7 @@ export default function OrdersPage() {
         </Button>
       </div>
 
+      <DashboardStats />
       <OrdersList />
     </div>
   );

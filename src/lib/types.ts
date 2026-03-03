@@ -687,3 +687,33 @@ export type OrderPreviewResponse =
 export interface TrialCheckResponse {
   isTrial: boolean;
 }
+
+/**
+ * OPH-11: Order History & Dashboard types.
+ */
+
+/** Paginated orders list response from GET /api/orders. */
+export interface OrdersPageResponse {
+  orders: OrderListItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+/** Dashboard stats from GET /api/orders/stats. */
+export interface OrderDashboardStats {
+  today: number;
+  thisWeek: number;
+  thisMonth: number;
+  openOrders: number;
+  errorRate7Days: number;
+}
+
+/** Filter state for the orders list. */
+export interface OrdersFilterState {
+  status: OrderStatus | "all";
+  search: string;
+  dateFrom: string;
+  dateTo: string;
+  page: number;
+}
