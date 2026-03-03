@@ -234,47 +234,92 @@ export async function sendTrialResultEmail(params: {
     ? `${orderSummary.totalAmount.toFixed(2)} ${currency}`
     : "–";
 
-  // Build line items table for the email
-  const itemLines: string[] = [];
+  // Escape HTML special characters
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+  // Build HTML line items table
+  let itemsHtml = "";
   if (lineItems.length > 0) {
-    itemLines.push("");
-    itemLines.push("Extrahierte Positionen:");
-    itemLines.push("─".repeat(72));
-    itemLines.push(
-      `${"Pos".padEnd(5)}${"Artikelnr.".padEnd(18)}${"Bezeichnung".padEnd(28)}${"Menge".padStart(7)}  ${"Preis".padStart(10)}`
-    );
-    itemLines.push("─".repeat(72));
-    for (const item of lineItems) {
-      const pos = String(item.position ?? "").padEnd(5);
-      const artNr = String(item.article_number ?? "–").slice(0, 16).padEnd(18);
-      const desc = String(item.description ?? "–").slice(0, 26).padEnd(28);
-      const qty = String(item.quantity ?? "").padStart(7);
-      const price = item.total_price != null ? String(item.total_price).padStart(10) : "".padStart(10);
-      itemLines.push(`${pos}${artNr}${desc}${qty}  ${price}`);
-    }
-    itemLines.push("─".repeat(72));
-    itemLines.push(`${"".padEnd(60)}${("Gesamt: " + total).padStart(12)}`);
-    itemLines.push("");
+    const rows = lineItems.map((item) => `
+      <tr>
+        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:center">${esc(String(item.position ?? ""))}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb">${esc(String(item.article_number ?? "–"))}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb">${esc(String(item.description ?? "–"))}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right">${esc(String(item.quantity ?? ""))}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:center">${esc(String(item.unit ?? ""))}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right">${item.unit_price != null ? esc(String(item.unit_price)) : ""}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:500">${item.total_price != null ? esc(String(item.total_price)) : ""}</td>
+      </tr>`).join("");
+
+    itemsHtml = `
+    <h3 style="margin:24px 0 12px;font-size:15px;color:#111827">Extrahierte Positionen</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;border:1px solid #e5e7eb;border-radius:6px">
+      <thead>
+        <tr style="background:#f9fafb">
+          <th style="padding:8px 10px;text-align:center;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Pos</th>
+          <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Artikelnr.</th>
+          <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Bezeichnung</th>
+          <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Menge</th>
+          <th style="padding:8px 10px;text-align:center;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Einheit</th>
+          <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Einzelpreis</th>
+          <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Gesamt</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+      <tfoot>
+        <tr style="background:#f9fafb">
+          <td colspan="6" style="padding:8px 10px;text-align:right;font-weight:600;border-top:2px solid #e5e7eb">Gesamtbetrag:</td>
+          <td style="padding:8px 10px;text-align:right;font-weight:700;border-top:2px solid #e5e7eb;color:#111827">${esc(total)}</td>
+        </tr>
+      </tfoot>
+    </table>`;
   }
 
+  const htmlBody = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#374151;background:#f9fafb">
+<div style="max-width:680px;margin:0 auto;padding:32px 20px">
+  <div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;margin-bottom:20px">
+    <h2 style="margin:0 0 8px;font-size:18px;color:#111827">Extrahierte Bestellung</h2>
+    <p style="margin:0 0 24px;color:#6b7280;font-size:14px">Ihre weitergeleitete E-Mail &ldquo;${esc(subject)}&rdquo; wurde verarbeitet.</p>
+
+    <table style="font-size:14px;margin-bottom:20px">
+      <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Bestellnummer:</td><td style="padding:4px 0;font-weight:500">${esc(orderSummary.orderNumber ?? "–")}</td></tr>
+      <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Bestelldatum:</td><td style="padding:4px 0;font-weight:500">${esc(orderSummary.orderDate ?? "–")}</td></tr>
+      <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Haendler:</td><td style="padding:4px 0;font-weight:500">${esc(orderSummary.dealerName ?? "–")}</td></tr>
+      <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Positionen:</td><td style="padding:4px 0;font-weight:500">${orderSummary.itemCount}</td></tr>
+      <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Gesamtbetrag:</td><td style="padding:4px 0;font-weight:700;color:#111827">${esc(total)}</td></tr>
+    </table>
+
+    ${itemsHtml}
+
+    <p style="margin:24px 0 12px;font-size:14px;color:#374151">Die vollstaendigen Daten finden Sie als CSV-Datei im Anhang.</p>
+
+    <a href="${esc(previewUrl)}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500">Bestellung online ansehen</a>
+  </div>
+
+  <div style="text-align:center;padding:16px 0;font-size:12px;color:#9ca3af">
+    <p style="margin:0 0 4px">Interesse an der Vollversion? <a href="https://www.ids.online" style="color:#2563eb;text-decoration:none">Kontaktieren Sie uns</a></p>
+    <p style="margin:0">Order Intelligence Platform &mdash; <a href="https://www.ids.online" style="color:#9ca3af;text-decoration:none">ids.online</a></p>
+  </div>
+</div>
+</body></html>`;
+
+  // Plain text fallback
   const textBody = [
     `Hallo ${toName || toEmail},`,
     "",
-    `Ihre weitergeleitete E-Mail "${subject}" wurde verarbeitet. Hier ist eine Uebersicht der extrahierten Bestelldaten:`,
+    `Ihre weitergeleitete E-Mail "${subject}" wurde verarbeitet.`,
     "",
     `  Bestellnummer: ${orderSummary.orderNumber ?? "–"}`,
     `  Bestelldatum:  ${orderSummary.orderDate ?? "–"}`,
     `  Haendler:      ${orderSummary.dealerName ?? "–"}`,
     `  Positionen:    ${orderSummary.itemCount}`,
     `  Gesamtbetrag:  ${total}`,
-    ...itemLines,
+    "",
     `Die vollstaendigen Daten finden Sie als CSV-Datei im Anhang.`,
     "",
-    `Sie koennen die Bestellung auch online einsehen:`,
-    previewUrl,
-    "",
-    `---`,
-    `Interesse an der Vollversion? Kontaktieren Sie uns: https://www.ids.online`,
+    `Bestellung online ansehen: ${previewUrl}`,
     "",
     "Mit freundlichen Gruessen,",
     "Ihr Order Intelligence Team",
@@ -291,6 +336,7 @@ export async function sendTrialResultEmail(params: {
       From: fromAddress,
       To: toEmail,
       Subject: `Extrahierte Bestellung: ${subject}`,
+      HtmlBody: htmlBody,
       TextBody: textBody,
       Attachments: [
         {
