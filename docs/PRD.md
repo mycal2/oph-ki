@@ -35,6 +35,7 @@ Eine mandantenfähige SaaS-Plattform ("Order Intelligence Platform"), die Dental
 | P1 | OPH-13: Order Submission Email Notifications | Planned |
 | P1 | OPH-14: Händler-Datentransformationen (Artikel-Mapping, Einheiten, Felder) | Planned |
 | P1 | OPH-15: Dealer Column Mapping for Extraction | Planned |
+| P1 | OPH-18: Admin: Cross-Tenant Order View | Planned |
 | P1 | OPH-16: Trial-/Demo-Modus für Interessenten | Deployed |
 | P1 | OPH-17: Allowed Email Domains für Sender-Autorisierung | Planned |
 
