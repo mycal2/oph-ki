@@ -433,8 +433,8 @@ export async function POST(
       });
     }
 
-    // 15. Send confirmation email to sender (skip for trial — they get the result email after extraction)
-    if (!isTrial) {
+    // 15. Send confirmation email to sender
+    {
       const serverApiToken = process.env.POSTMARK_SERVER_API_TOKEN;
       if (serverApiToken) {
         const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
