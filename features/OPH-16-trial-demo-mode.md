@@ -1,8 +1,9 @@
 # OPH-16: Trial-/Demo-Modus für Interessenten
 
-## Status: In Review
+## Status: Deployed
 **Created:** 2026-03-03
 **Last Updated:** 2026-03-03
+**Deployed:** 2026-03-03
 
 ## Dependencies
 - Requires: OPH-1 (Multi-Tenant Auth) — `tenants.status = 'trial'` already in schema
