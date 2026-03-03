@@ -67,6 +67,14 @@ export async function POST(
       );
     }
 
+    // OPH-16: Trial tenants cannot have team members
+    if (tenant.status === "trial") {
+      return NextResponse.json(
+        { success: false, error: "Team-Einladungen sind waehrend der Testphase nicht verfuegbar." },
+        { status: 403 }
+      );
+    }
+
     // Invite user via Supabase Auth, setting the target tenant_id in metadata
     const { data: inviteData, error: inviteError } =
       await adminClient.auth.admin.inviteUserByEmail(email, {

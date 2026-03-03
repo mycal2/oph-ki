@@ -99,6 +99,14 @@ export async function GET(
       );
     }
 
+    // OPH-16: Trial tenants cannot export to ERP
+    if (appMetadata?.tenant_status === "trial") {
+      return NextResponse.json(
+        { success: false, error: "ERP-Export ist waehrend der Testphase nicht verfuegbar." },
+        { status: 403 }
+      );
+    }
+
     const tenantId = appMetadata?.tenant_id;
     const isPlatformAdmin = appMetadata?.role === "platform_admin";
 

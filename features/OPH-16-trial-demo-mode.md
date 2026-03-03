@@ -1,6 +1,6 @@
 # OPH-16: Trial-/Demo-Modus für Interessenten
 
-## Status: In Progress
+## Status: In Review
 **Created:** 2026-03-03
 **Last Updated:** 2026-03-03
 
@@ -278,4 +278,309 @@ All required functionality is available in existing packages:
 8. Attempt login with trial tenant's email → "Trial-Konto" message shown, no sign-in
 9. Attempt ERP export API call with trial tenant → 403 returned
 10. Cron endpoint triggered manually → admin notification email sent for expiring trial
+
+---
+
+## QA Test Results
+
+**Tested:** 2026-03-03
+**Build Status:** `npm run build` passes cleanly (0 TypeScript errors)
+**Tester:** QA Engineer (AI)
+
+### Acceptance Criteria Status
+
+#### AC-1: Trial-Mandant anlegen
+- [x] Admin can set `status = trial` when creating a new tenant (validation schema accepts "trial")
+- [x] `trial_started_at` is auto-set to `now()` on creation (`POST /api/admin/tenants`, line 128-133)
+- [x] `trial_expires_at` is auto-set to `now() + 28 days` on creation
+- [x] Admin can set `status = trial` when editing an existing tenant (`PATCH /api/admin/tenants/[id]`, line 116-124)
+- [x] Trial dates are auto-set when updating an existing tenant from non-trial to trial status
+- [x] Trial dates are preserved when status changes from trial to active (no clearing logic exists)
+- [x] Status dropdown in TenantFormSheet includes "Testphase" option
+- [x] Hint text shown when creating a new trial tenant ("Testphase: 28 Tage ab Erstellung")
+- **PASS**
+
+#### AC-2: Admin-Uebersicht
+- [x] "Testphase" badge shown in the tenant list for trial tenants (STATUS_BADGES includes `trial`)
+- [x] "Noch X Tage" countdown displayed via `getTrialDaysRemaining()` function
+- [x] Red warning indicator shown when <= 7 days remaining (`isTrialUrgent` check)
+- [x] "Abgelaufen" text shown when trial has expired (`isTrialExpired` check)
+- [x] Trial period dates shown in the tenant edit sheet (started at + expires at)
+- [x] Red expiry date in edit sheet when <= 7 days remaining
+- **PASS**
+
+#### AC-3: E-Mail-Antwort nach Extraktion
+- [x] Trial detection in extraction endpoint (`tenant.status === 'trial'`)
+- [x] CSV generation with simple column headers (Pos, Artikelnummer, Bezeichnung, Menge, Einheit, Einzelpreis, Gesamtpreis)
+- [x] `sendTrialResultEmail()` sends text summary with order number, date, dealer, item count, total
+- [x] CSV attachment included in the email via Postmark API
+- [x] Magic link included: `${siteUrl}/orders/preview/${previewToken}`
+- [x] "Vollversion" mention included in the email text
+- [x] Email sent via `after()` for non-blocking execution
+- [x] Confirmation email suppressed for trial tenants (`!isTrial` guard on line 431)
+- **PASS**
+
+#### AC-4: Magic-Link-Vorschauseite
+- [x] Public page at `/orders/preview/[token]` exists outside `(protected)` route group
+- [x] No login required (middleware marks `/orders/preview` as public route)
+- [x] Token-based data lookup via `/api/orders/preview/[token]` using service role client
+- [x] Read-only display: OrderSummaryCard shows order data, LineItemsTable shows line items
+- [x] PreviewHeader shows only IDS logo (branding-neutral)
+- [x] "Vollversion testen" CTA button present (PreviewCtaSection)
+- [x] No action buttons besides CTA
+- [ ] **BUG-1:** Authenticated users visiting the preview page are redirected to `/dashboard` (see Bugs section)
+- **PARTIAL PASS** (blocked for authenticated users)
+
+#### AC-5: Magic-Link-Ablauf
+- [x] Token expiry check in preview API (`expiresAt.getTime() < Date.now()`)
+- [x] Expired token returns `{ status: "expired" }` response (not 404)
+- [x] ExpiredTokenMessage component shows friendly "Diese Vorschau ist nicht mehr verfuegbar"
+- [x] 30-day token validity set at order creation time in inbound webhook
+- **PASS**
+
+#### AC-6: Zugangsbeschraenkungen fuer Trial-Mandanten
+- [x] Login detection via `/api/auth/check-trial` endpoint before sign-in
+- [x] Trial banner shown: "Ihr Konto ist ein Trial-Konto" with email forwarding instructions
+- [x] Login form does not submit when trial detected (`setIsTrialTenant(true); return;`)
+- [x] ERP export: 403 guard on `GET /api/orders/[orderId]/export` (checks `appMetadata.tenant_status === 'trial'`)
+- [x] ERP config GET: 403 guard on `GET /api/admin/erp-configs/[tenantId]` (checks `tenant.status === 'trial'`)
+- [x] ERP config PUT: 403 guard on `PUT /api/admin/erp-configs/[tenantId]` (checks `tenant.status === 'trial'`)
+- [x] Team invitations: 403 guard on `POST /api/admin/tenants/[id]/users/invite` (checks `tenant.status === 'trial'`)
+- [ ] **BUG-2:** Check-trial endpoint lacks rate limiting -- enumeration risk (see Security Audit)
+- [ ] **BUG-3:** Trial login detection matches by contact_email only, not by user email (see Bugs section)
+- **PARTIAL PASS** (security concern on check-trial, edge case on login detection)
+
+#### AC-7: Trial-Ablauf-Benachrichtigung
+- [x] Daily cron job scheduled at 08:00 UTC (`vercel.json` configured)
+- [x] Secured via `CRON_SECRET` bearer token
+- [x] Finds trial tenants with 7 days remaining (`daysRemaining === 7`)
+- [x] Finds trial tenants with expiry today or past (`daysRemaining <= 0`)
+- [x] Sends consolidated email to `PLATFORM_ADMIN_EMAIL` via Postmark
+- [x] Email includes tenant name, expiry date, and admin link
+- [ ] **BUG-4:** 7-day warning only triggers on exactly day 7, not on days 1-6 (see Bugs section)
+- **PARTIAL PASS** (gap in notification coverage for days 1-6)
+
+#### AC-8: Kein automatisches Deaktivieren
+- [x] No auto-deactivation logic exists anywhere in the codebase
+- [x] Expired trial tenants continue to process inbound emails (no expiry check in webhook)
+- [x] Daily reminder emails sent after expiry (`daysRemaining <= 0` in cron job)
+- **PASS**
+
+### Edge Cases Status
+
+#### EC-1: Extraktion schlaegt fehl
+- [x] `sendTrialFailureEmail()` function sends failure notification to sender
+- [x] Triggered in the `catch` block of the extraction endpoint (line 580-614)
+- [x] Message: "Leider konnten die Bestelldaten nicht automatisch erkannt werden"
+- **PASS**
+
+#### EC-2: Mehrere E-Mails vom gleichen Absender
+- [x] Each email creates a separate order with its own `preview_token`
+- [x] No aggregation or deduplication by sender (only by Message-ID)
+- **PASS**
+
+#### EC-3: Magic-Link geteilt
+- [x] Preview page is public (no auth check), sharing is accepted behavior
+- [x] Read-only display, no state-changing actions possible
+- **PASS**
+
+#### EC-4: Admin aendert Trial -> Active
+- [x] Status change from trial to active auto-handled by runtime `status` checks
+- [x] All restrictions lift immediately (403 guards check `status` at request time)
+- [x] Trial date columns preserved for audit (no clearing logic)
+- **PASS**
+
+#### EC-5: Trial-Mandant sendet E-Mail von nicht-autorisiertem Absender
+- [x] Quarantine logic applied for non-matching senders (same as normal tenants)
+- [x] Quarantine notification suppressed for trial tenants (no admin users to notify)
+- **PASS**
+
+#### EC-6: Vorschauseite nach Ablauf
+- [x] Shows "Diese Vorschau ist nicht mehr verfuegbar" (ExpiredTokenMessage)
+- [x] No 404, no server error -- returns HTTP 200 with `status: "expired"`
+- **PASS**
+
+#### EC-7: CSV-Generierung schlaegt fehl
+- [ ] **BUG-5:** CSV generation is not wrapped in try/catch. If it throws, the entire trial post-processing fails silently and no email is sent at all. The spec requires the email to be sent without the CSV attachment with an explanatory note.
+- **FAIL**
+
+### Security Audit Results
+
+#### Authentication & Authorization
+- [x] Preview API uses service role client (correctly bypasses RLS for public access)
+- [x] Preview API validates token length >= 32 characters
+- [x] Cron endpoint secured with CRON_SECRET bearer token
+- [x] ERP export 403 guard placed after existing authentication (no auth bypass)
+- [x] ERP config 403 guard placed after existing authentication
+- [x] Team invite 403 guard placed after existing authentication
+- [x] Token is 32-byte hex (64 chars) -- cryptographically random via `crypto.randomBytes(32)`
+
+#### Input Validation
+- [x] Tenant create/update schemas accept "trial" status via Zod validation
+- [x] Preview token validated for minimum length before DB query
+- [x] Postmark inbound payload validated via Zod schema
+- [ ] **BUG-6 (Security):** `/api/auth/check-trial` has no Zod validation or input sanitization on the email field. It directly passes user input to a Supabase `.eq()` query. While Supabase parameterizes queries (preventing SQL injection), the endpoint also lacks rate limiting, allowing unlimited email enumeration.
+- [ ] **BUG-7 (Security):** `/api/orders/preview/[token]` returns HTTP 200 for all responses (valid, expired, not_found). While this prevents information leakage via HTTP status codes, the response body still differentiates between "expired" and "not_found", which could allow token enumeration. An attacker can distinguish between tokens that existed but expired vs. tokens that never existed.
+
+#### Rate Limiting
+- [ ] **BUG-6 (repeated):** The `/api/auth/check-trial` endpoint is fully public with no rate limiting. An attacker could enumerate email addresses to discover which ones are associated with trial tenants.
+- [x] Cron endpoint: rate limited by CRON_SECRET requirement
+- [x] Admin endpoints: rate limited via `checkAdminRateLimit()`
+
+#### Data Exposure
+- [x] Preview API does not expose `tenant_id`, `uploaded_by`, or internal IDs beyond the order ID
+- [x] Preview API does not expose the `preview_token` itself in the response
+- [x] Preview API selects only necessary fields from the orders table
+- [x] Check-trial endpoint only returns `{ isTrial: boolean }` -- minimal information
+
+#### Secret Management
+- [x] `PLATFORM_ADMIN_EMAIL` documented in `.env.local.example`
+- [x] No secrets hardcoded in source code
+- [x] `SUPABASE_SERVICE_ROLE_KEY` used only server-side (no NEXT_PUBLIC_ prefix)
+
+#### Cross-Site Scripting (XSS)
+- [x] Preview page uses React (auto-escaped by default)
+- [x] Line items and order data displayed via text content (not dangerouslySetInnerHTML)
+- [x] CSV generation properly escapes double quotes (`replace(/"/g, '""')`)
+
+### Responsive Design Review (Code Analysis)
+
+#### Preview Page (375px / 768px / 1440px)
+- [x] `max-w-3xl` container with responsive padding (`px-4 sm:px-6 lg:px-8`)
+- [x] OrderSummaryCard: `grid-cols-1 sm:grid-cols-2` responsive grid
+- [x] LineItemsTable: Article number column hidden on mobile (`hidden sm:table-cell`)
+- [x] LineItemsTable: Unit price column hidden on mobile and tablet (`hidden md:table-cell`)
+- [x] LineItemsTable: Total price column hidden on mobile (`hidden sm:table-cell`)
+- [x] LineItemsTable: `overflow-x-auto` for horizontal scroll on narrow screens
+- [x] PreviewCtaSection: `flex-col sm:flex-row` layout for CTA section
+- [x] Footer responsive with centered text
+
+#### Admin Tenant Table (Trial indicators)
+- [x] Trial countdown shown in status column (hidden on mobile via `hidden sm:table-cell`)
+- [x] Trial info in form sheet responsive via sheet's built-in `sm:max-w-xl`
+
+### Regression Testing
+
+#### OPH-1 (Multi-Tenant Auth)
+- [x] `TenantStatus` type includes "trial" (already in schema as CHECK constraint)
+- [x] Login form still functional for non-trial users
+- [x] Middleware still correctly handles public routes, auth redirects
+- [x] Session timeout logic unaffected
+
+#### OPH-6 (ERP Export)
+- [x] Export route still functional for active tenants (trial guard is additive)
+- [x] No changes to export logic beyond the 403 guard
+
+#### OPH-9 (ERP Mapping)
+- [x] ERP config GET/PUT still functional for active tenants
+- [x] Trial guard added after auth check (does not affect active tenants)
+
+#### OPH-10 (Email Ingestion)
+- [x] Normal tenant email flow unaffected (isTrial=false path preserved)
+- [x] Confirmation email still sent for non-trial tenants
+- [x] Quarantine logic still works for both trial and normal tenants
+- [x] Duplicate detection (Message-ID) still functional
+
+#### OPH-8 (Tenant Management)
+- [x] Tenant list page still loads correctly
+- [x] Create/edit sheet still works for active/inactive tenants
+- [x] User management tab still functional
+- [x] CSV export still works
+
+### Bugs Found
+
+#### BUG-1: Authenticated users redirected away from preview page
+- **Severity:** High
+- **Steps to Reproduce:**
+  1. Log in to the platform as any user
+  2. Navigate to `/orders/preview/[valid-token]`
+  3. Expected: Preview page displays the order data
+  4. Actual: User is redirected to `/dashboard` because the middleware treats `/orders/preview` as a public route and redirects authenticated users on public routes to the dashboard
+- **Root Cause:** In `src/lib/supabase/middleware.ts` line 115, the authenticated-user redirect only excludes `/reset-password` and `/auth/callback` but not `/orders/preview`. The condition should also exclude the preview route.
+- **File:** `/Users/michaelmollath/projects/ai-coding-starter-kit/src/lib/supabase/middleware.ts` line 115
+- **Priority:** Fix before deployment
+
+#### BUG-2: Check-trial endpoint lacks rate limiting and input validation
+- **Severity:** Medium
+- **Steps to Reproduce:**
+  1. Send POST requests to `/api/auth/check-trial` with different email addresses
+  2. No rate limit is enforced; all requests succeed
+  3. An attacker can enumerate which email addresses belong to trial tenants
+- **Root Cause:** The `/api/auth/check-trial` endpoint has no Zod validation on the email field and no rate limiting mechanism.
+- **File:** `/Users/michaelmollath/projects/ai-coding-starter-kit/src/app/api/auth/check-trial/route.ts`
+- **Priority:** Fix before deployment (add rate limiting or throttle)
+
+#### BUG-3: Trial login detection matches contact_email not user email
+- **Severity:** Low
+- **Steps to Reproduce:**
+  1. Create a trial tenant with `contact_email = "admin@acme.com"`
+  2. Try to log in with email "employee@acme.com" (a different email at the same company)
+  3. Expected: The trial banner should appear (the user is trying to access a trial tenant)
+  4. Actual: No trial banner appears; the login attempt proceeds normally and fails (since trial tenants have no user accounts)
+- **Root Cause:** The check-trial endpoint matches only against `tenants.contact_email`, but the spec says the login page should detect "trial tenant" before sign-in. If someone enters an email that is not the contact_email but would still fail login (no user account exists), they get a confusing generic error instead of the trial banner.
+- **Note:** This is a design decision documented in the tech design ("match against contact_email"), so it may be intentional. But it creates a confusing UX for prospect employees who are not the designated contact.
+- **File:** `/Users/michaelmollath/projects/ai-coding-starter-kit/src/app/api/auth/check-trial/route.ts` line 42
+- **Priority:** Nice to have (consider in next iteration)
+
+#### BUG-4: 7-day warning notification only triggers on exactly day 7
+- **Severity:** Medium
+- **Steps to Reproduce:**
+  1. Create a trial tenant that expires in 5 days
+  2. Run the cron job
+  3. Expected: The admin should receive a warning (5 days is <= 7 and > 0)
+  4. Actual: No warning is sent because the cron job only checks `daysRemaining === 7` (strict equality)
+- **Root Cause:** In `src/app/api/cron/trial-expiry-check/route.ts` line 76, the condition is `daysRemaining === 7` instead of `daysRemaining > 0 && daysRemaining <= 7`. The spec says "7 Tage vor trial_expires_at" which could mean exactly 7 days, but the intent seems to be "within 7 days of expiry". More importantly, if the cron job misses a day (e.g., Vercel cold start delay), the 7-day notification would never be sent.
+- **File:** `/Users/michaelmollath/projects/ai-coding-starter-kit/src/app/api/cron/trial-expiry-check/route.ts` line 76
+- **Priority:** Fix before deployment (change to `daysRemaining > 0 && daysRemaining <= 7` or at minimum also check days 1-6)
+
+#### BUG-5: CSV generation failure kills entire trial email flow
+- **Severity:** Medium
+- **Steps to Reproduce:**
+  1. Trigger extraction for a trial tenant where `line_items` data causes an error during CSV generation (e.g., unexpected null values in nested properties)
+  2. Expected: Email is sent without CSV attachment, with explanatory note
+  3. Actual: The entire `after()` callback fails, no email is sent at all
+- **Root Cause:** In `src/app/api/orders/[orderId]/extract/route.ts` lines 517-530, the CSV generation code is not wrapped in its own try/catch. The spec (Edge Case EC-7) explicitly requires: "Antwort-E-Mail wird trotzdem versendet, aber ohne CSV-Anhang; ein Hinweis in der E-Mail erklaert das Fehlen des Anhangs." The `sendTrialResultEmail` call on line 537 assumes `csvContent` is always valid.
+- **File:** `/Users/michaelmollath/projects/ai-coding-starter-kit/src/app/api/orders/[orderId]/extract/route.ts` lines 517-557
+- **Priority:** Fix before deployment
+
+#### BUG-6: Preview token differentiation enables token enumeration
+- **Severity:** Low
+- **Steps to Reproduce:**
+  1. Send GET request to `/api/orders/preview/[random-64-char-hex]`
+  2. Response: `{ status: "not_found" }`
+  3. Send GET request to `/api/orders/preview/[real-but-expired-token]`
+  4. Response: `{ status: "expired" }`
+  5. An attacker can distinguish between tokens that never existed vs. tokens that did exist but expired
+- **Root Cause:** The preview API returns different `status` values for "not found" vs. "expired" tokens. While the risk is low (tokens are 64-char hex, brute force is infeasible), defense-in-depth suggests returning the same response for both cases.
+- **File:** `/Users/michaelmollath/projects/ai-coding-starter-kit/src/app/api/orders/preview/[token]/route.ts` lines 58-73
+- **Priority:** Nice to have
+
+#### BUG-7: Invite button visible for trial tenants in admin UI
+- **Severity:** Low
+- **Steps to Reproduce:**
+  1. Open the admin tenant management page
+  2. Click on a trial tenant to open the edit sheet
+  3. Switch to the "Benutzer" tab
+  4. The "Einladen" button is visible and clickable
+  5. Expected: The button should be hidden or disabled for trial tenants (API returns 403 anyway)
+  6. Actual: Clicking "Einladen" opens the invite dialog; submitting it will get a 403 error from the API
+- **Root Cause:** The TenantFormSheet does not check `status === 'trial'` to hide the invite button. The API correctly blocks the action, but the UI should indicate the restriction proactively.
+- **File:** `/Users/michaelmollath/projects/ai-coding-starter-kit/src/components/admin/tenant-form-sheet.tsx` line 478
+- **Priority:** Nice to have
+
+### Cross-Browser Compatibility (Code Analysis)
+- [x] No browser-specific APIs used (all standard Web APIs and React patterns)
+- [x] `crypto.randomBytes()` is Node.js server-side only (not browser-dependent)
+- [x] `Intl.NumberFormat` and `Date.toLocaleDateString` are widely supported
+- [x] CSS uses Tailwind utility classes (cross-browser compatible)
+- [x] Next.js Image component used for logo (optimized for all browsers)
+
+### Summary
+- **Acceptance Criteria:** 6/8 fully passed, 2 partial passes (AC-4 has BUG-1, AC-6 has BUG-2/3, AC-7 has BUG-4)
+- **Edge Cases:** 6/7 passed, 1 failed (EC-7: CSV failure handling)
+- **Bugs Found:** 7 total (0 critical, 1 high, 3 medium, 3 low)
+- **Security:** Minor concerns (rate limiting on check-trial, token enumeration via response differentiation)
+- **Build:** Passes cleanly
+- **Production Ready:** NO -- BUG-1 (High) must be fixed first. BUG-4 and BUG-5 (Medium) should also be fixed before deployment.
+- **Recommendation:** Fix BUG-1, BUG-4, and BUG-5 before deployment. BUG-2 should ideally be addressed as well. BUG-3, BUG-6, and BUG-7 are nice-to-have improvements.
 

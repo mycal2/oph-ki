@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Loader2, MoreHorizontal, Power, PowerOff, UserPlus } from "lucide-react";
+import { Loader2, MoreHorizontal, Power, PowerOff, UserPlus, Clock, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,6 +36,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { TenantInviteDialog } from "@/components/admin/tenant-invite-dialog";
 import type {
   Tenant,
@@ -90,10 +101,10 @@ interface TenantFormSheetProps {
 function generateSlug(name: string): string {
   return name
     .toLowerCase()
-    .replace(/[äÄ]/g, "ae")
-    .replace(/[öÖ]/g, "oe")
-    .replace(/[üÜ]/g, "ue")
-    .replace(/ß/g, "ss")
+    .replace(/[aeAE]/g, "ae")
+    .replace(/[oeOE]/g, "oe")
+    .replace(/[ueUE]/g, "ue")
+    .replace(/ss/g, "ss")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 50);
@@ -119,6 +130,9 @@ export function TenantFormSheet({
   const [contactEmail, setContactEmail] = useState("");
   const [erpType, setErpType] = useState<ErpType>("SAP");
   const [status, setStatus] = useState<TenantStatus>("active");
+  // OPH-16: Trial date state (read-only, for display)
+  const [trialStartedAt, setTrialStartedAt] = useState<string | null>(null);
+  const [trialExpiresAt, setTrialExpiresAt] = useState<string | null>(null);
 
   // UI state
   const [isLoadingTenant, setIsLoadingTenant] = useState(false);
@@ -128,6 +142,14 @@ export function TenantFormSheet({
   const [inviteOpen, setInviteOpen] = useState(false);
   const [tenantName, setTenantName] = useState("");
 
+  // BUG-6: Confirmation dialog state for user deactivation
+  const [confirmUserToggle, setConfirmUserToggle] = useState<{
+    userId: string;
+    userName: string;
+    currentStatus: UserStatus;
+    action: "deactivate" | "reactivate";
+  } | null>(null);
+
   // Reset form
   const resetForm = useCallback(() => {
     setName("");
@@ -136,9 +158,12 @@ export function TenantFormSheet({
     setContactEmail("");
     setErpType("SAP");
     setStatus("active");
+    setTrialStartedAt(null);
+    setTrialExpiresAt(null);
     setUsers([]);
     setActiveTab("profile");
     setTenantName("");
+    setConfirmUserToggle(null);
   }, []);
 
   // Populate form from tenant data
@@ -149,6 +174,8 @@ export function TenantFormSheet({
     setContactEmail(tenant.contact_email);
     setErpType(tenant.erp_type);
     setStatus(tenant.status);
+    setTrialStartedAt(tenant.trial_started_at);
+    setTrialExpiresAt(tenant.trial_expires_at);
     setTenantName(tenant.name);
   }, []);
 
@@ -227,12 +254,22 @@ export function TenantFormSheet({
     }
   };
 
-  const handleToggleUser = async (userId: string, currentStatus: UserStatus) => {
+  // BUG-6: Show confirmation dialog before toggling user status
+  const handleToggleUser = (userId: string, currentStatus: UserStatus, userName: string) => {
+    const action = currentStatus === "active" ? "deactivate" : "reactivate";
+    setConfirmUserToggle({ userId, userName, currentStatus, action });
+  };
+
+  // BUG-6: Confirm user toggle
+  const confirmToggleUser = async () => {
+    if (!confirmUserToggle) return;
+    const { userId, currentStatus } = confirmUserToggle;
     const newStatus = currentStatus === "active" ? "inactive" : "active";
     const ok = await onToggleUserStatus(userId, newStatus);
     if (ok) {
       loadUsers();
     }
+    setConfirmUserToggle(null);
   };
 
   const handleInvite = async (email: string, role: "tenant_user" | "tenant_admin") => {
@@ -362,7 +399,69 @@ export function TenantFormSheet({
                           ))}
                         </SelectContent>
                       </Select>
+                      {/* OPH-16: Hint when switching to trial */}
+                      {status === "trial" && isNew && (
+                        <p className="text-xs text-muted-foreground">
+                          Testphase: 28 Tage ab Erstellung. Startdatum und Ablaufdatum
+                          werden automatisch gesetzt.
+                        </p>
+                      )}
                     </div>
+
+                    {/* OPH-16: Trial period info (shown for existing trial tenants) */}
+                    {!isNew && status === "trial" && trialStartedAt && trialExpiresAt && (
+                      <Alert className="border-primary/30 bg-primary/5">
+                        <Info className="h-4 w-4 text-primary" />
+                        <AlertDescription>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 text-sm">
+                              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="text-muted-foreground">Testphase gestartet:</span>
+                              <span className="font-medium">
+                                {new Date(trialStartedAt).toLocaleDateString("de-DE", {
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  year: "numeric",
+                                })}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm">
+                              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="text-muted-foreground">Ablaufdatum:</span>
+                              <span className={`font-medium ${
+                                new Date(trialExpiresAt).getTime() - Date.now() <= 7 * 24 * 60 * 60 * 1000
+                                  ? "text-destructive"
+                                  : ""
+                              }`}>
+                                {new Date(trialExpiresAt).toLocaleDateString("de-DE", {
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  year: "numeric",
+                                })}
+                              </span>
+                              {(() => {
+                                const days = Math.ceil(
+                                  (new Date(trialExpiresAt).getTime() - Date.now()) /
+                                    (1000 * 60 * 60 * 24)
+                                );
+                                if (days <= 0) {
+                                  return (
+                                    <span className="text-xs font-semibold text-destructive">
+                                      (Abgelaufen)
+                                    </span>
+                                  );
+                                }
+                                return (
+                                  <span className={`text-xs ${days <= 7 ? "font-semibold text-destructive" : "text-muted-foreground"}`}>
+                                    (Noch {days} {days === 1 ? "Tag" : "Tage"})
+                                  </span>
+                                );
+                              })()}
+                            </div>
+                          </div>
+                        </AlertDescription>
+                      </Alert>
+                    )}
                   </TabsContent>
 
                   {/* Tab: Users */}
@@ -399,7 +498,7 @@ export function TenantFormSheet({
                             <TableHeader>
                               <TableRow>
                                 <TableHead>Name</TableHead>
-                                <TableHead className="hidden sm:table-cell">Rolle</TableHead>
+                                <TableHead>Rolle</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead className="hidden sm:table-cell">Letzter Login</TableHead>
                                 <TableHead className="w-10" />
@@ -408,15 +507,27 @@ export function TenantFormSheet({
                             <TableBody>
                               {users.map((u) => {
                                 const sBadge = STATUS_BADGES[u.status];
+                                const displayName = [u.first_name, u.last_name].filter(Boolean).join(" ") || "—";
                                 return (
                                   <TableRow key={u.id}>
                                     <TableCell>
                                       <span className="font-medium text-sm">
-                                        {u.first_name} {u.last_name}
+                                        {displayName}
                                       </span>
                                       <p className="text-xs text-muted-foreground">
                                         {u.email}
                                       </p>
+                                      {/* BUG-2: Show role and last login on mobile as sub-labels */}
+                                      <div className="flex items-center gap-2 mt-1 sm:hidden">
+                                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                          {ROLE_LABELS[u.role]}
+                                        </Badge>
+                                        <span className="text-[10px] text-muted-foreground">
+                                          {u.last_sign_in_at
+                                            ? new Date(u.last_sign_in_at).toLocaleDateString("de-DE")
+                                            : "Nie eingeloggt"}
+                                        </span>
+                                      </div>
                                     </TableCell>
                                     <TableCell className="hidden sm:table-cell">
                                       <Badge variant="secondary" className="text-xs">
@@ -454,7 +565,7 @@ export function TenantFormSheet({
                                         <DropdownMenuContent align="end">
                                           {u.status === "active" ? (
                                             <DropdownMenuItem
-                                              onClick={() => handleToggleUser(u.id, u.status)}
+                                              onClick={() => handleToggleUser(u.id, u.status, displayName)}
                                               className="text-destructive"
                                             >
                                               <PowerOff className="mr-2 h-4 w-4" />
@@ -462,7 +573,7 @@ export function TenantFormSheet({
                                             </DropdownMenuItem>
                                           ) : (
                                             <DropdownMenuItem
-                                              onClick={() => handleToggleUser(u.id, u.status)}
+                                              onClick={() => handleToggleUser(u.id, u.status, displayName)}
                                             >
                                               <Power className="mr-2 h-4 w-4" />
                                               Reaktivieren
@@ -506,7 +617,7 @@ export function TenantFormSheet({
         </SheetContent>
       </Sheet>
 
-      {/* Invite dialog — opens on top of the sheet */}
+      {/* Invite dialog -- opens on top of the sheet */}
       {!isNew && (
         <TenantInviteDialog
           open={inviteOpen}
@@ -516,6 +627,55 @@ export function TenantFormSheet({
           isMutating={isMutating}
         />
       )}
+
+      {/* BUG-6: Confirmation dialog for user deactivation/reactivation */}
+      <AlertDialog
+        open={!!confirmUserToggle}
+        onOpenChange={(open) => {
+          if (!open) setConfirmUserToggle(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmUserToggle?.action === "deactivate"
+                ? "Benutzer deaktivieren?"
+                : "Benutzer reaktivieren?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmUserToggle?.action === "deactivate" ? (
+                <>
+                  Sind Sie sicher, dass Sie{" "}
+                  <span className="font-semibold">{confirmUserToggle?.userName}</span>{" "}
+                  deaktivieren moechten? Der Benutzer kann sich danach nicht mehr
+                  einloggen.
+                </>
+              ) : (
+                <>
+                  Moechten Sie{" "}
+                  <span className="font-semibold">{confirmUserToggle?.userName}</span>{" "}
+                  reaktivieren? Der Benutzer kann sich danach wieder einloggen.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmToggleUser}
+              className={
+                confirmUserToggle?.action === "deactivate"
+                  ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  : ""
+              }
+            >
+              {confirmUserToggle?.action === "deactivate"
+                ? "Deaktivieren"
+                : "Reaktivieren"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

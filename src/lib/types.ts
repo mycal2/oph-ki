@@ -17,6 +17,10 @@ export interface Tenant {
   email_notifications_enabled: boolean;
   created_at: string;
   updated_at: string;
+  /** OPH-16: Trial period start date. */
+  trial_started_at: string | null;
+  /** OPH-16: Trial period expiry date. */
+  trial_expires_at: string | null;
 }
 
 export interface UserProfile {
@@ -422,6 +426,10 @@ export interface TenantAdminListItem {
   orders_last_month: number;
   last_upload_at: string | null;
   created_at: string;
+  /** OPH-16: Trial period start date. */
+  trial_started_at: string | null;
+  /** OPH-16: Trial period expiry date. */
+  trial_expires_at: string | null;
 }
 
 /** User belonging to a tenant, shown in the admin user tab. */
@@ -642,4 +650,34 @@ export interface EmailQuarantineListItem extends EmailQuarantineEntry {
 /** Response from GET /api/settings/inbound-email. */
 export interface InboundEmailSettingsResponse {
   inboundEmailAddress: string | null;
+}
+
+/**
+ * OPH-16: Trial / Demo Mode types.
+ */
+
+/** Response from GET /api/orders/preview/[token]. */
+export interface OrderPreviewData {
+  orderId: string;
+  orderNumber: string | null;
+  orderDate: string | null;
+  dealerName: string | null;
+  senderCompany: string | null;
+  deliveryAddress: CanonicalAddress | null;
+  lineItems: CanonicalLineItem[];
+  totalAmount: number | null;
+  currency: string | null;
+  notes: string | null;
+  extractedAt: string | null;
+}
+
+/** API response shape for preview endpoint. */
+export type OrderPreviewResponse =
+  | { status: "ok"; data: OrderPreviewData }
+  | { status: "expired"; message: string }
+  | { status: "not_found"; message: string };
+
+/** Response from POST /api/auth/check-trial -- trial tenant detection on login. */
+export interface TrialCheckResponse {
+  isTrial: boolean;
 }

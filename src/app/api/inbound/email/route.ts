@@ -98,7 +98,7 @@ export async function POST(
 
     const { data: tenant, error: tenantError } = await adminClient
       .from("tenants")
-      .select("id, name, slug, status")
+      .select("id, name, slug, status, contact_email")
       .eq("slug", slug)
       .single();
 
@@ -145,25 +145,37 @@ export async function POST(
       }
     }
 
-    // 6. Check sender authorization (is sender in tenant's team?)
+    // 6. Check sender authorization
     const senderEmail = payload.FromFull?.Email ?? payload.From;
     const senderName = payload.FromFull?.Name ?? payload.FromName ?? "";
-
-    // Get active user profiles for this specific tenant (typically < 20 users)
-    const { data: tenantProfiles } = await adminClient
-      .from("user_profiles")
-      .select("id")
-      .eq("tenant_id", tenant.id)
-      .eq("status", "active");
+    const isTrial = tenant.status === "trial";
 
     let authorizedUserId: string | null = null;
-    if (tenantProfiles && tenantProfiles.length > 0) {
-      // Check each tenant member's auth email — avoids listing ALL system users
-      for (const profile of tenantProfiles) {
-        const { data: { user: authUser } } = await adminClient.auth.admin.getUserById(profile.id);
-        if (authUser?.email?.toLowerCase() === senderEmail.toLowerCase()) {
-          authorizedUserId = authUser.id;
-          break;
+    let tenantProfiles: { id: string }[] | null = null;
+
+    if (isTrial) {
+      // OPH-16: Trial tenants have no user accounts — authorize by contact_email match
+      const contactEmail = (tenant.contact_email as string | null) ?? "";
+      if (contactEmail && senderEmail.toLowerCase() === contactEmail.toLowerCase()) {
+        // Mark as authorized (no real user ID, use a sentinel)
+        authorizedUserId = "trial-contact";
+      }
+    } else {
+      // Normal tenants: check sender against user profiles
+      const { data: profiles } = await adminClient
+        .from("user_profiles")
+        .select("id")
+        .eq("tenant_id", tenant.id)
+        .eq("status", "active");
+      tenantProfiles = profiles;
+
+      if (tenantProfiles && tenantProfiles.length > 0) {
+        for (const profile of tenantProfiles) {
+          const { data: { user: authUser } } = await adminClient.auth.admin.getUserById(profile.id);
+          if (authUser?.email?.toLowerCase() === senderEmail.toLowerCase()) {
+            authorizedUserId = authUser.id;
+            break;
+          }
         }
       }
     }
@@ -204,9 +216,9 @@ export async function POST(
         console.error("Failed to insert quarantine record:", quarantineError.message);
       }
 
-      // Notify tenant admins about the quarantined email
+      // Notify tenant admins about the quarantined email (not applicable for trial tenants — no users)
       const serverApiToken = process.env.POSTMARK_SERVER_API_TOKEN;
-      if (serverApiToken && tenantProfiles && tenantProfiles.length > 0) {
+      if (serverApiToken && !isTrial && tenantProfiles && tenantProfiles.length > 0) {
         const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
         after(async () => {
@@ -255,16 +267,28 @@ export async function POST(
     }
 
     // 9. Create order record (include ingestion warnings if any)
+    // OPH-16: For trial tenants, generate a preview token and don't set uploaded_by
+    // (trial tenants have no real user IDs)
+    const trialOrderFields: Record<string, unknown> = {};
+    let previewToken: string | null = null;
+    if (isTrial) {
+      previewToken = crypto.randomBytes(32).toString("hex");
+      const tokenExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+      trialOrderFields.preview_token = previewToken;
+      trialOrderFields.preview_token_expires_at = tokenExpiresAt.toISOString();
+    }
+
     const { data: order, error: orderError } = await adminClient
       .from("orders")
       .insert({
         tenant_id: tenant.id,
-        uploaded_by: authorizedUserId,
+        ...(isTrial ? {} : { uploaded_by: authorizedUserId }),
         status: "uploaded",
         source: "email_inbound",
         message_id: messageId,
         sender_email: senderEmail,
         ...(warnings.length > 0 ? { ingestion_notes: warnings } : {}),
+        ...trialOrderFields,
       })
       .select("id")
       .single();
@@ -403,25 +427,27 @@ export async function POST(
       });
     }
 
-    // 15. Send confirmation email to sender
-    const serverApiToken = process.env.POSTMARK_SERVER_API_TOKEN;
-    if (serverApiToken) {
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    // 15. Send confirmation email to sender (skip for trial — they get the result email after extraction)
+    if (!isTrial) {
+      const serverApiToken = process.env.POSTMARK_SERVER_API_TOKEN;
+      if (serverApiToken) {
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
-      after(async () => {
-        try {
-          await sendConfirmationEmail({
-            serverApiToken,
-            toEmail: senderEmail,
-            toName: senderName,
-            orderId,
-            subject: payload.Subject || "Bestellung",
-            siteUrl,
-          });
-        } catch (err) {
-          console.error("Failed to send confirmation email:", err);
-        }
-      });
+        after(async () => {
+          try {
+            await sendConfirmationEmail({
+              serverApiToken,
+              toEmail: senderEmail,
+              toName: senderName,
+              orderId,
+              subject: payload.Subject || "Bestellung",
+              siteUrl,
+            });
+          } catch (err) {
+            console.error("Failed to send confirmation email:", err);
+          }
+        });
+      }
     }
 
     return NextResponse.json({ success: true });

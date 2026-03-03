@@ -62,26 +62,26 @@ export async function GET(
       return NextResponse.json({ success: true, data: [] });
     }
 
-    // Fetch auth user details (email, last_sign_in_at) via admin client
-    const userIds = profiles.map((p) => p.id);
-    const { data: authUsersData } = await adminClient.auth.admin.listUsers({
-      page: 1,
-      perPage: 1000,
-    });
-
+    // Fetch auth user details (email, last_sign_in_at) per user via admin client.
+    // Uses getUserById per profile to avoid fetching all platform users (BUG-1 fix).
     const authUsersMap = new Map<
       string,
       { email: string; last_sign_in_at: string | null }
     >();
 
-    if (authUsersData?.users) {
-      for (const authUser of authUsersData.users) {
-        if (userIds.includes(authUser.id)) {
-          authUsersMap.set(authUser.id, {
-            email: authUser.email ?? "",
-            last_sign_in_at: authUser.last_sign_in_at ?? null,
-          });
-        }
+    const authResults = await Promise.allSettled(
+      profiles.map((p) =>
+        adminClient.auth.admin.getUserById(p.id)
+      )
+    );
+
+    for (const result of authResults) {
+      if (result.status === "fulfilled" && result.value.data?.user) {
+        const authUser = result.value.data.user;
+        authUsersMap.set(authUser.id, {
+          email: authUser.email ?? "",
+          last_sign_in_at: authUser.last_sign_in_at ?? null,
+        });
       }
     }
 

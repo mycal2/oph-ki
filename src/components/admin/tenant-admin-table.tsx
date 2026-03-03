@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Search, Plus, Building2, MoreHorizontal, Power, PowerOff, Download } from "lucide-react";
+import { Search, Plus, Building2, MoreHorizontal, Power, PowerOff, Download, Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +34,18 @@ const ERP_LABELS: Record<ErpType, string> = {
   Sage: "Sage",
   Custom: "Custom",
 };
+
+/**
+ * OPH-16: Calculate remaining days for a trial tenant.
+ * Returns null if not a trial tenant or no expiry date set.
+ */
+function getTrialDaysRemaining(tenant: TenantAdminListItem): number | null {
+  if (tenant.status !== "trial" || !tenant.trial_expires_at) return null;
+  const now = new Date();
+  const expires = new Date(tenant.trial_expires_at);
+  const diffMs = expires.getTime() - now.getTime();
+  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+}
 
 interface TenantAdminTableProps {
   tenants: TenantAdminListItem[];
@@ -153,6 +165,9 @@ export function TenantAdminTable({
             <TableBody>
               {filtered.map((tenant) => {
                 const statusBadge = STATUS_BADGES[tenant.status];
+                const trialDays = getTrialDaysRemaining(tenant);
+                const isTrialUrgent = trialDays !== null && trialDays <= 7;
+                const isTrialExpired = trialDays !== null && trialDays <= 0;
                 return (
                   <TableRow
                     key={tenant.id}
@@ -174,15 +189,34 @@ export function TenantAdminTable({
                       </Badge>
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">
-                      {tenant.status === "inactive" ? (
-                        <Badge variant="outline" className={`text-xs ${statusBadge.className}`}>
-                          {statusBadge.label}
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary" className={`text-xs ${statusBadge.className}`}>
-                          {statusBadge.label}
-                        </Badge>
-                      )}
+                      <div className="flex flex-col gap-1">
+                        {tenant.status === "inactive" ? (
+                          <Badge variant="outline" className={`text-xs ${statusBadge.className}`}>
+                            {statusBadge.label}
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className={`text-xs ${statusBadge.className}`}>
+                            {statusBadge.label}
+                          </Badge>
+                        )}
+                        {/* OPH-16: Trial countdown */}
+                        {trialDays !== null && (
+                          <span
+                            className={`flex items-center gap-1 text-[11px] ${
+                              isTrialExpired
+                                ? "font-semibold text-destructive"
+                                : isTrialUrgent
+                                  ? "font-semibold text-destructive"
+                                  : "text-muted-foreground"
+                            }`}
+                          >
+                            <Clock className="h-3 w-3" />
+                            {isTrialExpired
+                              ? "Abgelaufen"
+                              : `Noch ${trialDays} ${trialDays === 1 ? "Tag" : "Tage"}`}
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {tenant.order_count}

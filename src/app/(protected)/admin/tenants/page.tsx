@@ -4,11 +4,22 @@ import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useCurrentUserRole } from "@/hooks/use-current-user-role";
 import { useAdminTenants } from "@/hooks/use-admin-tenants";
 import { TenantAdminTable } from "@/components/admin/tenant-admin-table";
 import { TenantFormSheet } from "@/components/admin/tenant-form-sheet";
 import type { CreateTenantInput, UpdateTenantInput } from "@/lib/validations";
+import type { TenantStatus } from "@/lib/types";
 
 export default function AdminTenantsPage() {
   const { isPlatformAdmin, isLoading: isLoadingRole } = useCurrentUserRole();
@@ -31,6 +42,14 @@ export default function AdminTenantsPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingTenantId, setEditingTenantId] = useState<string | null>(null);
 
+  // Confirmation dialog state for tenant deactivation (BUG-7)
+  const [confirmDeactivate, setConfirmDeactivate] = useState<{
+    tenantId: string;
+    tenantName: string;
+    currentStatus: TenantStatus;
+    action: "deactivate" | "reactivate";
+  } | null>(null);
+
   const handleCreateNew = useCallback(() => {
     setEditingTenantId(null);
     setSheetOpen(true);
@@ -41,16 +60,34 @@ export default function AdminTenantsPage() {
     setSheetOpen(true);
   }, []);
 
+  // BUG-7: Show confirmation dialog before toggling status
   const handleToggleStatus = useCallback(
-    async (tenantId: string) => {
+    (tenantId: string) => {
       const tenant = tenants.find((t) => t.id === tenantId);
       if (!tenant) return;
 
-      const newStatus = tenant.status === "inactive" ? "active" : "inactive";
-      await updateTenant(tenantId, { status: newStatus });
+      const action = tenant.status === "inactive" ? "reactivate" : "deactivate";
+      setConfirmDeactivate({
+        tenantId,
+        tenantName: tenant.name,
+        currentStatus: tenant.status,
+        action,
+      });
     },
-    [tenants, updateTenant]
+    [tenants]
   );
+
+  // BUG-8: Handle trial state properly during reactivation
+  const confirmToggleStatus = useCallback(async () => {
+    if (!confirmDeactivate) return;
+
+    const { tenantId, currentStatus } = confirmDeactivate;
+    // When reactivating, always set to "active" (trial state cannot be restored
+    // via the toggle action -- admin can manually set it back to "trial" via edit).
+    const newStatus = currentStatus === "inactive" ? "active" : "inactive";
+    await updateTenant(tenantId, { status: newStatus });
+    setConfirmDeactivate(null);
+  }, [confirmDeactivate, updateTenant]);
 
   const handleSave = useCallback(
     async (data: CreateTenantInput | UpdateTenantInput, isNew: boolean) => {
@@ -152,6 +189,68 @@ export default function AdminTenantsPage() {
         onToggleUserStatus={handleToggleUserStatus}
         isMutating={isMutating}
       />
+
+      {/* BUG-7: Confirmation dialog for tenant deactivation/reactivation */}
+      <AlertDialog
+        open={!!confirmDeactivate}
+        onOpenChange={(open) => {
+          if (!open) setConfirmDeactivate(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmDeactivate?.action === "deactivate"
+                ? "Mandant deaktivieren?"
+                : "Mandant reaktivieren?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmDeactivate?.action === "deactivate" ? (
+                <>
+                  Sind Sie sicher, dass Sie{" "}
+                  <span className="font-semibold">{confirmDeactivate?.tenantName}</span>{" "}
+                  deaktivieren moechten? Alle Benutzer dieses Mandanten werden
+                  gesperrt und koennen sich nicht mehr einloggen.
+                  {/* BUG-8: Warn about trial state loss */}
+                  {confirmDeactivate?.currentStatus === "trial" && (
+                    <>
+                      {" "}
+                      <span className="font-semibold">
+                        Hinweis: Dieser Mandant befindet sich in der Testphase.
+                        Bei einer spaeteren Reaktivierung wird der Status auf
+                        &quot;Aktiv&quot; gesetzt, nicht zurueck auf
+                        &quot;Testphase&quot;.
+                      </span>
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  Moechten Sie{" "}
+                  <span className="font-semibold">{confirmDeactivate?.tenantName}</span>{" "}
+                  reaktivieren? Alle Benutzer des Mandanten koennen sich danach
+                  wieder einloggen. Der Status wird auf &quot;Aktiv&quot; gesetzt.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmToggleStatus}
+              className={
+                confirmDeactivate?.action === "deactivate"
+                  ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  : ""
+              }
+            >
+              {confirmDeactivate?.action === "deactivate"
+                ? "Deaktivieren"
+                : "Reaktivieren"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -20,7 +20,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import type { UserRole } from "@/lib/types";
 
 interface TenantInviteDialogProps {
   open: boolean;

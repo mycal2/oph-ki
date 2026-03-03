@@ -16,10 +16,10 @@ export async function GET(): Promise<NextResponse> {
     if (isErrorResponse(auth)) return auth;
     const { adminClient } = auth;
 
-    // Fetch all tenants
+    // Fetch all tenants (OPH-16: include trial date columns)
     const { data: tenants, error: tenantsError } = await adminClient
       .from("tenants")
-      .select("id, name, slug, status, erp_type, contact_email, created_at")
+      .select("id, name, slug, status, erp_type, contact_email, created_at, trial_started_at, trial_expires_at")
       .order("name", { ascending: true })
       .limit(1000);
 
@@ -59,6 +59,9 @@ export async function GET(): Promise<NextResponse> {
         orders_last_month: stats?.lastMonth ?? 0,
         last_upload_at: stats?.lastUploadAt ?? null,
         created_at: t.created_at as string,
+        // OPH-16: Trial period dates
+        trial_started_at: (t.trial_started_at as string) ?? null,
+        trial_expires_at: (t.trial_expires_at as string) ?? null,
       };
     });
 
@@ -120,6 +123,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       ? `${input.slug}@${inboundDomain}`
       : null;
 
+    // OPH-16: Auto-set trial dates when creating a trial tenant
+    const trialFields: Record<string, string> = {};
+    if (input.status === "trial") {
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + 28 * 24 * 60 * 60 * 1000);
+      trialFields.trial_started_at = now.toISOString();
+      trialFields.trial_expires_at = expiresAt.toISOString();
+    }
+
     // Insert the tenant
     const { data: tenant, error: insertError } = await adminClient
       .from("tenants")
@@ -130,6 +142,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         erp_type: input.erp_type,
         status: input.status,
         ...(inboundEmailAddress ? { inbound_email_address: inboundEmailAddress } : {}),
+        ...trialFields,
       })
       .select()
       .single();

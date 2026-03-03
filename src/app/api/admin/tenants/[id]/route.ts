@@ -112,6 +112,17 @@ export async function PATCH(
       }
     }
 
+    // OPH-16: Auto-set trial dates when status changes to 'trial'
+    if (
+      input.status === "trial" &&
+      (current as { status: string }).status !== "trial"
+    ) {
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + 28 * 24 * 60 * 60 * 1000);
+      updatePayload.trial_started_at = now.toISOString();
+      updatePayload.trial_expires_at = expiresAt.toISOString();
+    }
+
     if (Object.keys(updatePayload).length === 0) {
       return NextResponse.json(
         { success: false, error: "Keine Aenderungen angegeben." },

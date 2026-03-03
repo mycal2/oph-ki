@@ -40,7 +40,7 @@ export async function GET(
     // Fetch tenant
     const { data: tenant, error: tenantError } = await adminClient
       .from("tenants")
-      .select("id, name, erp_type")
+      .select("id, name, erp_type, status")
       .eq("id", tenantId)
       .single();
 
@@ -48,6 +48,14 @@ export async function GET(
       return NextResponse.json(
         { success: false, error: "Mandant nicht gefunden." },
         { status: 404 }
+      );
+    }
+
+    // OPH-16: Trial tenants cannot configure ERP mappings
+    if (tenant.status === "trial") {
+      return NextResponse.json(
+        { success: false, error: "ERP-Konfiguration ist waehrend der Testphase nicht verfuegbar." },
+        { status: 403 }
       );
     }
 
@@ -176,7 +184,7 @@ export async function PUT(
     // Verify tenant exists
     const { data: tenant, error: tenantError } = await adminClient
       .from("tenants")
-      .select("id")
+      .select("id, status")
       .eq("id", tenantId)
       .single();
 
@@ -184,6 +192,14 @@ export async function PUT(
       return NextResponse.json(
         { success: false, error: "Mandant nicht gefunden." },
         { status: 404 }
+      );
+    }
+
+    // OPH-16: Trial tenants cannot configure ERP mappings
+    if (tenant.status === "trial") {
+      return NextResponse.json(
+        { success: false, error: "ERP-Konfiguration ist waehrend der Testphase nicht verfuegbar." },
+        { status: 403 }
       );
     }
 

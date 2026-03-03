@@ -182,6 +182,141 @@ export async function sendQuarantineNotification(params: {
 }
 
 /**
+ * OPH-16: Sends the trial result email after extraction (text summary + CSV attachment + magic link).
+ */
+export async function sendTrialResultEmail(params: {
+  serverApiToken: string;
+  toEmail: string;
+  toName: string;
+  subject: string;
+  siteUrl: string;
+  previewToken: string;
+  orderSummary: {
+    orderNumber: string | null;
+    orderDate: string | null;
+    dealerName: string | null;
+    itemCount: number;
+    totalAmount: number | null;
+    currency: string | null;
+  };
+  csvContent: string;
+}): Promise<void> {
+  const { serverApiToken, toEmail, toName, subject, siteUrl, previewToken, orderSummary, csvContent } = params;
+
+  const fromDomain = siteUrl.replace(/^https?:\/\//, "").split("/")[0];
+  if (fromDomain.startsWith("localhost")) return;
+
+  const previewUrl = `${siteUrl}/orders/preview/${previewToken}`;
+  const total = orderSummary.totalAmount != null
+    ? `${orderSummary.totalAmount.toFixed(2)} ${orderSummary.currency ?? "EUR"}`
+    : "–";
+
+  const textBody = [
+    `Hallo ${toName || toEmail},`,
+    "",
+    `Ihre weitergeleitete E-Mail "${subject}" wurde verarbeitet. Hier ist eine Uebersicht der extrahierten Bestelldaten:`,
+    "",
+    `  Bestellnummer: ${orderSummary.orderNumber ?? "–"}`,
+    `  Bestelldatum:  ${orderSummary.orderDate ?? "–"}`,
+    `  Haendler:      ${orderSummary.dealerName ?? "–"}`,
+    `  Positionen:    ${orderSummary.itemCount}`,
+    `  Gesamtbetrag:  ${total}`,
+    "",
+    `Die vollstaendigen Daten finden Sie als CSV-Datei im Anhang.`,
+    "",
+    `Sie koennen die Bestellung auch online einsehen:`,
+    previewUrl,
+    "",
+    `---`,
+    `Interesse an der Vollversion? Kontaktieren Sie uns: https://www.ids.online`,
+    "",
+    "Mit freundlichen Gruessen,",
+    "Ihr Order Intelligence Team",
+  ].join("\n");
+
+  const response = await fetch("https://api.postmarkapp.com/email", {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      "X-Postmark-Server-Token": serverApiToken,
+    },
+    body: JSON.stringify({
+      From: `noreply@${fromDomain}`,
+      To: toEmail,
+      Subject: `Extrahierte Bestellung: ${subject}`,
+      TextBody: textBody,
+      Attachments: [
+        {
+          Name: `bestellung_${orderSummary.orderNumber ?? "export"}.csv`,
+          Content: Buffer.from(csvContent, "utf-8").toString("base64"),
+          ContentType: "text/csv",
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Failed to send trial result email via Postmark:", errorText);
+  }
+}
+
+/**
+ * OPH-16: Sends a failure notification to trial sender when extraction fails.
+ */
+export async function sendTrialFailureEmail(params: {
+  serverApiToken: string;
+  toEmail: string;
+  toName: string;
+  subject: string;
+  siteUrl: string;
+}): Promise<void> {
+  const { serverApiToken, toEmail, toName, subject, siteUrl } = params;
+
+  const fromDomain = siteUrl.replace(/^https?:\/\//, "").split("/")[0];
+  if (fromDomain.startsWith("localhost")) return;
+
+  const textBody = [
+    `Hallo ${toName || toEmail},`,
+    "",
+    `Leider konnten die Bestelldaten aus Ihrer E-Mail "${subject}" nicht automatisch erkannt werden.`,
+    "",
+    `Moegliche Gruende:`,
+    `  - Das Dokument-Format wird nicht unterstuetzt`,
+    `  - Die Bestelldaten sind nicht klar strukturiert`,
+    `  - Das Dokument enthaelt keine erkennbare Bestellung`,
+    "",
+    `Bitte pruefen Sie das Dokument-Format und versuchen Sie es erneut.`,
+    "",
+    `Bei Fragen kontaktieren Sie uns gerne: https://www.ids.online`,
+    "",
+    "Mit freundlichen Gruessen,",
+    "Ihr Order Intelligence Team",
+  ].join("\n");
+
+  const response = await fetch("https://api.postmarkapp.com/email", {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      "X-Postmark-Server-Token": serverApiToken,
+    },
+    body: JSON.stringify({
+      From: `noreply@${fromDomain}`,
+      To: toEmail,
+      Subject: `Extraktion fehlgeschlagen: ${subject}`,
+      TextBody: textBody,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Failed to send trial failure email via Postmark:", errorText);
+  }
+}
+
+/**
  * Sends a confirmation email to the sender via Postmark.
  */
 export async function sendConfirmationEmail(params: {

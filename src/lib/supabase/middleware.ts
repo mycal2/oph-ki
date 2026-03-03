@@ -93,6 +93,7 @@ export async function updateSession(request: NextRequest) {
     "/reset-password",
     "/invite/accept",
     "/auth/callback",
+    "/orders/preview", // OPH-16: Public magic-link preview page
   ];
   const isPublicRoute = publicRoutes.some((route) =>
     url.pathname.startsWith(route)

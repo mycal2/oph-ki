@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { extractOrderData } from "@/lib/claude-extraction";
 import { getMappingsForDealer, applyMappings, formatMappingsForPrompt } from "@/lib/dealer-mappings";
 import { mimeTypeToFormatType, getColumnMappingProfile, formatColumnMappingForPrompt } from "@/lib/column-mappings";
+import { sendTrialResultEmail, sendTrialFailureEmail } from "@/lib/postmark";
 import type { AppMetadata, ApiResponse } from "@/lib/types";
 
 /** Max extraction attempts per order before rejecting further retries. */
@@ -492,6 +493,72 @@ export async function POST(
         })
         .eq("id", orderId);
 
+      // --- OPH-16: Trial post-processing (CSV + result email) ---
+      const serverApiToken = process.env.POSTMARK_SERVER_API_TOKEN;
+      if (serverApiToken && tenantId) {
+        const { data: tenantRow } = await adminClient
+          .from("tenants")
+          .select("status")
+          .eq("id", tenantId)
+          .single();
+
+        if (tenantRow?.status === "trial") {
+          // Fetch order's sender_email and preview_token
+          const { data: orderMeta } = await adminClient
+            .from("orders")
+            .select("sender_email, preview_token")
+            .eq("id", orderId)
+            .single();
+
+          if (orderMeta?.sender_email && orderMeta?.preview_token) {
+            const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+            const lineItems = finalExtractedData.order.line_items ?? [];
+
+            // Generate simple CSV (no ERP mapping needed for trial)
+            const csvHeader = "Pos;Artikelnummer;Bezeichnung;Menge;Einheit;Einzelpreis;Gesamtpreis";
+            const csvRows = lineItems.map((item, idx) =>
+              [
+                item.position ?? idx + 1,
+                `"${String(item.article_number ?? "").replace(/"/g, '""')}"`,
+                `"${String(item.description ?? "").replace(/"/g, '""')}"`,
+                item.quantity ?? "",
+                item.unit ?? "",
+                item.unit_price ?? "",
+                item.total_price ?? "",
+              ].join(";")
+            );
+            const csvContent = [csvHeader, ...csvRows].join("\n");
+
+            const dealerName =
+              finalExtractedData.order.dealer?.name ?? null;
+
+            after(async () => {
+              try {
+                await sendTrialResultEmail({
+                  serverApiToken,
+                  toEmail: orderMeta.sender_email as string,
+                  toName: "",
+                  subject: `Bestellung ${finalExtractedData.order.order_number ?? orderId}`,
+                  siteUrl,
+                  previewToken: orderMeta.preview_token as string,
+                  orderSummary: {
+                    orderNumber: finalExtractedData.order.order_number ?? null,
+                    orderDate: finalExtractedData.order.order_date ?? null,
+                    dealerName,
+                    itemCount: lineItems.length,
+                    totalAmount: (finalExtractedData.order.total_amount as number) ?? null,
+                    currency: (finalExtractedData.order.currency as string) ?? null,
+                  },
+                  csvContent,
+                });
+              } catch (err) {
+                console.error("Failed to send trial result email:", err);
+              }
+            });
+          }
+        }
+      }
+
       return NextResponse.json({ success: true });
     } catch (extractionError) {
       const errorMessage =
@@ -509,6 +576,42 @@ export async function POST(
           status: "error",
         })
         .eq("id", orderId);
+
+      // --- OPH-16: Send failure email to trial sender ---
+      const failureApiToken = process.env.POSTMARK_SERVER_API_TOKEN;
+      if (failureApiToken && tenantId) {
+        const { data: tenantRow } = await adminClient
+          .from("tenants")
+          .select("status")
+          .eq("id", tenantId)
+          .single();
+
+        if (tenantRow?.status === "trial") {
+          const { data: orderMeta } = await adminClient
+            .from("orders")
+            .select("sender_email")
+            .eq("id", orderId)
+            .single();
+
+          if (orderMeta?.sender_email) {
+            const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+            after(async () => {
+              try {
+                await sendTrialFailureEmail({
+                  serverApiToken: failureApiToken,
+                  toEmail: orderMeta.sender_email as string,
+                  toName: "",
+                  subject: "Bestellung",
+                  siteUrl,
+                });
+              } catch (err) {
+                console.error("Failed to send trial failure email:", err);
+              }
+            });
+          }
+        }
+      }
 
       return NextResponse.json(
         { success: false, error: `Extraktion fehlgeschlagen: ${errorMessage}` },

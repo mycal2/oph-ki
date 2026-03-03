@@ -61,11 +61,12 @@ export async function PATCH(
       );
     }
 
-    // Update user status in user_profiles
+    // Update user status in user_profiles (tenant_id filter for defense-in-depth)
     const { error: updateError } = await adminClient
       .from("user_profiles")
       .update({ status })
-      .eq("id", userId);
+      .eq("id", userId)
+      .eq("tenant_id", tenantId);
 
     if (updateError) {
       console.error("Failed to update user status:", updateError.message);
