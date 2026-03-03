@@ -1,6 +1,7 @@
 # OPH-10: E-Mail-Weiterleitungs-Ingestion
 
 ## Status: Deployed
+> ⚠️ **OPH-17 supersedes sender authorization:** The user-list-based sender auth (BUG-009) is replaced by domain-based authorization in [OPH-17](OPH-17-allowed-email-domains.md).
 **Created:** 2026-02-27
 **Last Updated:** 2026-03-03
 

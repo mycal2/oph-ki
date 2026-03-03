@@ -28,7 +28,8 @@
 | OPH-14 | Händler-Datentransformationen (Artikel-Mapping, Einheiten, Felder) | Deployed | [OPH-14-dealer-data-transformations.md](OPH-14-dealer-data-transformations.md) | 2026-02-28 |
 | OPH-15 | Dealer Column Mapping for Extraction | Deployed | [OPH-15-dealer-column-mapping.md](OPH-15-dealer-column-mapping.md) | 2026-03-02 |
 | OPH-16 | Trial-/Demo-Modus für Interessenten | Deployed | [OPH-16-trial-demo-mode.md](OPH-16-trial-demo-mode.md) | 2026-03-03 |
+| OPH-17 | Allowed Email Domains für Sender-Autorisierung | Planned | [OPH-17-allowed-email-domains.md](OPH-17-allowed-email-domains.md) | 2026-03-03 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-17
+## Next Available ID: OPH-18
