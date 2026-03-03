@@ -1,6 +1,6 @@
 # OPH-11: Bestellhistorie & Dashboard
 
-## Status: In Progress
+## Status: Deployed
 **Created:** 2026-02-27
 **Last Updated:** 2026-03-03
 
@@ -217,4 +217,18 @@ All shadcn components required are already installed:
 All 9 acceptance criteria pass. 2 bugs found and fixed during QA. No critical/high issues remaining. Ready for deployment.
 
 ## Deployment
-_To be added by /deploy_
+
+**Deployed:** 2026-03-03
+**Production URL:** https://oph-ki.ids.online
+**Git commit:** `b91db11`
+**Git tag:** `v1.20.0-OPH-11`
+
+### Files Deployed
+- `src/app/(protected)/orders/page.tsx` — Added DashboardStats component
+- `src/app/api/orders/route.ts` — Enhanced with filter params + total count
+- `src/app/api/orders/stats/route.ts` — New endpoint (5 aggregate stats)
+- `src/components/orders/dashboard-stats.tsx` — New stat tiles (30s polling)
+- `src/components/orders/orders-filter-bar.tsx` — New filter bar (search + tabs + dates)
+- `src/components/orders/orders-list.tsx` — Enhanced with pagination + filters
+- `src/lib/types.ts` — Added OPH-11 types
+- `supabase/migrations/021_oph11_order_history_indexes.sql` — Applied to production
