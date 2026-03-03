@@ -1,6 +1,6 @@
 # OPH-18: Admin Cross-Tenant Order View
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-03-03
 **Last Updated:** 2026-03-03
 
@@ -87,7 +87,61 @@ Regular tenant users are unaffected — they continue to see only their own orde
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Component Structure
+
+```
+Orders Page (src/app/(protected)/orders/page.tsx)
+└── OrdersList  [MODIFIED]
+    ├── Admin Toolbar  [NEW — only visible to platform_admin]
+    │   └── Tenant Filter Dropdown ("Mandant: Alle" + tenant names)
+    ├── Orders Table
+    │   ├── "Mandant" column header  [NEW — hidden lg:table-cell, admin only]
+    │   └── Table rows
+    │       └── Tenant name cell  [NEW — hidden lg:table-cell, admin only]
+    └── Empty state (unchanged)
+```
+
+### Data Model
+
+**`OrderListItem`** gets one new field:
+- `tenant_name` — The display name of the tenant who owns this order (e.g. "Dental GmbH"). Null if the join yields no result (theoretical fallback, shown as "—").
+
+All other fields remain unchanged. No new database tables or columns required.
+
+**Tenant Dropdown Options** are derived client-side from the loaded orders:
+- Collect all unique `tenant_name` values from the current page of orders
+- Sort alphabetically
+- Prepend "Alle Mandanten" (= no filter)
+
+### Tech Decisions
+
+**1. Tenant name via database JOIN — no extra API call**
+The orders query already joins the `dealers` table for the dealer name. Adding a second join on `tenants(name)` follows the exact same pattern. The result includes `tenant_name` inline — no additional round-trip to a separate tenants endpoint. This keeps the API call count the same for admins and regular users alike.
+
+**2. Client-side filtering — no pagination/server filter needed**
+The orders list loads up to 50 orders at a time. Filtering 50 items by tenant name in the browser is instantaneous. A server-side `?tenant_id=` query parameter would add complexity (URL state management, cache invalidation) for no measurable benefit at this scale.
+
+**3. `useCurrentUserRole` hook — already in the codebase**
+The navigation already uses this hook to show/hide admin menu items. Reusing it in `OrdersList` avoids any prop-drilling through the page component and keeps the pattern consistent across the app.
+
+**4. shadcn `Select` component for the tenant dropdown**
+Already installed in the project. The `Select` component handles keyboard navigation, accessibility, and scrolling (for up to 100 tenants) out of the box. No new packages needed.
+
+**5. `hidden lg:table-cell` responsive pattern**
+The "Mandant" column follows the same responsive visibility pattern already used for "Haendler" (`hidden sm:table-cell`) and "Hochgeladen von" (`hidden md:table-cell`). Visible on large screens only to avoid crowding the table on mobile.
+
+### Dependencies
+
+No new packages required. All components (Select, Table, Badge) are already installed via shadcn/ui.
+
+### Files Modified
+
+| File | Change |
+|------|--------|
+| `src/lib/types.ts` | Add `tenant_name: string \| null` to `OrderListItem` |
+| `src/app/api/orders/route.ts` | Add `tenants(name)` JOIN; map `tenant_name` in response |
+| `src/components/orders/orders-list.tsx` | Add tenant filter toolbar + Mandant column + client-side filter |
 
 ## QA Test Results
 _To be added by /qa_
