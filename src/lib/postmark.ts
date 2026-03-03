@@ -127,6 +127,20 @@ export function filterAttachments(
 }
 
 /**
+ * Resolves the From address for outbound emails.
+ * Uses POSTMARK_SENDER_EMAIL env var if set (e.g. "noreply@ids.online"),
+ * otherwise derives from siteUrl. Returns null if sending should be skipped.
+ */
+function resolveSenderAddress(siteUrl: string): string | null {
+  const envSender = process.env.POSTMARK_SENDER_EMAIL;
+  if (envSender) return envSender;
+
+  const fromDomain = siteUrl.replace(/^https?:\/\//, "").split("/")[0];
+  if (fromDomain.startsWith("localhost")) return null;
+  return `noreply@${fromDomain}`;
+}
+
+/**
  * Sends a quarantine notification email to tenant admins via Postmark.
  */
 export async function sendQuarantineNotification(params: {
@@ -140,6 +154,9 @@ export async function sendQuarantineNotification(params: {
   const { serverApiToken, adminEmails, senderEmail, subject, tenantName, siteUrl } = params;
 
   if (adminEmails.length === 0) return;
+
+  const fromAddress = resolveSenderAddress(siteUrl);
+  if (!fromAddress) return;
 
   const quarantineUrl = `${siteUrl}/admin/email-quarantine`;
   const textBody = [
@@ -156,10 +173,6 @@ export async function sendQuarantineNotification(params: {
     "Ihr Order Intelligence Team",
   ].join("\n");
 
-  const fromDomain = siteUrl.replace(/^https?:\/\//, "").split("/")[0];
-  // Skip sending if domain is localhost (not a valid sender)
-  if (fromDomain.startsWith("localhost")) return;
-
   const response = await fetch("https://api.postmarkapp.com/email", {
     method: "POST",
     headers: {
@@ -168,7 +181,7 @@ export async function sendQuarantineNotification(params: {
       "X-Postmark-Server-Token": serverApiToken,
     },
     body: JSON.stringify({
-      From: `noreply@${fromDomain}`,
+      From: fromAddress,
       To: adminEmails.join(","),
       Subject: `Quarantaene: E-Mail von ${senderEmail}`,
       TextBody: textBody,
@@ -203,8 +216,8 @@ export async function sendTrialResultEmail(params: {
 }): Promise<void> {
   const { serverApiToken, toEmail, toName, subject, siteUrl, previewToken, orderSummary, csvContent } = params;
 
-  const fromDomain = siteUrl.replace(/^https?:\/\//, "").split("/")[0];
-  if (fromDomain.startsWith("localhost")) return;
+  const fromAddress = resolveSenderAddress(siteUrl);
+  if (!fromAddress) return;
 
   const previewUrl = `${siteUrl}/orders/preview/${previewToken}`;
   const total = orderSummary.totalAmount != null
@@ -242,7 +255,7 @@ export async function sendTrialResultEmail(params: {
       "X-Postmark-Server-Token": serverApiToken,
     },
     body: JSON.stringify({
-      From: `noreply@${fromDomain}`,
+      From: fromAddress,
       To: toEmail,
       Subject: `Extrahierte Bestellung: ${subject}`,
       TextBody: textBody,
@@ -274,8 +287,8 @@ export async function sendTrialFailureEmail(params: {
 }): Promise<void> {
   const { serverApiToken, toEmail, toName, subject, siteUrl } = params;
 
-  const fromDomain = siteUrl.replace(/^https?:\/\//, "").split("/")[0];
-  if (fromDomain.startsWith("localhost")) return;
+  const fromAddress = resolveSenderAddress(siteUrl);
+  if (!fromAddress) return;
 
   const textBody = [
     `Hallo ${toName || toEmail},`,
@@ -303,7 +316,7 @@ export async function sendTrialFailureEmail(params: {
       "X-Postmark-Server-Token": serverApiToken,
     },
     body: JSON.stringify({
-      From: `noreply@${fromDomain}`,
+      From: fromAddress,
       To: toEmail,
       Subject: `Extraktion fehlgeschlagen: ${subject}`,
       TextBody: textBody,
@@ -329,6 +342,9 @@ export async function sendConfirmationEmail(params: {
 }): Promise<void> {
   const { serverApiToken, toEmail, toName, orderId, subject, siteUrl } = params;
 
+  const fromAddress = resolveSenderAddress(siteUrl);
+  if (!fromAddress) return;
+
   const orderUrl = `${siteUrl}/orders/${orderId}`;
   const textBody = [
     `Hallo ${toName || toEmail},`,
@@ -342,10 +358,6 @@ export async function sendConfirmationEmail(params: {
     "Ihr Order Intelligence Team",
   ].join("\n");
 
-  const fromDomain = siteUrl.replace(/^https?:\/\//, "").split("/")[0];
-  // Skip sending if domain is localhost (not a valid Postmark sender)
-  if (fromDomain.startsWith("localhost")) return;
-
   const response = await fetch("https://api.postmarkapp.com/email", {
     method: "POST",
     headers: {
@@ -354,7 +366,7 @@ export async function sendConfirmationEmail(params: {
       "X-Postmark-Server-Token": serverApiToken,
     },
     body: JSON.stringify({
-      From: `noreply@${fromDomain}`,
+      From: fromAddress,
       To: toEmail,
       Subject: `Bestellung empfangen: ${subject}`,
       TextBody: textBody,
