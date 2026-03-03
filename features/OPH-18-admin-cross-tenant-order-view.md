@@ -1,6 +1,6 @@
 # OPH-18: Admin Cross-Tenant Order View
 
-## Status: In Progress
+## Status: Deployed
 **Created:** 2026-03-03
 **Last Updated:** 2026-03-03
 
@@ -189,4 +189,22 @@ Tenants with zero orders in the current page (50 items) do not appear in the dro
 | No data leakage to tenant users | PASS — UI gated + API gated |
 
 ## Deployment
-_To be added by /deploy_
+
+**Deployed:** 2026-03-03
+**Commit:** 330d163
+**Tag:** v1.18.0-OPH-18
+
+### Checklist
+- [x] `npm run build` passes
+- [x] All QA ACs pass (5/5)
+- [x] No Critical/High bugs
+- [x] No new environment variables
+- [x] No database migrations required
+- [x] Code committed and pushed to `main`
+- [x] Vercel auto-deploy triggered
+
+### What was deployed
+- `OrderListItem` type extended with `tenant_name`
+- `GET /api/orders` returns `tenant_name` via `tenants(name)` JOIN
+- `OrdersList` component: Mandant column + tenant filter dropdown (admin only)
+- `sessionStorage` persistence for filter state across navigation
