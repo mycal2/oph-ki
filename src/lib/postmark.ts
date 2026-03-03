@@ -147,7 +147,7 @@ const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replac
  * Wraps email content in a branded HTML layout with logo and footer.
  */
 function wrapHtmlEmail(siteUrl: string, bodyHtml: string): string {
-  const logoUrl = `${siteUrl}/ids-logo-orange.svg`;
+  const logoUrl = `${siteUrl}/ids-logo-orange.png`;
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#374151;background:#f9fafb">
@@ -476,7 +476,7 @@ export async function sendConfirmationEmail(params: {
   const htmlBody = wrapHtmlEmail(siteUrl, `
     <h2 style="margin:0 0 8px;font-size:18px;color:#111827">Bestellung empfangen</h2>
     <p style="margin:0 0 20px;color:#6b7280;font-size:14px">Ihre weitergeleitete E-Mail &ldquo;${esc(subject)}&rdquo; wurde empfangen und wird verarbeitet.</p>
-    <a href="${esc(orderUrl)}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500">Bestellstatus ansehen</a>
+    <a href="${esc(orderUrl)}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500">Bestellung ansehen</a>
   `);
 
   const response = await fetch("https://api.postmarkapp.com/email", {

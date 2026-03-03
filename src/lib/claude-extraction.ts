@@ -24,7 +24,7 @@ const CANONICAL_JSON_SCHEMA = `{
       "country": "string | null",
       "email": "string | null",
       "phone": "string | null",
-      "customer_number": "string | null (the sender's own order or customer reference number)"
+      "customer_number": "string | null (the manufacturer's customer ID / Kundennummer for the ordering dealer — assigned by the manufacturer, NOT the dealer's own reference or order number)"
     } | null,
     "delivery_address": {
       "company": "string | null",
@@ -72,7 +72,19 @@ ${CANONICAL_JSON_SCHEMA}
 8. If the document contains NO order data at all, return line_items as an empty array and set confidence_score to 0.
 9. Dates should be in ISO 8601 format (YYYY-MM-DD).
 10. All text fields should preserve the original language of the document.
-11. The "sender" is the company or dealer that placed/sent the order. This is different from the delivery address (where goods are shipped). Look for sender info in letterheads, "From" fields, company stamps, headers, or contact blocks at the top of the document.`;
+11. The "sender" is the company or dealer that placed/sent the order. This is different from the delivery address (where goods are shipped). Look for sender info in letterheads, "From" fields, company stamps, headers, or contact blocks at the top of the document.
+12. **Customer Number (Kundennummer) extraction rules:**
+    - The customer_number is the **manufacturer's customer ID** for the ordering dealer. It is assigned by the manufacturer, NOT the dealer's own reference or order number.
+    - Search for the customer number in **both** the order document (PDF, Excel, email attachment) **and** the forwarding email body text (the portion of text added by the person forwarding the order).
+    - Recognise multi-language keywords indicating a customer number:
+      * German: "Kundennummer", "Kd.-Nr.", "Kd.Nr.", "Kundennr."
+      * English: "customer number", "customer no.", "customer ID", "account number"
+      * French: "numéro client", "n° client"
+      * Spanish: "número de cliente", "nº cliente"
+      * Italian: "numero cliente", "n. cliente"
+    - If a customer number appears in both the forwarding note and the order document and they differ, **prefer the forwarding note value** (the person forwarding knows the correct account).
+    - Only extract a value as customer_number when it is clearly preceded by one of the keywords above. Do NOT confuse it with order numbers, invoice numbers, PO numbers, or article numbers.
+    - The customer number may be purely numeric ("12345") or alphanumeric ("KD-12345-DE").`;
 
 export interface ExtractionInput {
   orderId: string;

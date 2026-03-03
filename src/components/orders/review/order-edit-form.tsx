@@ -20,6 +20,7 @@ import type {
   CanonicalOrder,
   CanonicalLineItem,
   CanonicalAddress,
+  CanonicalSender,
 } from "@/lib/types";
 
 interface OrderEditFormProps {
@@ -110,6 +111,25 @@ export function OrderEditForm({ data, onChange }: OrderEditFormProps) {
     [order.line_items, updateOrder]
   );
 
+  // ---- Sender Helpers ----
+
+  const updateSender = useCallback(
+    (patch: Partial<CanonicalSender>) => {
+      const current = order.sender ?? {
+        company_name: null,
+        street: null,
+        city: null,
+        postal_code: null,
+        country: null,
+        email: null,
+        phone: null,
+        customer_number: null,
+      };
+      updateOrder({ sender: { ...current, ...patch } });
+    },
+    [order.sender, updateOrder]
+  );
+
   // ---- Address Helpers ----
 
   const updateAddress = useCallback(
@@ -176,6 +196,35 @@ export function OrderEditForm({ data, onChange }: OrderEditFormProps) {
                 })
               }
             />
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* ---- Sender Section ---- */}
+        <div>
+          <h3 className="text-sm font-medium mb-3">Absender</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="review-customer-number">
+                Kundennummer{" "}
+                <span className="text-muted-foreground font-normal">(Kd.-Nr.)</span>
+              </Label>
+              <Input
+                id="review-customer-number"
+                value={order.sender?.customer_number ?? ""}
+                onChange={(e) => {
+                  const value = e.target.value || null;
+                  updateSender({ customer_number: value });
+                }}
+                placeholder="z.B. 12345 oder KD-12345-DE"
+                maxLength={100}
+                aria-label="Kundennummer des Herstellers fuer den Haendler"
+              />
+              <p className="text-xs text-muted-foreground">
+                Vom Hersteller vergebene Kundennummer des Bestellers (optional).
+              </p>
+            </div>
           </div>
         </div>
 
