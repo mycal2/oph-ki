@@ -1,6 +1,6 @@
 # OPH-19: Customer Number (Kundennummer) Recognition & Editing
 
-## Status: In Progress
+## Status: Deployed
 **Created:** 2026-03-03
 **Last Updated:** 2026-03-03
 
@@ -155,4 +155,8 @@ No new packages required.
 ### Verdict: PASS — Ready for deployment
 
 ## Deployment
-_To be added by /deploy_
+
+- **Production URL:** https://oph-ki.ids.online
+- **Deployed:** 2026-03-03
+- **Commit:** `c03ca37` feat(OPH-19): Customer number recognition & review editing
+- **Vercel:** Auto-deployed via push to `main`
