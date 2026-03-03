@@ -1,6 +1,6 @@
 # OPH-17: Allowed Email Domains for Sender Authorization
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-03-03
 **Last Updated:** 2026-03-03
 
@@ -89,7 +89,116 @@ This feature replaces both authorization paths with a unified, domain-based mode
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Overview
+
+This feature touches three layers: the database (one new column), the backend (two API routes + the inbound email webhook), and the UI (one existing form gets a new section). No new pages, no new packages. The existing `TagInput` component already handles the add/remove chip interaction — we just wire it to the domain list.
+
+---
+
+### Component Structure
+
+Only one UI component changes — the existing tenant form sheet gains a new section in its "Profil" tab:
+
+```
+TenantFormSheet (existing — src/components/admin/tenant-form-sheet.tsx)
++-- Tab: Profil (existing)
+|   +-- Name field (existing)
+|   +-- Slug field (existing)
+|   +-- Kontakt-E-Mail field (existing)
+|   +-- ERP-Typ dropdown (existing)
+|   +-- Status dropdown (existing)
+|   +-- Trial-Info alert (existing, OPH-16)
+|   +-- [NEW] "Erlaubte E-Mail-Domains" section
+|       +-- Label + helper text
+|       +-- TagInput (existing component — src/components/admin/tag-input.tsx)
+|           +-- Domain chips (e.g. "example.de" × | "example.com" ×)
+|           +-- Input field: type domain + Enter to add
+|       +-- Fallback hint (shown when list is empty):
+|           "Kein Eintrag: Domain aus Kontakt-E-Mail wird automatisch verwendet"
++-- Tab: Benutzer (existing, unchanged)
+```
+
+No new components or pages are needed.
+
+---
+
+### Data Model
+
+**Existing table — one new column added:**
+
+```
+tenants table gets:
+- allowed_email_domains  TEXT[]  DEFAULT '{}'
+  A list of lowercase domain strings (e.g. ["example.de", "example.com"])
+  Empty array = no explicit config → fallback to contact_email domain
+  Maximum 10 entries enforced at the API level
+```
+
+**Authorization resolution logic (inbound email webhook):**
+```
+1. Load tenant's allowed_email_domains
+2. If the list is empty → derive effective domain from contact_email (everything after @)
+3. Extract sender domain from the incoming email's From address (everything after @, lowercased)
+4. If sender domain is in the effective allowed list → authorize → create order
+5. Otherwise → quarantine (same as before)
+```
+
+---
+
+### API Changes
+
+| Route | Method | Change |
+|-------|--------|--------|
+| `GET /api/admin/tenants/[id]` | GET | Return `allowed_email_domains` field in response |
+| `POST /api/admin/tenants` | POST | Accept optional `allowed_email_domains` array in request body |
+| `PATCH /api/admin/tenants/[id]` | PATCH | Accept `allowed_email_domains` array in request body; validate max 10, valid domain format |
+| `POST /api/inbound/email` | POST | Replace user-list auth with domain check (see resolution logic above) |
+
+**What is removed from the inbound email route:**
+- The `auth.admin.listUsers({ perPage: 1000 })` call (BUG-009 fix)
+- The trial-specific `contact_email` exact-match check
+
+Both paths are replaced by the unified domain resolution logic.
+
+---
+
+### Validation Rules
+
+Applied server-side in the API (Zod schema):
+- Each domain: no `@` symbol, no spaces, contains at least one `.`, 3–253 characters
+- List: maximum 10 domains per tenant
+- Duplicates rejected (case-insensitive: `Example.DE` == `example.de`, stored lowercase)
+
+The `TagInput` component also validates on the client before adding a chip, with a domain-specific error message ("Bitte nur die Domain eingeben, z.B. `example.de` — ohne @").
+
+---
+
+### Tech Decisions
+
+| Decision | Choice | Why |
+|----------|--------|-----|
+| Storage format | `TEXT[]` PostgreSQL array | Native array support, simple to query with `= ANY(...)`, no join table needed for ≤10 items |
+| Domain matching | `senderDomain = ANY(allowed_domains)` | Single DB comparison, case-insensitive normalization applied on write (store lowercase) |
+| Fallback location | Server-side in inbound webhook | Fallback logic belongs on the server — client never needs to know about it |
+| UI component | Reuse existing `TagInput` | Already built for dealer rules (known domains, subject patterns) — zero new code for the chip interaction |
+| No separate endpoint | Domains saved with the tenant form | Domains are tenant configuration, not a standalone resource — keeping them in the same PUT/POST reduces API surface |
+
+---
+
+### Files Changed
+
+| File | Type of change |
+|------|----------------|
+| `supabase/migrations/020_oph17_allowed_email_domains.sql` | New — add `allowed_email_domains TEXT[] DEFAULT '{}'` to `tenants` |
+| `src/lib/types.ts` | Add `allowed_email_domains: string[]` to `Tenant` interface |
+| `src/lib/validations.ts` | Add domain array validation to `createTenantSchema` and `updateTenantSchema` |
+| `src/app/api/admin/tenants/route.ts` | Accept + store `allowed_email_domains` on create |
+| `src/app/api/admin/tenants/[id]/route.ts` | Return + accept `allowed_email_domains` on GET/PATCH |
+| `src/app/api/inbound/email/route.ts` | Replace auth logic with domain check + fallback |
+| `src/components/admin/tenant-form-sheet.tsx` | Add domain section to Profile tab; load/save domains |
+
+No new packages required.
 
 ## QA Test Results
 _To be added by /qa_
