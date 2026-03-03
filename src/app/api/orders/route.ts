@@ -68,7 +68,7 @@ export async function GET(
 
     const adminClient = createAdminClient();
 
-    // 4. Fetch orders with dealer join and uploader name
+    // 4. Fetch orders with dealer join, tenant join, and uploader name
     let query = adminClient
       .from("orders")
       .select(`
@@ -80,7 +80,8 @@ export async function GET(
         recognition_confidence,
         extraction_status,
         dealers ( name ),
-        uploader:user_profiles!orders_uploaded_by_fkey ( first_name, last_name )
+        uploader:user_profiles!orders_uploaded_by_fkey ( first_name, last_name ),
+        tenants ( name )
       `)
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
@@ -138,6 +139,12 @@ export async function GET(
         ? (rawUploader[0] as { first_name: string; last_name: string } | undefined) ?? null
         : (rawUploader as { first_name: string; last_name: string } | null);
 
+      // OPH-18: Extract tenant name from join (only meaningful for platform admins)
+      const rawTenant = order.tenants as unknown;
+      const tenantData = Array.isArray(rawTenant)
+        ? (rawTenant[0] as { name: string } | undefined) ?? null
+        : (rawTenant as { name: string } | null);
+
       const fileInfo = filesByOrder.get(order.id as string);
 
       return {
@@ -153,6 +160,7 @@ export async function GET(
         file_count: fileInfo?.count ?? 0,
         primary_filename: fileInfo?.primaryFilename ?? null,
         extraction_status: (order.extraction_status as OrderListItem["extraction_status"]) ?? null,
+        tenant_name: isPlatformAdmin ? (tenantData?.name ?? null) : null,
       };
     });
 

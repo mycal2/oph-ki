@@ -198,6 +198,8 @@ export interface OrderListItem {
   file_count: number;
   primary_filename: string | null;
   extraction_status: ExtractionStatus | null;
+  /** OPH-18: Tenant name for cross-tenant admin view. Null for non-admin responses. */
+  tenant_name: string | null;
 }
 
 /** Response from PATCH /api/orders/[orderId]/dealer */

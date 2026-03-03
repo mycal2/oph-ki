@@ -144,7 +144,49 @@ No new packages required. All components (Select, Table, Badge) are already inst
 | `src/components/orders/orders-list.tsx` | Add tenant filter toolbar + Mandant column + client-side filter |
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-03-03
+**Build:** `npm run build` PASS (zero errors)
+
+### Acceptance Criteria Results
+
+| AC | Description | Result |
+|----|-------------|--------|
+| AC-1 | Mandant-Spalte fuer Platform-Admins | PASS |
+| AC-2 | Mandanten-Filter Dropdown in Toolbar | PASS |
+| AC-3 | Persistenz des Filters (Session) | PASS (fixed) |
+| AC-4 | Keine Aenderung fuer Tenant-User | PASS |
+| AC-5 | Tenant-Name kommt vom Backend | PASS |
+
+### Bugs Found
+
+**BUG-1 (Medium): Filter state lost on navigation** — FIXED
+- **AC:** AC-3
+- **File:** `src/components/orders/orders-list.tsx`
+- **Issue:** `selectedTenant` used React `useState` which reset on remount.
+- **Fix applied:** `sessionStorage` persistence — filter initializes from `sessionStorage`, updates on change, clears on "Alle Mandanten". Resets on browser refresh per spec.
+
+### Edge Cases Verified
+
+| Edge Case | Result |
+|-----------|--------|
+| Bestellung ohne Tenant-Name | PASS — em dash fallback |
+| Mandant geloescht/deaktiviert | PASS — JOIN is unconditional |
+| Viele Mandanten (>20) | PASS — shadcn Select scrollable |
+| Gefilterte Liste leer | PASS — "Keine Bestellungen gefunden" |
+
+### Known Limitation
+
+Tenants with zero orders in the current page (50 items) do not appear in the dropdown. This is by design per the Technical Requirements ("clientseitig aus den bereits geladenen Bestellungen befuellt, kein separater API-Aufruf"). Not a bug.
+
+### Security Audit
+
+| Check | Result |
+|-------|--------|
+| Non-admin users cannot see tenant names | PASS — API returns `null` for non-admins (line 163) |
+| `isPlatformAdmin` verified server-side from JWT | PASS — `app_metadata.role` check |
+| No new user input to validate | PASS — Select is read-only |
+| No data leakage to tenant users | PASS — UI gated + API gated |
 
 ## Deployment
 _To be added by /deploy_
