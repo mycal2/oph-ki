@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Loader2, MoreHorizontal, Power, PowerOff, UserPlus, Clock, Info } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { Loader2, MoreHorizontal, Power, PowerOff, UserPlus, Clock, Info, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,6 +47,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { TagInput } from "@/components/admin/tag-input";
 import { TenantInviteDialog } from "@/components/admin/tenant-invite-dialog";
 import type {
   Tenant,
@@ -133,6 +134,8 @@ export function TenantFormSheet({
   // OPH-16: Trial date state (read-only, for display)
   const [trialStartedAt, setTrialStartedAt] = useState<string | null>(null);
   const [trialExpiresAt, setTrialExpiresAt] = useState<string | null>(null);
+  // OPH-17: Allowed email domains
+  const [allowedEmailDomains, setAllowedEmailDomains] = useState<string[]>([]);
 
   // UI state
   const [isLoadingTenant, setIsLoadingTenant] = useState(false);
@@ -160,6 +163,7 @@ export function TenantFormSheet({
     setStatus("active");
     setTrialStartedAt(null);
     setTrialExpiresAt(null);
+    setAllowedEmailDomains([]);
     setUsers([]);
     setActiveTab("profile");
     setTenantName("");
@@ -176,6 +180,7 @@ export function TenantFormSheet({
     setStatus(tenant.status);
     setTrialStartedAt(tenant.trial_started_at);
     setTrialExpiresAt(tenant.trial_expires_at);
+    setAllowedEmailDomains(tenant.allowed_email_domains ?? []);
     setTenantName(tenant.name);
   }, []);
 
@@ -235,6 +240,7 @@ export function TenantFormSheet({
         contact_email: contactEmail,
         erp_type: erpType,
         status,
+        allowed_email_domains: allowedEmailDomains,
       };
       const result = await onSave(data, true);
       if (result) {
@@ -246,6 +252,7 @@ export function TenantFormSheet({
         contact_email: contactEmail,
         erp_type: erpType,
         status,
+        allowed_email_domains: allowedEmailDomains,
       };
       const result = await onSave(data, false);
       if (result) {
@@ -279,6 +286,27 @@ export function TenantFormSheet({
     }
     return result;
   };
+
+  // OPH-17 BUG-1: Client-side domain validation for TagInput
+  const validateDomain = useCallback((domain: string): string | null => {
+    const d = domain.toLowerCase();
+    if (d.length < 3) return "Domain muss mindestens 3 Zeichen lang sein.";
+    if (d.includes("@")) return "Bitte nur die Domain eingeben, ohne @.";
+    if (!d.includes(".")) return "Domain muss einen Punkt enthalten (z.B. example.de).";
+    if (d.includes("..")) return "Domain darf keine aufeinanderfolgenden Punkte enthalten.";
+    if (!/^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/.test(d)) return "Ungueltige Domain (z.B. example.de).";
+    return null;
+  }, []);
+
+  // OPH-17 BUG-3: Warn when contact_email domain is not usable as fallback
+  const contactDomainWarning = useMemo(() => {
+    if (allowedEmailDomains.length > 0) return null; // explicit domains configured
+    const domain = contactEmail.split("@")[1]?.toLowerCase();
+    if (!domain || domain.length < 3 || !domain.includes(".")) {
+      return "Ohne konfigurierte Domains und ohne gueltige Kontakt-E-Mail-Domain koennen keine eingehenden E-Mails autorisiert werden.";
+    }
+    return null;
+  }, [contactEmail, allowedEmailDomains]);
 
   return (
     <>
@@ -462,6 +490,29 @@ export function TenantFormSheet({
                         </AlertDescription>
                       </Alert>
                     )}
+
+                    {/* OPH-17: Allowed email domains */}
+                    <div className="space-y-2">
+                      <Label>Erlaubte E-Mail-Domains</Label>
+                      <TagInput
+                        value={allowedEmailDomains}
+                        onChange={setAllowedEmailDomains}
+                        placeholder="z.B. example.de + Enter"
+                        maxItems={10}
+                        validate={validateDomain}
+                      />
+                      {allowedEmailDomains.length === 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          Kein Eintrag: Domain aus Kontakt-E-Mail wird automatisch verwendet.
+                        </p>
+                      )}
+                      {contactDomainWarning && (
+                        <p className="flex items-start gap-1.5 text-xs text-amber-600">
+                          <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                          {contactDomainWarning}
+                        </p>
+                      )}
+                    </div>
                   </TabsContent>
 
                   {/* Tab: Users */}

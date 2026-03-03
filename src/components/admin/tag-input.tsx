@@ -13,6 +13,8 @@ interface TagInputProps {
   disabled?: boolean;
   /** When true, validates each entry as a valid regex pattern on add. */
   validateRegex?: boolean;
+  /** Custom validation function. Return an error message string to reject, or null to accept. */
+  validate?: (value: string) => string | null;
 }
 
 export function TagInput({
@@ -22,6 +24,7 @@ export function TagInput({
   maxItems = 50,
   disabled = false,
   validateRegex = false,
+  validate,
 }: TagInputProps) {
   const [inputValue, setInputValue] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -30,7 +33,8 @@ export function TagInput({
     (tag: string) => {
       const trimmed = tag.trim();
       if (!trimmed) return;
-      if (value.includes(trimmed)) return;
+      // Case-insensitive duplicate check
+      if (value.some((v) => v.toLowerCase() === trimmed.toLowerCase())) return;
       if (value.length >= maxItems) return;
 
       if (validateRegex) {
@@ -42,11 +46,19 @@ export function TagInput({
         }
       }
 
+      if (validate) {
+        const error = validate(trimmed);
+        if (error) {
+          setValidationError(error);
+          return;
+        }
+      }
+
       setValidationError(null);
       onChange([...value, trimmed]);
       setInputValue("");
     },
-    [value, onChange, maxItems, validateRegex]
+    [value, onChange, maxItems, validateRegex, validate]
   );
 
   const removeTag = useCallback(

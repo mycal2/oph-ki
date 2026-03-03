@@ -179,6 +179,11 @@ export function TenantAdminTable({
                       <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">
                         {tenant.contact_email}
                       </p>
+                      {tenant.allowed_email_domains.length > 0 && (
+                        <p className="mt-0.5 text-[11px] text-muted-foreground/70 font-mono line-clamp-1">
+                          {tenant.allowed_email_domains.join(", ")}
+                        </p>
+                      )}
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-sm text-muted-foreground font-mono">
                       {tenant.slug}

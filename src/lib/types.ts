@@ -21,6 +21,8 @@ export interface Tenant {
   trial_started_at: string | null;
   /** OPH-16: Trial period expiry date. */
   trial_expires_at: string | null;
+  /** OPH-17: Allowed email domains for sender authorization. */
+  allowed_email_domains: string[];
 }
 
 export interface UserProfile {
@@ -430,6 +432,8 @@ export interface TenantAdminListItem {
   trial_started_at: string | null;
   /** OPH-16: Trial period expiry date. */
   trial_expires_at: string | null;
+  /** OPH-17: Allowed email domains for sender authorization. */
+  allowed_email_domains: string[];
 }
 
 /** User belonging to a tenant, shown in the admin user tab. */

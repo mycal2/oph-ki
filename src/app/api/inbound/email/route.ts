@@ -98,7 +98,7 @@ export async function POST(
 
     const { data: tenant, error: tenantError } = await adminClient
       .from("tenants")
-      .select("id, name, slug, status, contact_email")
+      .select("id, name, slug, status, contact_email, allowed_email_domains")
       .eq("slug", slug)
       .single();
 
@@ -145,35 +145,41 @@ export async function POST(
       }
     }
 
-    // 6. Check sender authorization
+    // 6. Check sender authorization — OPH-17: domain-based check (unified for all tenants)
     const senderEmail = payload.FromFull?.Email ?? payload.From;
     const senderName = payload.FromFull?.Name ?? payload.FromName ?? "";
     const isTrial = tenant.status === "trial";
 
-    let authorizedUserId: string | null = null;
-    let tenantProfiles: { id: string }[] | null = null;
-
-    if (isTrial) {
-      // OPH-16: Trial tenants have no user accounts — authorize by contact_email match
-      const contactEmail = (tenant.contact_email as string | null) ?? "";
-      if (contactEmail && senderEmail.toLowerCase() === contactEmail.toLowerCase()) {
-        // Mark as authorized (no real user ID, use a sentinel)
-        authorizedUserId = "trial-contact";
-      }
+    // Resolve the effective allowed domains list
+    const configuredDomains = (tenant.allowed_email_domains as string[]) ?? [];
+    let effectiveDomains: string[];
+    if (configuredDomains.length > 0) {
+      effectiveDomains = configuredDomains.map((d) => d.toLowerCase());
     } else {
-      // Normal tenants: check sender against user profiles
+      // Fallback: derive domain from contact_email
+      const contactEmail = (tenant.contact_email as string | null) ?? "";
+      const fallbackDomain = contactEmail.split("@")[1]?.toLowerCase();
+      effectiveDomains = fallbackDomain ? [fallbackDomain] : [];
+    }
+
+    // Extract sender domain and check against allowed list
+    const senderDomain = senderEmail.split("@")[1]?.toLowerCase() ?? "";
+    const isAuthorized = effectiveDomains.length > 0 && effectiveDomains.includes(senderDomain);
+
+    // For non-trial tenants, try to resolve the sender to a user ID for uploaded_by
+    let uploadedBy: string | null = null;
+    if (isAuthorized && !isTrial) {
       const { data: profiles } = await adminClient
         .from("user_profiles")
         .select("id")
         .eq("tenant_id", tenant.id)
         .eq("status", "active");
-      tenantProfiles = profiles;
 
-      if (tenantProfiles && tenantProfiles.length > 0) {
-        for (const profile of tenantProfiles) {
+      if (profiles && profiles.length > 0) {
+        for (const profile of profiles) {
           const { data: { user: authUser } } = await adminClient.auth.admin.getUserById(profile.id);
           if (authUser?.email?.toLowerCase() === senderEmail.toLowerCase()) {
-            authorizedUserId = authUser.id;
+            uploadedBy = authUser.id;
             break;
           }
         }
@@ -181,7 +187,7 @@ export async function POST(
     }
 
     // 7. If not authorized → quarantine
-    if (!authorizedUserId) {
+    if (!isAuthorized) {
       // Archive the raw email to storage
       let storagePath: string | null = null;
       try {
@@ -218,7 +224,7 @@ export async function POST(
 
       // Notify tenant admins about the quarantined email (not applicable for trial tenants — no users)
       const serverApiToken = process.env.POSTMARK_SERVER_API_TOKEN;
-      if (serverApiToken && !isTrial && tenantProfiles && tenantProfiles.length > 0) {
+      if (serverApiToken && !isTrial) {
         const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
         after(async () => {
@@ -282,7 +288,7 @@ export async function POST(
       .from("orders")
       .insert({
         tenant_id: tenant.id,
-        ...(isTrial ? {} : { uploaded_by: authorizedUserId }),
+        ...(uploadedBy ? { uploaded_by: uploadedBy } : {}),
         status: "uploaded",
         source: "email_inbound",
         message_id: messageId,

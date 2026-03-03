@@ -19,7 +19,7 @@ export async function GET(): Promise<NextResponse> {
     // Fetch all tenants (OPH-16: include trial date columns)
     const { data: tenants, error: tenantsError } = await adminClient
       .from("tenants")
-      .select("id, name, slug, status, erp_type, contact_email, created_at, trial_started_at, trial_expires_at")
+      .select("id, name, slug, status, erp_type, contact_email, created_at, trial_started_at, trial_expires_at, allowed_email_domains")
       .order("name", { ascending: true })
       .limit(1000);
 
@@ -62,6 +62,8 @@ export async function GET(): Promise<NextResponse> {
         // OPH-16: Trial period dates
         trial_started_at: (t.trial_started_at as string) ?? null,
         trial_expires_at: (t.trial_expires_at as string) ?? null,
+        // OPH-17: Allowed email domains
+        allowed_email_domains: (t.allowed_email_domains as string[]) ?? [],
       };
     });
 
@@ -141,6 +143,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         contact_email: input.contact_email,
         erp_type: input.erp_type,
         status: input.status,
+        allowed_email_domains: input.allowed_email_domains,
         ...(inboundEmailAddress ? { inbound_email_address: inboundEmailAddress } : {}),
         ...trialFields,
       })

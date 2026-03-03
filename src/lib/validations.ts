@@ -368,6 +368,44 @@ const slugField = z
     "Slug darf nur Kleinbuchstaben, Zahlen und Bindestriche enthalten."
   );
 
+/** OPH-17: Single domain validation (no @, no spaces, must contain a dot). */
+const emailDomainField = z
+  .string()
+  .min(3, "Domain muss mindestens 3 Zeichen lang sein.")
+  .max(253, "Domain darf maximal 253 Zeichen lang sein.")
+  .transform((d) => d.toLowerCase())
+  .pipe(
+    z
+      .string()
+      .regex(
+        /^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/,
+        "Ungueltige Domain. Bitte nur die Domain eingeben, z.B. example.de — ohne @."
+      )
+      .refine((d) => d.includes("."), {
+        message: "Domain muss mindestens einen Punkt enthalten (z.B. example.de).",
+      })
+      .refine((d) => !d.includes(".."), {
+        message: "Domain darf keine aufeinanderfolgenden Punkte enthalten.",
+      })
+  );
+
+/** OPH-17: Allowed email domains array — max 10, deduplicated, stored lowercase. */
+const allowedEmailDomainsField = z
+  .array(emailDomainField)
+  .max(10, "Maximal 10 Domains pro Mandant.")
+  .transform((domains) => {
+    // Deduplicate case-insensitively and store lowercase
+    const seen = new Set<string>();
+    return domains
+      .map((d) => d.toLowerCase())
+      .filter((d) => {
+        if (seen.has(d)) return false;
+        seen.add(d);
+        return true;
+      });
+  })
+  .default([]);
+
 export const createTenantSchema = z.object({
   name: z
     .string()
@@ -385,6 +423,7 @@ export const createTenantSchema = z.object({
   status: z.enum(["active", "inactive", "trial"], {
     message: "Ungueltiger Status.",
   }).default("active"),
+  allowed_email_domains: allowedEmailDomainsField,
 });
 
 export const updateTenantSchema = z.object({
@@ -405,6 +444,7 @@ export const updateTenantSchema = z.object({
   status: z.enum(["active", "inactive", "trial"], {
     message: "Ungueltiger Status.",
   }).optional(),
+  allowed_email_domains: allowedEmailDomainsField.optional(),
 });
 
 /** Invite user on behalf of a specific tenant (platform admin). */
