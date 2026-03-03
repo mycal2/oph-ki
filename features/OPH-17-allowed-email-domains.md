@@ -1,6 +1,6 @@
 # OPH-17: Allowed Email Domains for Sender Authorization
 
-## Status: In Review
+## Status: Deployed
 **Created:** 2026-03-03
 **Last Updated:** 2026-03-03
 
@@ -396,4 +396,22 @@ Note: Full manual browser/responsive testing requires a running dev server with 
 - **Recommendation:** Fix BUG-1 and BUG-4 before deployment. The remaining low-severity bugs can be addressed in a follow-up sprint.
 
 ## Deployment
-_To be added by /deploy_
+
+**Deployed:** 2026-03-03
+**Commit:** fb9b8e3
+
+### Pre-Deployment Checklist
+- [x] `npm run build` passes — no TypeScript or compilation errors
+- [x] All 6 QA bugs fixed (BUG-1 through BUG-6)
+- [x] No Critical or High severity bugs
+- [x] Database migration `020_oph17_allowed_email_domains.sql` applied to production Supabase
+- [x] No new environment variables required
+- [x] No secrets committed to git
+- [x] All code committed and pushed to remote
+
+### What Was Deployed
+- Unified domain-based sender authorization replacing the old dual-path approach
+- `allowed_email_domains TEXT[]` column on `tenants` table
+- Admin tenant form updated with domain tag input and warnings
+- Domain list shown in tenant admin table
+- BUG-009 (scalability) fixed: `auth.admin.listUsers` removed from inbound email path
