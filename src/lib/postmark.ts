@@ -140,6 +140,33 @@ function resolveSenderAddress(siteUrl: string): string | null {
   return `noreply@${fromDomain}`;
 }
 
+/** Escape HTML special characters. */
+const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+/**
+ * Wraps email content in a branded HTML layout with logo and footer.
+ */
+function wrapHtmlEmail(siteUrl: string, bodyHtml: string): string {
+  const logoUrl = `${siteUrl}/ids-logo-orange.svg`;
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#374151;background:#f9fafb">
+<div style="max-width:680px;margin:0 auto;padding:32px 20px">
+  <div style="text-align:center;padding:0 0 24px">
+    <a href="https://www.ids.online" style="text-decoration:none">
+      <img src="${esc(logoUrl)}" alt="IDS.online" width="120" height="119" style="width:120px;height:auto" />
+    </a>
+  </div>
+  <div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;margin-bottom:20px">
+    ${bodyHtml}
+  </div>
+  <div style="text-align:center;padding:16px 0;font-size:12px;color:#9ca3af">
+    <p style="margin:0">Order Intelligence Platform &mdash; <a href="https://www.ids.online" style="color:#9ca3af;text-decoration:none">ids.online</a></p>
+  </div>
+</div>
+</body></html>`;
+}
+
 /**
  * Sends a quarantine notification email to tenant admins via Postmark.
  */
@@ -173,6 +200,17 @@ export async function sendQuarantineNotification(params: {
     "Ihr Order Intelligence Team",
   ].join("\n");
 
+  const htmlBody = wrapHtmlEmail(siteUrl, `
+    <h2 style="margin:0 0 8px;font-size:18px;color:#111827">E-Mail in Quarantaene</h2>
+    <p style="margin:0 0 20px;color:#6b7280;font-size:14px">Eine E-Mail wurde in die Quarantaene verschoben.</p>
+    <table style="font-size:14px;margin-bottom:20px">
+      <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Absender:</td><td style="padding:4px 0;font-weight:500">${esc(senderEmail)}</td></tr>
+      <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Betreff:</td><td style="padding:4px 0;font-weight:500">${esc(subject || "(kein Betreff)")}</td></tr>
+      <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Mandant:</td><td style="padding:4px 0;font-weight:500">${esc(tenantName)}</td></tr>
+    </table>
+    <a href="${esc(quarantineUrl)}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500">Quarantaene pruefen</a>
+  `);
+
   const response = await fetch("https://api.postmarkapp.com/email", {
     method: "POST",
     headers: {
@@ -184,6 +222,7 @@ export async function sendQuarantineNotification(params: {
       From: fromAddress,
       To: adminEmails.join(","),
       Subject: `Quarantaene: E-Mail von ${senderEmail}`,
+      HtmlBody: htmlBody,
       TextBody: textBody,
     }),
   });
@@ -234,9 +273,6 @@ export async function sendTrialResultEmail(params: {
     ? `${orderSummary.totalAmount.toFixed(2)} ${currency}`
     : "–";
 
-  // Escape HTML special characters
-  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-
   // Build HTML line items table
   let itemsHtml = "";
   if (lineItems.length > 0) {
@@ -275,14 +311,9 @@ export async function sendTrialResultEmail(params: {
     </table>`;
   }
 
-  const htmlBody = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"></head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#374151;background:#f9fafb">
-<div style="max-width:680px;margin:0 auto;padding:32px 20px">
-  <div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:32px;margin-bottom:20px">
+  const htmlBody = wrapHtmlEmail(siteUrl, `
     <h2 style="margin:0 0 8px;font-size:18px;color:#111827">Extrahierte Bestellung</h2>
     <p style="margin:0 0 24px;color:#6b7280;font-size:14px">Ihre weitergeleitete E-Mail &ldquo;${esc(subject)}&rdquo; wurde verarbeitet.</p>
-
     <table style="font-size:14px;margin-bottom:20px">
       <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Bestellnummer:</td><td style="padding:4px 0;font-weight:500">${esc(orderSummary.orderNumber ?? "–")}</td></tr>
       <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Bestelldatum:</td><td style="padding:4px 0;font-weight:500">${esc(orderSummary.orderDate ?? "–")}</td></tr>
@@ -290,20 +321,11 @@ export async function sendTrialResultEmail(params: {
       <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Positionen:</td><td style="padding:4px 0;font-weight:500">${orderSummary.itemCount}</td></tr>
       <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Gesamtbetrag:</td><td style="padding:4px 0;font-weight:700;color:#111827">${esc(total)}</td></tr>
     </table>
-
     ${itemsHtml}
-
     <p style="margin:24px 0 12px;font-size:14px;color:#374151">Die vollstaendigen Daten finden Sie als CSV-Datei im Anhang.</p>
-
     <a href="${esc(previewUrl)}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500">Bestellung online ansehen</a>
-  </div>
-
-  <div style="text-align:center;padding:16px 0;font-size:12px;color:#9ca3af">
-    <p style="margin:0 0 4px">Interesse an der Vollversion? <a href="https://www.ids.online" style="color:#2563eb;text-decoration:none">Kontaktieren Sie uns</a></p>
-    <p style="margin:0">Order Intelligence Platform &mdash; <a href="https://www.ids.online" style="color:#9ca3af;text-decoration:none">ids.online</a></p>
-  </div>
-</div>
-</body></html>`;
+    <p style="margin:16px 0 0;font-size:12px;color:#9ca3af">Interesse an der Vollversion? <a href="https://www.ids.online" style="color:#2563eb;text-decoration:none">Kontaktieren Sie uns</a></p>
+  `);
 
   // Plain text fallback
   const textBody = [
@@ -387,6 +409,19 @@ export async function sendTrialFailureEmail(params: {
     "Ihr Order Intelligence Team",
   ].join("\n");
 
+  const htmlBody = wrapHtmlEmail(siteUrl, `
+    <h2 style="margin:0 0 8px;font-size:18px;color:#111827">Extraktion fehlgeschlagen</h2>
+    <p style="margin:0 0 20px;color:#6b7280;font-size:14px">Leider konnten die Bestelldaten aus Ihrer E-Mail &ldquo;${esc(subject)}&rdquo; nicht automatisch erkannt werden.</p>
+    <p style="margin:0 0 8px;font-size:14px;font-weight:500;color:#374151">Moegliche Gruende:</p>
+    <ul style="margin:0 0 20px;padding-left:20px;font-size:14px;color:#374151">
+      <li style="margin-bottom:4px">Das Dokument-Format wird nicht unterstuetzt</li>
+      <li style="margin-bottom:4px">Die Bestelldaten sind nicht klar strukturiert</li>
+      <li>Das Dokument enthaelt keine erkennbare Bestellung</li>
+    </ul>
+    <p style="margin:0 0 20px;font-size:14px;color:#374151">Bitte pruefen Sie das Dokument-Format und versuchen Sie es erneut.</p>
+    <p style="margin:0;font-size:13px;color:#6b7280">Bei Fragen kontaktieren Sie uns gerne: <a href="https://www.ids.online" style="color:#2563eb;text-decoration:none">ids.online</a></p>
+  `);
+
   const response = await fetch("https://api.postmarkapp.com/email", {
     method: "POST",
     headers: {
@@ -398,6 +433,7 @@ export async function sendTrialFailureEmail(params: {
       From: fromAddress,
       To: toEmail,
       Subject: `Extraktion fehlgeschlagen: ${subject}`,
+      HtmlBody: htmlBody,
       TextBody: textBody,
     }),
   });
@@ -437,6 +473,12 @@ export async function sendConfirmationEmail(params: {
     "Ihr Order Intelligence Team",
   ].join("\n");
 
+  const htmlBody = wrapHtmlEmail(siteUrl, `
+    <h2 style="margin:0 0 8px;font-size:18px;color:#111827">Bestellung empfangen</h2>
+    <p style="margin:0 0 20px;color:#6b7280;font-size:14px">Ihre weitergeleitete E-Mail &ldquo;${esc(subject)}&rdquo; wurde empfangen und wird verarbeitet.</p>
+    <a href="${esc(orderUrl)}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500">Bestellstatus ansehen</a>
+  `);
+
   const response = await fetch("https://api.postmarkapp.com/email", {
     method: "POST",
     headers: {
@@ -448,6 +490,7 @@ export async function sendConfirmationEmail(params: {
       From: fromAddress,
       To: toEmail,
       Subject: `Bestellung empfangen: ${subject}`,
+      HtmlBody: htmlBody,
       TextBody: textBody,
     }),
   });
