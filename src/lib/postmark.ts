@@ -212,17 +212,50 @@ export async function sendTrialResultEmail(params: {
     totalAmount: number | null;
     currency: string | null;
   };
+  lineItems: Array<{
+    position?: number | string | null;
+    article_number?: string | null;
+    description?: string | null;
+    quantity?: number | string | null;
+    unit?: string | null;
+    unit_price?: number | string | null;
+    total_price?: number | string | null;
+  }>;
   csvContent: string;
 }): Promise<void> {
-  const { serverApiToken, toEmail, toName, subject, siteUrl, previewToken, orderSummary, csvContent } = params;
+  const { serverApiToken, toEmail, toName, subject, siteUrl, previewToken, orderSummary, lineItems, csvContent } = params;
 
   const fromAddress = resolveSenderAddress(siteUrl);
   if (!fromAddress) return;
 
   const previewUrl = `${siteUrl}/orders/preview/${previewToken}`;
+  const currency = orderSummary.currency ?? "EUR";
   const total = orderSummary.totalAmount != null
-    ? `${orderSummary.totalAmount.toFixed(2)} ${orderSummary.currency ?? "EUR"}`
+    ? `${orderSummary.totalAmount.toFixed(2)} ${currency}`
     : "–";
+
+  // Build line items table for the email
+  const itemLines: string[] = [];
+  if (lineItems.length > 0) {
+    itemLines.push("");
+    itemLines.push("Extrahierte Positionen:");
+    itemLines.push("─".repeat(72));
+    itemLines.push(
+      `${"Pos".padEnd(5)}${"Artikelnr.".padEnd(18)}${"Bezeichnung".padEnd(28)}${"Menge".padStart(7)}  ${"Preis".padStart(10)}`
+    );
+    itemLines.push("─".repeat(72));
+    for (const item of lineItems) {
+      const pos = String(item.position ?? "").padEnd(5);
+      const artNr = String(item.article_number ?? "–").slice(0, 16).padEnd(18);
+      const desc = String(item.description ?? "–").slice(0, 26).padEnd(28);
+      const qty = String(item.quantity ?? "").padStart(7);
+      const price = item.total_price != null ? String(item.total_price).padStart(10) : "".padStart(10);
+      itemLines.push(`${pos}${artNr}${desc}${qty}  ${price}`);
+    }
+    itemLines.push("─".repeat(72));
+    itemLines.push(`${"".padEnd(60)}${("Gesamt: " + total).padStart(12)}`);
+    itemLines.push("");
+  }
 
   const textBody = [
     `Hallo ${toName || toEmail},`,
@@ -234,7 +267,7 @@ export async function sendTrialResultEmail(params: {
     `  Haendler:      ${orderSummary.dealerName ?? "–"}`,
     `  Positionen:    ${orderSummary.itemCount}`,
     `  Gesamtbetrag:  ${total}`,
-    "",
+    ...itemLines,
     `Die vollstaendigen Daten finden Sie als CSV-Datei im Anhang.`,
     "",
     `Sie koennen die Bestellung auch online einsehen:`,

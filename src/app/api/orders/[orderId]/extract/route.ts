@@ -549,6 +549,7 @@ export async function POST(
                     totalAmount: (finalExtractedData.order.total_amount as number) ?? null,
                     currency: (finalExtractedData.order.currency as string) ?? null,
                   },
+                  lineItems,
                   csvContent,
                 });
               } catch (err) {
