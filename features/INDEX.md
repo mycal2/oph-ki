@@ -32,7 +32,7 @@
 | OPH-18 | Admin: Cross-Tenant Order View | Deployed | [OPH-18-admin-cross-tenant-order-view.md](OPH-18-admin-cross-tenant-order-view.md) | 2026-03-03 |
 | OPH-19 | Customer Number (Kundennummer) Recognition & Editing | Deployed | [OPH-19-customer-number-recognition.md](OPH-19-customer-number-recognition.md) | 2026-03-03 |
 | OPH-20 | Sprach-Erkennung & Mengeneinheiten-Normalisierung | Deployed | [OPH-20-language-detection-unit-normalization.md](OPH-20-language-detection-unit-normalization.md) | 2026-03-03 |
-| OPH-21 | E-Mail-Text als Extraktionsquelle | In Progress | [OPH-21-email-body-extraction.md](OPH-21-email-body-extraction.md) | 2026-03-04 |
+| OPH-21 | E-Mail-Text als Extraktionsquelle | Deployed | [OPH-21-email-body-extraction.md](OPH-21-email-body-extraction.md) | 2026-03-04 |
 
 <!-- Add features above this line -->
 

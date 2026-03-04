@@ -1,6 +1,6 @@
 # OPH-21: E-Mail-Text als Extraktionsquelle
 
-## Status: Planned
+## Status: Deployed
 **Created:** 2026-03-04
 **Last Updated:** 2026-03-04
 
@@ -158,4 +158,9 @@ Order Detail Page
 _To be added by /qa_
 
 ## Deployment
-_To be added by /deploy_
+
+- **Deployed:** 2026-03-04
+- **Commit:** `8374a24`
+- **Tag:** `v1.21.0-OPH-21`
+- **Vercel:** auto-deployed via push to `main`
+- **No database migration required**
