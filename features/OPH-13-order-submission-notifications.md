@@ -296,4 +296,12 @@ _To be added by /architecture_
 The feature is marked as "Planned" in `features/INDEX.md` but the implementation is clearly present and integrated across multiple files. The status should be updated to "In Review" to reflect the actual state.
 
 ## Deployment
-_To be added by /deploy_
+
+**Deployed:** 2026-03-04
+**Production URL:** https://ai-coding-starter-kit-nine.vercel.app
+**Commit:** 21407b8
+**Git Tag:** v1.13.0-OPH-13
+
+### Deferred Bugs (tracked for next sprint)
+- **BUG-3** (Medium): Results email missing extraction warnings — requires data model change to pass confidence metadata to email template
+- **BUG-7** (Medium): No application-level retry logic — Postmark handles transient retries on their end; app-level retry planned for next sprint
