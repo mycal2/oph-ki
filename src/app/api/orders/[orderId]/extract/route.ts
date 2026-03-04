@@ -7,7 +7,7 @@ import { extractOrderData } from "@/lib/claude-extraction";
 import { normalizeUnits } from "@/lib/unit-normalization";
 import { getMappingsForDealer, applyMappings, formatMappingsForPrompt } from "@/lib/dealer-mappings";
 import { mimeTypeToFormatType, getColumnMappingProfile, formatColumnMappingForPrompt } from "@/lib/column-mappings";
-import { sendTrialResultEmail, sendTrialFailureEmail } from "@/lib/postmark";
+import { sendTrialResultEmail, sendTrialFailureEmail, sendOrderResultEmail, sendOrderFailureEmail } from "@/lib/postmark";
 import type { AppMetadata, ApiResponse } from "@/lib/types";
 
 /** Max extraction attempts per order before rejecting further retries. */
@@ -500,16 +500,17 @@ export async function POST(
         .eq("id", orderId);
 
       // --- OPH-16: Trial post-processing (CSV + result email) ---
+      // --- OPH-13: Non-trial result email with notification toggle ---
       const serverApiToken = process.env.POSTMARK_SERVER_API_TOKEN;
       if (serverApiToken && tenantId) {
         const { data: tenantRow } = await adminClient
           .from("tenants")
-          .select("status")
+          .select("status, email_notifications_enabled")
           .eq("id", tenantId)
           .single();
 
         if (tenantRow?.status === "trial") {
-          // Fetch order's sender_email and preview_token
+          // OPH-16: Trial flow — always send result email to sender
           const { data: orderMeta } = await adminClient
             .from("orders")
             .select("sender_email, preview_token")
@@ -521,7 +522,8 @@ export async function POST(
             const lineItems = finalExtractedData.order.line_items ?? [];
 
             // Generate simple CSV (no ERP mapping needed for trial)
-            const csvHeader = "Pos;Artikelnummer;Bezeichnung;Menge;Einheit;Einzelpreis;Gesamtpreis";
+            const trialCurrency = (finalExtractedData.order.currency as string) ?? "";
+            const csvHeader = "Pos;Artikelnummer;Bezeichnung;Menge;Einheit;Einzelpreis;Gesamtpreis;Währung";
             const csvRows = lineItems.map((item, idx) =>
               [
                 item.position ?? idx + 1,
@@ -531,6 +533,7 @@ export async function POST(
                 item.unit ?? "",
                 item.unit_price ?? "",
                 item.total_price ?? "",
+                trialCurrency,
               ].join(";")
             );
             const csvContent = [csvHeader, ...csvRows].join("\n");
@@ -563,6 +566,84 @@ export async function POST(
               }
             });
           }
+        } else if (tenantRow?.email_notifications_enabled) {
+          // OPH-13: Non-trial tenant with notifications enabled
+          const { data: orderMeta } = await adminClient
+            .from("orders")
+            .select("uploaded_by, sender_email")
+            .eq("id", orderId)
+            .single();
+
+          if (orderMeta) {
+            const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+            const lineItems = finalExtractedData.order.line_items ?? [];
+            const isReExtraction = currentAttempts > 0; // currentAttempts was incremented before extraction
+
+            const orderCurrency = (finalExtractedData.order.currency as string) ?? "";
+            const csvHeader = "Pos;Artikelnummer;Bezeichnung;Menge;Einheit;Einzelpreis;Gesamtpreis;Währung";
+            const csvRows = lineItems.map((item, idx) =>
+              [
+                item.position ?? idx + 1,
+                `"${String(item.article_number ?? "").replace(/"/g, '""')}"`,
+                `"${String(item.description ?? "").replace(/"/g, '""')}"`,
+                item.quantity ?? "",
+                item.unit ?? "",
+                item.unit_price ?? "",
+                item.total_price ?? "",
+                orderCurrency,
+              ].join(";")
+            );
+            const csvContent = [csvHeader, ...csvRows].join("\n");
+
+            const dealerName = finalExtractedData.order.dealer?.name ?? null;
+
+            after(async () => {
+              try {
+                // Resolve recipient email
+                let toEmail: string | null = null;
+                let toName = "";
+
+                if (orderMeta.uploaded_by) {
+                  const { data: { user: submitter } } = await adminClient.auth.admin.getUserById(
+                    orderMeta.uploaded_by as string
+                  );
+                  if (submitter?.email) {
+                    toEmail = submitter.email;
+                    toName = [submitter.user_metadata?.first_name, submitter.user_metadata?.last_name]
+                      .filter(Boolean)
+                      .join(" ");
+                  }
+                }
+
+                if (!toEmail && orderMeta.sender_email) {
+                  toEmail = orderMeta.sender_email as string;
+                }
+
+                if (!toEmail) return;
+
+                await sendOrderResultEmail({
+                  serverApiToken,
+                  toEmail,
+                  toName,
+                  orderId,
+                  siteUrl,
+                  isReExtraction,
+                  orderSummary: {
+                    orderNumber: finalExtractedData.order.order_number ?? null,
+                    orderDate: finalExtractedData.order.order_date ?? null,
+                    dealerName,
+                    itemCount: lineItems.length,
+                    totalAmount: (finalExtractedData.order.total_amount as number) ?? null,
+                    currency: (finalExtractedData.order.currency as string) ?? null,
+                  },
+                  lineItems,
+                  csvContent,
+                });
+              } catch (err) {
+                console.error("Failed to send order result email:", err);
+              }
+            });
+          }
         }
       }
 
@@ -585,15 +666,17 @@ export async function POST(
         .eq("id", orderId);
 
       // --- OPH-16: Send failure email to trial sender ---
+      // --- OPH-13: Send failure email to non-trial tenant submitter ---
       const failureApiToken = process.env.POSTMARK_SERVER_API_TOKEN;
       if (failureApiToken && tenantId) {
         const { data: tenantRow } = await adminClient
           .from("tenants")
-          .select("status")
+          .select("status, email_notifications_enabled")
           .eq("id", tenantId)
           .single();
 
         if (tenantRow?.status === "trial") {
+          // OPH-16: Trial flow — always send failure email to sender
           const { data: orderMeta } = await adminClient
             .from("orders")
             .select("sender_email")
@@ -614,6 +697,52 @@ export async function POST(
                 });
               } catch (err) {
                 console.error("Failed to send trial failure email:", err);
+              }
+            });
+          }
+        } else if (tenantRow?.email_notifications_enabled) {
+          // OPH-13: Non-trial tenant with notifications enabled
+          const { data: orderMeta } = await adminClient
+            .from("orders")
+            .select("uploaded_by, sender_email")
+            .eq("id", orderId)
+            .single();
+
+          if (orderMeta) {
+            const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+            after(async () => {
+              try {
+                let toEmail: string | null = null;
+                let toName = "";
+
+                if (orderMeta.uploaded_by) {
+                  const { data: { user: submitter } } = await adminClient.auth.admin.getUserById(
+                    orderMeta.uploaded_by as string
+                  );
+                  if (submitter?.email) {
+                    toEmail = submitter.email;
+                    toName = [submitter.user_metadata?.first_name, submitter.user_metadata?.last_name]
+                      .filter(Boolean)
+                      .join(" ");
+                  }
+                }
+
+                if (!toEmail && orderMeta.sender_email) {
+                  toEmail = orderMeta.sender_email as string;
+                }
+
+                if (!toEmail) return;
+
+                await sendOrderFailureEmail({
+                  serverApiToken: failureApiToken,
+                  toEmail,
+                  toName,
+                  orderId,
+                  siteUrl,
+                });
+              } catch (err) {
+                console.error("Failed to send order failure email:", err);
               }
             });
           }

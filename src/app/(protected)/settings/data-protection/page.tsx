@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Shield, Download, FileText, Loader2 } from "lucide-react";
+import { Shield, Download, FileText, Loader2, Mail, CheckCircle2, XCircle } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -29,6 +29,9 @@ export default function DataProtectionSettingsPage() {
   const [retentionError, setRetentionError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  // OPH-13: Email notification status (read-only)
+  const [emailNotificationsEnabled, setEmailNotificationsEnabled] = useState<boolean | null>(null);
+
   // Export state
   const [isExporting, setIsExporting] = useState(false);
 
@@ -46,6 +49,7 @@ export default function DataProtectionSettingsPage() {
 
       setRetentionDays(json.data.dataRetentionDays);
       setSavedRetentionDays(json.data.dataRetentionDays);
+      setEmailNotificationsEnabled(json.data.emailNotificationsEnabled);
     } catch {
       setRetentionError("Verbindungsfehler beim Laden der Einstellungen.");
     } finally {
@@ -204,6 +208,39 @@ export default function DataProtectionSettingsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* OPH-13: E-Mail-Benachrichtigungen (read-only) */}
+      {emailNotificationsEnabled !== null && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              E-Mail-Benachrichtigungen
+            </CardTitle>
+            <CardDescription>
+              Automatische E-Mails bei Bestellungseingang und nach erfolgreicher Extraktion.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              {emailNotificationsEnabled ? (
+                <>
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <span className="text-sm font-medium text-green-700">Aktiviert</span>
+                </>
+              ) : (
+                <>
+                  <XCircle className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium text-muted-foreground">Deaktiviert</span>
+                </>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Diese Einstellung wird von Ihrem Plattform-Administrator verwaltet.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Datenexport Card */}
       <Card>

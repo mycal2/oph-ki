@@ -50,11 +50,11 @@ export async function GET(): Promise<NextResponse<ApiResponse<DataRetentionSetti
       );
     }
 
-    // 2. Fetch tenant's data retention setting
+    // 2. Fetch tenant's data retention setting + notification preference
     const adminClient = createAdminClient();
     const { data: tenant, error: tenantError } = await adminClient
       .from("tenants")
-      .select("data_retention_days")
+      .select("data_retention_days, email_notifications_enabled")
       .eq("id", tenantId)
       .single();
 
@@ -67,7 +67,10 @@ export async function GET(): Promise<NextResponse<ApiResponse<DataRetentionSetti
 
     return NextResponse.json({
       success: true,
-      data: { dataRetentionDays: tenant.data_retention_days as number },
+      data: {
+        dataRetentionDays: tenant.data_retention_days as number,
+        emailNotificationsEnabled: tenant.email_notifications_enabled as boolean,
+      },
     });
   } catch (error) {
     console.error("Error in GET /api/settings/data-retention:", error);
@@ -156,7 +159,7 @@ export async function PATCH(
       .from("tenants")
       .update({ data_retention_days: dataRetentionDays })
       .eq("id", tenantId)
-      .select("data_retention_days")
+      .select("data_retention_days, email_notifications_enabled")
       .single();
 
     if (updateError || !updated) {
@@ -169,7 +172,10 @@ export async function PATCH(
 
     return NextResponse.json({
       success: true,
-      data: { dataRetentionDays: updated.data_retention_days as number },
+      data: {
+        dataRetentionDays: updated.data_retention_days as number,
+        emailNotificationsEnabled: updated.email_notifications_enabled as boolean,
+      },
     });
   } catch (error) {
     console.error("Error in PATCH /api/settings/data-retention:", error);

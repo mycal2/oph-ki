@@ -751,6 +751,8 @@ export interface DataDeletionLogEntry {
 /** Response from GET /api/settings/data-retention. */
 export interface DataRetentionSettings {
   dataRetentionDays: number;
+  /** OPH-13: Whether email notifications are enabled for this tenant (read-only for tenant users). */
+  emailNotificationsEnabled: boolean;
 }
 
 /** Response from DELETE /api/orders/[orderId]. */

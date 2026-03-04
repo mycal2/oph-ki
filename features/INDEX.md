@@ -24,7 +24,7 @@
 | OPH-10 | E-Mail-Weiterleitungs-Ingestion | Deployed | [OPH-10-email-ingestion.md](OPH-10-email-ingestion.md) | 2026-02-27 |
 | OPH-11 | Bestellhistorie & Dashboard | Deployed | [OPH-11-order-history-dashboard.md](OPH-11-order-history-dashboard.md) | 2026-02-27 |
 | OPH-12 | DSGVO-Compliance & Datenaufbewahrung | Deployed | [OPH-12-dsgvo-compliance.md](OPH-12-dsgvo-compliance.md) | 2026-02-27 |
-| OPH-13 | Order Submission Email Notifications | Planned | [OPH-13-order-submission-notifications.md](OPH-13-order-submission-notifications.md) | 2026-02-27 |
+| OPH-13 | Order Submission Email Notifications | In Review | [OPH-13-order-submission-notifications.md](OPH-13-order-submission-notifications.md) | 2026-02-27 |
 | OPH-14 | Händler-Datentransformationen (Artikel-Mapping, Einheiten, Felder) | Deployed | [OPH-14-dealer-data-transformations.md](OPH-14-dealer-data-transformations.md) | 2026-02-28 |
 | OPH-15 | Dealer Column Mapping for Extraction | Deployed | [OPH-15-dealer-column-mapping.md](OPH-15-dealer-column-mapping.md) | 2026-03-02 |
 | OPH-16 | Trial-/Demo-Modus für Interessenten | Deployed | [OPH-16-trial-demo-mode.md](OPH-16-trial-demo-mode.md) | 2026-03-03 |

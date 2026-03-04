@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Loader2, MoreHorizontal, Power, PowerOff, UserPlus, Clock, Info, AlertTriangle } from "lucide-react";
+import { Loader2, MoreHorizontal, Power, PowerOff, UserPlus, Clock, Info, AlertTriangle, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -136,6 +137,8 @@ export function TenantFormSheet({
   const [trialExpiresAt, setTrialExpiresAt] = useState<string | null>(null);
   // OPH-17: Allowed email domains
   const [allowedEmailDomains, setAllowedEmailDomains] = useState<string[]>([]);
+  // OPH-13: Email notifications toggle
+  const [emailNotifications, setEmailNotifications] = useState(true);
 
   // UI state
   const [isLoadingTenant, setIsLoadingTenant] = useState(false);
@@ -164,6 +167,7 @@ export function TenantFormSheet({
     setTrialStartedAt(null);
     setTrialExpiresAt(null);
     setAllowedEmailDomains([]);
+    setEmailNotifications(true);
     setUsers([]);
     setActiveTab("profile");
     setTenantName("");
@@ -181,6 +185,7 @@ export function TenantFormSheet({
     setTrialStartedAt(tenant.trial_started_at);
     setTrialExpiresAt(tenant.trial_expires_at);
     setAllowedEmailDomains(tenant.allowed_email_domains ?? []);
+    setEmailNotifications(tenant.email_notifications_enabled);
     setTenantName(tenant.name);
   }, []);
 
@@ -253,6 +258,7 @@ export function TenantFormSheet({
         erp_type: erpType,
         status,
         allowed_email_domains: allowedEmailDomains,
+        email_notifications_enabled: emailNotifications,
       };
       const result = await onSave(data, false);
       if (result) {
@@ -512,6 +518,24 @@ export function TenantFormSheet({
                           {contactDomainWarning}
                         </p>
                       )}
+                    </div>
+
+                    {/* OPH-13: Email notifications toggle */}
+                    <div className="flex items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="email-notifications" className="flex items-center gap-2 text-sm font-medium">
+                          <Mail className="h-4 w-4 text-muted-foreground" />
+                          E-Mail-Benachrichtigungen
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          Automatische E-Mails bei Bestellungseingang und nach Extraktion.
+                        </p>
+                      </div>
+                      <Switch
+                        id="email-notifications"
+                        checked={emailNotifications}
+                        onCheckedChange={setEmailNotifications}
+                      />
                     </div>
                   </TabsContent>
 

@@ -445,6 +445,287 @@ export async function sendTrialFailureEmail(params: {
 }
 
 /**
+ * OPH-13: Sends a confirmation email to the submitter after web upload.
+ * Uses a direct platform URL (not a preview token).
+ */
+export async function sendOrderConfirmationEmail(params: {
+  serverApiToken: string;
+  toEmail: string;
+  toName: string;
+  orderId: string;
+  fileName: string;
+  siteUrl: string;
+}): Promise<void> {
+  const { serverApiToken, toEmail, toName, orderId, fileName, siteUrl } = params;
+
+  const fromAddress = resolveSenderAddress(siteUrl);
+  if (!fromAddress) return;
+
+  const orderUrl = `${siteUrl}/orders/${orderId}`;
+  const shortId = orderId.slice(0, 8);
+  const receivedAt = new Date().toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" });
+
+  const textBody = [
+    `Hallo ${toName || toEmail},`,
+    "",
+    `Ihre Bestellung "${fileName}" wurde empfangen und wird verarbeitet.`,
+    "",
+    `  Bestell-ID: ${shortId}`,
+    `  Dateiname:  ${fileName}`,
+    `  Empfangen:  ${receivedAt}`,
+    "",
+    `Sie können den Status Ihrer Bestellung hier verfolgen:`,
+    orderUrl,
+    "",
+    "Mit freundlichen Grüßen,",
+    "Ihr Order Intelligence Team",
+  ].join("\n");
+
+  const htmlBody = wrapHtmlEmail(siteUrl, `
+    <h2 style="margin:0 0 8px;font-size:18px;color:#111827">Bestellung empfangen</h2>
+    <p style="margin:0 0 20px;color:#6b7280;font-size:14px">Ihre Bestellung &ldquo;${esc(fileName)}&rdquo; wurde empfangen und wird verarbeitet.</p>
+    <table style="font-size:14px;margin-bottom:20px">
+      <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Bestell-ID:</td><td style="padding:4px 0;font-weight:500">${esc(shortId)}</td></tr>
+      <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Dateiname:</td><td style="padding:4px 0;font-weight:500">${esc(fileName)}</td></tr>
+      <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Empfangen:</td><td style="padding:4px 0;font-weight:500">${esc(receivedAt)}</td></tr>
+    </table>
+    <a href="${esc(orderUrl)}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500">Bestellung ansehen</a>
+  `);
+
+  const response = await fetch("https://api.postmarkapp.com/email", {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      "X-Postmark-Server-Token": serverApiToken,
+    },
+    body: JSON.stringify({
+      From: fromAddress,
+      To: toEmail,
+      Subject: `[Bestellung empfangen] – ${fileName}`,
+      HtmlBody: htmlBody,
+      TextBody: textBody,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Failed to send order confirmation email via Postmark:", errorText);
+  }
+}
+
+/**
+ * OPH-13: Sends the extraction result email with order summary + CSV attachment.
+ */
+export async function sendOrderResultEmail(params: {
+  serverApiToken: string;
+  toEmail: string;
+  toName: string;
+  orderId: string;
+  siteUrl: string;
+  isReExtraction: boolean;
+  orderSummary: {
+    orderNumber: string | null;
+    orderDate: string | null;
+    dealerName: string | null;
+    itemCount: number;
+    totalAmount: number | null;
+    currency: string | null;
+  };
+  lineItems: Array<{
+    position?: number | string | null;
+    article_number?: string | null;
+    description?: string | null;
+    quantity?: number | string | null;
+    unit?: string | null;
+    unit_price?: number | string | null;
+    total_price?: number | string | null;
+  }>;
+  csvContent: string;
+}): Promise<void> {
+  const { serverApiToken, toEmail, toName, orderId, siteUrl, isReExtraction, orderSummary, lineItems, csvContent } = params;
+
+  const fromAddress = resolveSenderAddress(siteUrl);
+  if (!fromAddress) return;
+
+  const orderUrl = `${siteUrl}/orders/${orderId}`;
+  const currency = orderSummary.currency ?? "EUR";
+  const total = orderSummary.totalAmount != null
+    ? `${orderSummary.totalAmount.toFixed(2)} ${currency}`
+    : "–";
+
+  const subjectLabel = orderSummary.orderNumber ?? orderId.slice(0, 8);
+  const updatedSuffix = isReExtraction ? " (aktualisiert)" : "";
+
+  // Build HTML line items table (max 20 in email body)
+  const MAX_ITEMS_IN_EMAIL = 20;
+  const displayItems = lineItems.slice(0, MAX_ITEMS_IN_EMAIL);
+  const remainingCount = lineItems.length - displayItems.length;
+
+  let itemsHtml = "";
+  if (displayItems.length > 0) {
+    const rows = displayItems.map((item) => `
+      <tr>
+        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:center">${esc(String(item.position ?? ""))}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb">${esc(String(item.article_number ?? "–"))}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb">${esc(String(item.description ?? "–"))}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right">${esc(String(item.quantity ?? ""))}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:center">${esc(String(item.unit ?? ""))}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right">${item.unit_price != null ? esc(String(item.unit_price)) : ""}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:500">${item.total_price != null ? esc(String(item.total_price)) : ""}</td>
+      </tr>`).join("");
+
+    const moreRow = remainingCount > 0
+      ? `<tr><td colspan="7" style="padding:8px 10px;text-align:center;font-size:12px;color:#6b7280">… und ${remainingCount} weitere ${remainingCount === 1 ? "Position" : "Positionen"} (siehe CSV-Anhang)</td></tr>`
+      : "";
+
+    itemsHtml = `
+    <h3 style="margin:24px 0 12px;font-size:15px;color:#111827">Extrahierte Positionen</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;border:1px solid #e5e7eb;border-radius:6px">
+      <thead>
+        <tr style="background:#f9fafb">
+          <th style="padding:8px 10px;text-align:center;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Pos</th>
+          <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Artikelnr.</th>
+          <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Bezeichnung</th>
+          <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Menge</th>
+          <th style="padding:8px 10px;text-align:center;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Einheit</th>
+          <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Einzelpreis</th>
+          <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Gesamt</th>
+        </tr>
+      </thead>
+      <tbody>${rows}${moreRow}</tbody>
+      <tfoot>
+        <tr style="background:#f9fafb">
+          <td colspan="6" style="padding:8px 10px;text-align:right;font-weight:600;border-top:2px solid #e5e7eb">Gesamtbetrag:</td>
+          <td style="padding:8px 10px;text-align:right;font-weight:700;border-top:2px solid #e5e7eb;color:#111827">${esc(total)}</td>
+        </tr>
+      </tfoot>
+    </table>`;
+  }
+
+  const htmlBody = wrapHtmlEmail(siteUrl, `
+    <h2 style="margin:0 0 8px;font-size:18px;color:#111827">Bestellung extrahiert${updatedSuffix}</h2>
+    <p style="margin:0 0 24px;color:#6b7280;font-size:14px">Die Bestelldaten wurden erfolgreich extrahiert.</p>
+    <table style="font-size:14px;margin-bottom:20px">
+      <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Bestellnummer:</td><td style="padding:4px 0;font-weight:500">${esc(orderSummary.orderNumber ?? "–")}</td></tr>
+      <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Bestelldatum:</td><td style="padding:4px 0;font-weight:500">${esc(orderSummary.orderDate ?? "–")}</td></tr>
+      <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Händler:</td><td style="padding:4px 0;font-weight:500">${esc(orderSummary.dealerName ?? "–")}</td></tr>
+      <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Positionen:</td><td style="padding:4px 0;font-weight:500">${orderSummary.itemCount}</td></tr>
+      <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Gesamtbetrag:</td><td style="padding:4px 0;font-weight:700;color:#111827">${esc(total)}</td></tr>
+    </table>
+    ${itemsHtml}
+    <p style="margin:24px 0 12px;font-size:14px;color:#374151">Die vollständigen Daten finden Sie als CSV-Datei im Anhang.</p>
+    <a href="${esc(orderUrl)}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500">Bestellung prüfen & freigeben</a>
+  `);
+
+  const textBody = [
+    `Hallo ${toName || toEmail},`,
+    "",
+    `Die Bestelldaten wurden erfolgreich extrahiert${updatedSuffix}.`,
+    "",
+    `  Bestellnummer: ${orderSummary.orderNumber ?? "–"}`,
+    `  Bestelldatum:  ${orderSummary.orderDate ?? "–"}`,
+    `  Händler:       ${orderSummary.dealerName ?? "–"}`,
+    `  Positionen:    ${orderSummary.itemCount}`,
+    `  Gesamtbetrag:  ${total}`,
+    "",
+    `Die vollständigen Daten finden Sie als CSV-Datei im Anhang.`,
+    "",
+    `Bestellung prüfen & freigeben: ${orderUrl}`,
+    "",
+    "Mit freundlichen Grüßen,",
+    "Ihr Order Intelligence Team",
+  ].join("\n");
+
+  const csvDate = new Date().toISOString().slice(0, 10);
+  const response = await fetch("https://api.postmarkapp.com/email", {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      "X-Postmark-Server-Token": serverApiToken,
+    },
+    body: JSON.stringify({
+      From: fromAddress,
+      To: toEmail,
+      Subject: `[Bestellung extrahiert] – ${subjectLabel}${updatedSuffix}`,
+      HtmlBody: htmlBody,
+      TextBody: textBody,
+      Attachments: [
+        {
+          Name: `bestellung_${orderId.slice(0, 8)}_${csvDate}.csv`,
+          Content: Buffer.from(csvContent, "utf-8").toString("base64"),
+          ContentType: "text/csv",
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Failed to send order result email via Postmark:", errorText);
+  }
+}
+
+/**
+ * OPH-13: Sends a failure notification when extraction fails for non-trial tenants.
+ */
+export async function sendOrderFailureEmail(params: {
+  serverApiToken: string;
+  toEmail: string;
+  toName: string;
+  orderId: string;
+  siteUrl: string;
+}): Promise<void> {
+  const { serverApiToken, toEmail, toName, orderId, siteUrl } = params;
+
+  const fromAddress = resolveSenderAddress(siteUrl);
+  if (!fromAddress) return;
+
+  const orderUrl = `${siteUrl}/orders/${orderId}`;
+
+  const textBody = [
+    `Hallo ${toName || toEmail},`,
+    "",
+    `Leider konnten die Bestelldaten nicht automatisch erkannt werden.`,
+    "",
+    `Bitte prüfen Sie die Bestellung in der Plattform:`,
+    orderUrl,
+    "",
+    "Mit freundlichen Grüßen,",
+    "Ihr Order Intelligence Team",
+  ].join("\n");
+
+  const htmlBody = wrapHtmlEmail(siteUrl, `
+    <h2 style="margin:0 0 8px;font-size:18px;color:#111827">Extraktion fehlgeschlagen</h2>
+    <p style="margin:0 0 20px;color:#6b7280;font-size:14px">Leider konnten die Bestelldaten nicht automatisch erkannt werden.</p>
+    <p style="margin:0 0 20px;font-size:14px;color:#374151">Bitte prüfen Sie die Bestellung in der Plattform und versuchen Sie es erneut.</p>
+    <a href="${esc(orderUrl)}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500">Bestellung ansehen</a>
+  `);
+
+  const response = await fetch("https://api.postmarkapp.com/email", {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      "X-Postmark-Server-Token": serverApiToken,
+    },
+    body: JSON.stringify({
+      From: fromAddress,
+      To: toEmail,
+      Subject: `[Extraktion fehlgeschlagen] – Bestellung`,
+      HtmlBody: htmlBody,
+      TextBody: textBody,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Failed to send order failure email via Postmark:", errorText);
+  }
+}
+
+/**
  * Sends a confirmation email to the sender via Postmark.
  */
 export async function sendConfirmationEmail(params: {

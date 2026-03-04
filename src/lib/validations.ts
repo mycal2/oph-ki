@@ -447,6 +447,7 @@ export const updateTenantSchema = z.object({
     message: "Ungueltiger Status.",
   }).optional(),
   allowed_email_domains: allowedEmailDomainsField.optional(),
+  email_notifications_enabled: z.boolean().optional(),
 });
 
 /** Invite user on behalf of a specific tenant (platform admin). */

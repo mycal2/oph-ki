@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { uploadConfirmSchema } from "@/lib/validations";
 import { recognizeDealer } from "@/lib/dealer-recognition";
+import { sendOrderConfirmationEmail } from "@/lib/postmark";
 import type { AppMetadata, ApiResponse, UploadOrderResponse } from "@/lib/types";
 
 /**
@@ -209,6 +210,49 @@ export async function POST(
       });
     } else {
       console.warn("CRON_SECRET not set — skipping automatic extraction trigger.");
+    }
+
+    // OPH-13: Send confirmation email to submitter (non-trial tenants only)
+    const serverApiToken = process.env.POSTMARK_SERVER_API_TOKEN;
+    if (serverApiToken) {
+      after(async () => {
+        try {
+          // Check tenant's notification preference
+          const { data: tenantRow } = await adminClient
+            .from("tenants")
+            .select("email_notifications_enabled, status")
+            .eq("id", tenantId)
+            .single();
+
+          if (
+            !tenantRow ||
+            tenantRow.status === "trial" ||
+            !tenantRow.email_notifications_enabled
+          ) {
+            return;
+          }
+
+          // Resolve submitter email
+          const { data: { user: submitter } } = await adminClient.auth.admin.getUserById(user.id);
+          if (!submitter?.email) return;
+
+          const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+          const displayName = [submitter.user_metadata?.first_name, submitter.user_metadata?.last_name]
+            .filter(Boolean)
+            .join(" ");
+
+          await sendOrderConfirmationEmail({
+            serverApiToken,
+            toEmail: submitter.email,
+            toName: displayName,
+            orderId,
+            fileName: originalFilename,
+            siteUrl,
+          });
+        } catch (err) {
+          console.error("Failed to send order confirmation email:", err);
+        }
+      });
     }
 
     return NextResponse.json({
