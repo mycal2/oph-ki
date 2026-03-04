@@ -12,6 +12,7 @@ const RETRY_DELAY_MS = 2000;
 const DEFAULT_MODEL = "claude-sonnet-4-6";
 
 const CANONICAL_JSON_SCHEMA = `{
+  "document_language": "string | null (ISO 639-1 code, e.g. DE, EN, FR, ES, CS, PL, IT, NL, PT; null if indeterminate)",
   "order": {
     "order_number": "string | null",
     "order_date": "ISO 8601 date string | null",
@@ -40,7 +41,7 @@ const CANONICAL_JSON_SCHEMA = `{
         "article_number": "string | null",
         "description": "string",
         "quantity": "number",
-        "unit": "string | null (e.g. Stueck, Packung, Karton)",
+        "unit": "string | null (German standard term: Stueck, Packung, Karton, Flasche, Dose, Tube, Beutel, Rolle, Paar, Set, Liter, Milliliter, Gramm, Kilogramm, Meter)",
         "unit_price": "number | null",
         "total_price": "number | null",
         "currency": "string | null (e.g. EUR, USD)"
@@ -84,7 +85,41 @@ ${CANONICAL_JSON_SCHEMA}
       * Italian: "numero cliente", "n. cliente"
     - If a customer number appears in both the forwarding note and the order document and they differ, **prefer the forwarding note value** (the person forwarding knows the correct account).
     - Only extract a value as customer_number when it is clearly preceded by one of the keywords above. Do NOT confuse it with order numbers, invoice numbers, PO numbers, or article numbers.
-    - The customer number may be purely numeric ("12345") or alphanumeric ("KD-12345-DE").`;
+    - The customer number may be purely numeric ("12345") or alphanumeric ("KD-12345-DE").
+13. **Document language detection:**
+    - Detect the primary language of the order content (the table/line items), not the email wrapper or forwarding note.
+    - Set \`document_language\` to the uppercase ISO 639-1 code (DE, EN, FR, ES, CS, PL, IT, NL, PT, etc.).
+    - Set to null if the document is purely numeric or the language cannot be determined.
+14. **Unit normalization to German standard terms:**
+    - All \`unit\` field values MUST be German standard terms. Translate from any source language abbreviation:
+      * pc, pcs, piece, pieces, unit, units, ea, each, stk, stueck, unite, piece, pieza, ks, szt -> "Stueck"
+      * pkg, pack, package, pkt, pckg, Packung -> "Packung"
+      * box, bx, ctn, carton, cs, case, Karton -> "Karton"
+      * btl, bottle, flasche, fl -> "Flasche"
+      * can, tin, dose, ds -> "Dose"
+      * tube, tb, tub -> "Tube"
+      * bag, beutel, sachet -> "Beutel"
+      * roll, rll, rolle -> "Rolle"
+      * pair, pr, paar -> "Paar"
+      * set, kit -> "Set"
+      * L, l, lt, liter, litre -> "Liter"
+      * ml, mL, milliliter -> "Milliliter"
+      * g, gr, gramm, gram -> "Gramm"
+      * kg, kilogramm, kilogram -> "Kilogramm"
+      * m, meter, metre -> "Meter"
+    - If no unit is stated for a line item, use "Stueck" as the default.
+    - If the unit cannot be mapped to any of the above, preserve the original abbreviation as-is.
+15. **Quantity column recognition (multilingual):**
+    - Recognize the quantity column by its header name in any language:
+      * German: Menge, Anzahl, Stueck, Qty
+      * English: Qty, Quantity, Amount, Count, Units
+      * French: Quantite, Qte, Nombre
+      * Spanish: Cantidad, Cant, Ctd
+      * Czech: Mnozstvi, Pocet
+      * Polish: Ilosc, Liczba
+      * Italian: Quantita, Qta
+      * Dutch: Aantal, Hoeveelheid
+    - Extract the numeric value from that column.`;
 
 export interface ExtractionInput {
   orderId: string;
@@ -250,12 +285,14 @@ export async function extractOrderData(
       // Parse JSON from response (handle potential markdown fences)
       const jsonStr = extractJson(responseText);
       const parsed = JSON.parse(jsonStr) as {
+        document_language?: string | null;
         order: CanonicalOrderData["order"];
         extraction_metadata: { confidence_score: number };
       };
 
       // Build full canonical result
       const extractedData: CanonicalOrderData = {
+        document_language: parsed.document_language?.toUpperCase() ?? null,
         order: {
           order_number: parsed.order.order_number ?? null,
           order_date: parsed.order.order_date ?? null,

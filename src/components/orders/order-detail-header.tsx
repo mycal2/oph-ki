@@ -8,6 +8,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { DealerSection } from "./dealer/dealer-section";
 import { RecognitionAuditLine } from "./dealer/recognition-audit-line";
 import { ExtractionStatusBadge } from "./extraction-status-badge";
@@ -47,6 +53,51 @@ const STATUS_VARIANTS: Record<
   error: "destructive",
 };
 
+/** OPH-20: ISO 639-1 code to full German language name for tooltip display. */
+const LANGUAGE_NAMES: Record<string, string> = {
+  DE: "Deutsch",
+  EN: "Englisch",
+  FR: "Franzoesisch",
+  ES: "Spanisch",
+  CS: "Tschechisch",
+  PL: "Polnisch",
+  IT: "Italienisch",
+  NL: "Niederlaendisch",
+  PT: "Portugiesisch",
+};
+
+/**
+ * OPH-20: Renders the detected document language as a small neutral badge.
+ * Only shown when `document_language` is present (backwards-compatible).
+ */
+function LanguageBadge({ code }: { code: string | null | undefined }) {
+  if (!code) return null;
+
+  const upper = code.toUpperCase();
+  const isKnown = upper in LANGUAGE_NAMES;
+  const languageName = LANGUAGE_NAMES[upper] ?? "Unbekannte Sprache";
+  const displayCode = isKnown ? upper : "?";
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge
+            variant="outline"
+            className="ml-1.5 text-[10px] px-1.5 py-0 font-mono tracking-wide shrink-0"
+            aria-label={`Dokumentsprache: ${languageName}`}
+          >
+            {displayCode}
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          <p className="text-xs">Dokumentsprache: {languageName}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("de-DE", {
     day: "2-digit",
@@ -77,6 +128,7 @@ export function OrderDetailHeader({
             <CardTitle className="flex items-center gap-2 text-lg">
               <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
               <span className="truncate">{fileName}</span>
+              <LanguageBadge code={order.extracted_data?.document_language} />
             </CardTitle>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
               <span className="flex items-center gap-1.5">

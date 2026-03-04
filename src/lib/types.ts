@@ -278,6 +278,8 @@ export interface ExtractionMetadata {
 export interface CanonicalOrderData {
   order: CanonicalOrder;
   extraction_metadata: ExtractionMetadata;
+  /** OPH-20: ISO 639-1 code of the document's primary language (e.g. "DE", "EN"). Null/absent for old orders. */
+  document_language?: string | null;
 }
 
 /**

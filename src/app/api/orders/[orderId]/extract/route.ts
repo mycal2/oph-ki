@@ -4,6 +4,7 @@ import { timingSafeEqual } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { extractOrderData } from "@/lib/claude-extraction";
+import { normalizeUnits } from "@/lib/unit-normalization";
 import { getMappingsForDealer, applyMappings, formatMappingsForPrompt } from "@/lib/dealer-mappings";
 import { mimeTypeToFormatType, getColumnMappingProfile, formatColumnMappingForPrompt } from "@/lib/column-mappings";
 import { sendTrialResultEmail, sendTrialFailureEmail } from "@/lib/postmark";
@@ -479,6 +480,11 @@ export async function POST(
           hasUnmappedArticles = mapped.unmappedArticles.length > 0;
         }
       }
+
+      // --- OPH-20: Server-side unit normalization fallback ---
+      // Ensures all units are German standard terms even if Claude returned
+      // unexpected abbreviations. Also marks truly unknown units with "(unbekannt)".
+      finalExtractedData = normalizeUnits(finalExtractedData);
 
       // --- Save extracted data ---
       await adminClient

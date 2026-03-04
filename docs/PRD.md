@@ -39,6 +39,7 @@ Eine mandantenfähige SaaS-Plattform ("Order Intelligence Platform"), die Dental
 | P1 | OPH-16: Trial-/Demo-Modus für Interessenten | Deployed |
 | P1 | OPH-17: Allowed Email Domains für Sender-Autorisierung | Planned |
 | P1 | OPH-19: Customer Number (Kundennummer) Recognition & Editing | Planned |
+| P1 | OPH-20: Sprach-Erkennung & Mengeneinheiten-Normalisierung | Planned |
 
 ## Success Metrics
 - Bearbeitungszeit pro Bestellung: von ~15 Min. manuell auf < 3 Min. mit System

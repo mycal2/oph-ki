@@ -182,6 +182,8 @@ export const reviewSaveSchema = z.object({
       input_tokens: z.number(),
       output_tokens: z.number(),
     }),
+    /** OPH-20: Detected document language (ISO 639-1 code). */
+    document_language: z.string().nullable().optional(),
   }),
   /** ISO timestamp for optimistic locking. */
   updatedAt: z.string().optional(),
