@@ -51,14 +51,33 @@ export async function updateSession(request: NextRequest) {
 
   const url = request.nextUrl;
 
+  // Public routes that do not require authentication
+  const publicRoutes = [
+    "/login",
+    "/forgot-password",
+    "/reset-password",
+    "/invite/accept",
+    "/auth/callback",
+    "/orders/preview", // OPH-16: Public magic-link preview page
+  ];
+  const isPublicRoute = publicRoutes.some((route) =>
+    url.pathname.startsWith(route)
+  );
+
+  // API routes handle their own auth
+  const isApiRoute = url.pathname.startsWith("/api/");
+  if (isApiRoute) {
+    return supabaseResponse;
+  }
+
   // --- Session inactivity timeout ---
   // Configurable via NEXT_PUBLIC_SESSION_TIMEOUT_HOURS (default: 8 hours)
+  // Skip for public routes (e.g. preview pages should always be accessible)
   const SESSION_TIMEOUT_MS =
     parseInt(process.env.NEXT_PUBLIC_SESSION_TIMEOUT_HOURS ?? "8") * 60 * 60 * 1000;
   const LAST_ACTIVE_COOKIE = "last_active_at";
-  const isApiRoute = url.pathname.startsWith("/api/");
 
-  if (user && !isApiRoute) {
+  if (user && !isPublicRoute) {
     const lastActiveCookie = request.cookies.get(LAST_ACTIVE_COOKIE)?.value;
     const now = Date.now();
 
@@ -86,24 +105,6 @@ export async function updateSession(request: NextRequest) {
     });
   }
 
-  // Public routes that do not require authentication
-  const publicRoutes = [
-    "/login",
-    "/forgot-password",
-    "/reset-password",
-    "/invite/accept",
-    "/auth/callback",
-    "/orders/preview", // OPH-16: Public magic-link preview page
-  ];
-  const isPublicRoute = publicRoutes.some((route) =>
-    url.pathname.startsWith(route)
-  );
-
-  // API routes handle their own auth
-  if (isApiRoute) {
-    return supabaseResponse;
-  }
-
   // --- Unauthenticated user handling ---
   if (!user && !isPublicRoute) {
     const redirectUrl = request.nextUrl.clone();
@@ -112,7 +113,14 @@ export async function updateSession(request: NextRequest) {
   }
 
   // --- Authenticated user on public route ---
-  if (user && isPublicRoute && url.pathname !== "/reset-password" && url.pathname !== "/auth/callback") {
+  // Allow preview pages even when logged in (users may click email links while authenticated)
+  if (
+    user &&
+    isPublicRoute &&
+    url.pathname !== "/reset-password" &&
+    url.pathname !== "/auth/callback" &&
+    !url.pathname.startsWith("/orders/preview")
+  ) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/dashboard";
     return NextResponse.redirect(redirectUrl);
