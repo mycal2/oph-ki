@@ -24,6 +24,7 @@ export default function AdminDealersPage() {
     deleteDealer,
     fetchDealer,
     fetchAuditLog,
+    fetchTenantUsage,
     testRecognition,
     isMutating,
     mutationError,
@@ -141,6 +142,7 @@ export default function AdminDealersPage() {
         onSave={handleSave}
         onFetchDealer={fetchDealer}
         onFetchAuditLog={fetchAuditLog}
+        onFetchTenantUsage={fetchTenantUsage}
         isMutating={isMutating}
       />
     </div>

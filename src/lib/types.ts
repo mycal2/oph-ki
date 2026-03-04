@@ -469,6 +469,14 @@ export interface DealerAdminListItem {
   created_at: string;
 }
 
+/** Tenant usage info for admin dealer view: which tenants this dealer sends orders to. */
+export interface DealerTenantUsage {
+  tenant_id: string;
+  tenant_name: string;
+  order_count: number;
+  last_order_at: string | null;
+}
+
 /** Audit log action types. */
 export type DealerAuditAction = "created" | "updated" | "deactivated" | "reactivated";
 

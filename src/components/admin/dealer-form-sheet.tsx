@@ -34,6 +34,7 @@ import type {
   DealerRuleConflict,
   DealerAuditLogEntry,
   DealerAuditAction,
+  DealerTenantUsage,
 } from "@/lib/types";
 import type { CreateDealerInput, UpdateDealerInput } from "@/lib/validations";
 
@@ -47,6 +48,7 @@ interface DealerFormSheetProps {
   ) => Promise<{ dealer: Dealer; warnings: DealerRuleConflict[] } | null>;
   onFetchDealer: (id: string) => Promise<Dealer | null>;
   onFetchAuditLog: (id: string) => Promise<DealerAuditLogEntry[]>;
+  onFetchTenantUsage?: (id: string) => Promise<DealerTenantUsage[]>;
   isMutating: boolean;
 }
 
@@ -78,6 +80,7 @@ export function DealerFormSheet({
   onSave,
   onFetchDealer,
   onFetchAuditLog,
+  onFetchTenantUsage,
   isMutating,
 }: DealerFormSheetProps) {
   const isNew = !dealerId;
@@ -102,6 +105,8 @@ export function DealerFormSheet({
   const [warnings, setWarnings] = useState<DealerRuleConflict[]>([]);
   const [auditLog, setAuditLog] = useState<DealerAuditLogEntry[]>([]);
   const [isLoadingAudit, setIsLoadingAudit] = useState(false);
+  const [tenantUsage, setTenantUsage] = useState<DealerTenantUsage[]>([]);
+  const [isLoadingTenants, setIsLoadingTenants] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
 
   // Reset form
@@ -121,6 +126,7 @@ export function DealerFormSheet({
     setActive(true);
     setWarnings([]);
     setAuditLog([]);
+    setTenantUsage([]);
     setActiveTab("profile");
   }, []);
 
@@ -158,6 +164,17 @@ export function DealerFormSheet({
       setIsLoadingDealer(false);
     });
   }, [open, dealerId, isNew, onFetchDealer, populateForm, resetForm]);
+
+  // Load tenant usage when switching to tenants tab
+  useEffect(() => {
+    if (activeTab !== "tenants" || isNew || !dealerId || !onFetchTenantUsage) return;
+
+    setIsLoadingTenants(true);
+    onFetchTenantUsage(dealerId).then((entries) => {
+      setTenantUsage(entries);
+      setIsLoadingTenants(false);
+    });
+  }, [activeTab, isNew, dealerId, onFetchTenantUsage]);
 
   // Load audit log when switching to audit tab
   useEffect(() => {
@@ -273,6 +290,11 @@ export function DealerFormSheet({
                   {!isNew && (
                     <TabsTrigger value="columns" className="flex-1">
                       Spalten
+                    </TabsTrigger>
+                  )}
+                  {!isNew && (
+                    <TabsTrigger value="tenants" className="flex-1">
+                      Mandanten
                     </TabsTrigger>
                   )}
                   {!isNew && (
@@ -473,6 +495,48 @@ export function DealerFormSheet({
                 {!isNew && dealerId && (
                   <TabsContent value="columns" className="mt-0">
                     <DealerColumnMappingTab dealerId={dealerId} />
+                  </TabsContent>
+                )}
+
+                {/* Tab: Tenant Usage */}
+                {!isNew && (
+                  <TabsContent value="tenants" className="px-6 pb-6 mt-0">
+                    {isLoadingTenants ? (
+                      <div className="space-y-3">
+                        {Array.from({ length: 3 }).map((_, i) => (
+                          <Skeleton key={i} className="h-12 w-full" />
+                        ))}
+                      </div>
+                    ) : tenantUsage.length === 0 ? (
+                      <p className="text-sm text-muted-foreground py-8 text-center">
+                        Noch keine Bestellungen fuer diesen Haendler.
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        <p className="text-xs text-muted-foreground mb-3">
+                          {tenantUsage.length} {tenantUsage.length === 1 ? "Mandant" : "Mandanten"} mit Bestellungen
+                        </p>
+                        {tenantUsage.map((t) => (
+                          <div
+                            key={t.tenant_id}
+                            className="rounded-lg border p-3 flex items-center justify-between gap-3"
+                          >
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium truncate">{t.tenant_name}</p>
+                              {t.last_order_at && (
+                                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  Letzte Bestellung: {new Date(t.last_order_at).toLocaleDateString("de-DE")}
+                                </p>
+                              )}
+                            </div>
+                            <Badge variant="secondary" className="shrink-0">
+                              {t.order_count} {t.order_count === 1 ? "Bestellung" : "Bestellungen"}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </TabsContent>
                 )}
 

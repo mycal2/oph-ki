@@ -5,6 +5,7 @@ import type {
   DealerAdminListItem,
   Dealer,
   DealerAuditLogEntry,
+  DealerTenantUsage,
   DealerRuleConflict,
   TestRecognitionResult,
   ApiResponse,
@@ -26,6 +27,7 @@ interface UseAdminDealersReturn {
   deleteDealer: (id: string) => Promise<boolean>;
   fetchDealer: (id: string) => Promise<Dealer | null>;
   fetchAuditLog: (id: string) => Promise<DealerAuditLogEntry[]>;
+  fetchTenantUsage: (id: string) => Promise<DealerTenantUsage[]>;
   testRecognition: (file: File) => Promise<TestRecognitionResult | null>;
   isMutating: boolean;
   mutationError: string | null;
@@ -189,6 +191,21 @@ export function useAdminDealers(): UseAdminDealersReturn {
     }
   }, []);
 
+  const fetchTenantUsage = useCallback(async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/dealers/${id}/tenants`);
+      const json = (await res.json()) as ApiResponse<DealerTenantUsage[]>;
+
+      if (!res.ok || !json.success || !json.data) {
+        return [];
+      }
+
+      return json.data;
+    } catch {
+      return [];
+    }
+  }, []);
+
   const testRecognition = useCallback(async (file: File) => {
     setIsMutating(true);
     setMutationError(null);
@@ -227,6 +244,7 @@ export function useAdminDealers(): UseAdminDealersReturn {
     deleteDealer,
     fetchDealer,
     fetchAuditLog,
+    fetchTenantUsage,
     testRecognition,
     isMutating,
     mutationError,
