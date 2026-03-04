@@ -1,6 +1,7 @@
 "use client";
 
-import { Calendar, FileText, User } from "lucide-react";
+import { useState } from "react";
+import { Calendar, FileText, Trash2, User } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -8,6 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
@@ -18,7 +20,8 @@ import { DealerSection } from "./dealer/dealer-section";
 import { RecognitionAuditLine } from "./dealer/recognition-audit-line";
 import { ExtractionStatusBadge } from "./extraction-status-badge";
 import { ExportButton } from "./export/export-button";
-import type { OrderWithDealer, OrderStatus, DealerOverrideResponse } from "@/lib/types";
+import { DeleteOrderDialog } from "./delete-order-dialog";
+import type { OrderWithDealer, OrderStatus, DealerOverrideResponse, UserRole } from "@/lib/types";
 
 interface OrderDetailHeaderProps {
   order: OrderWithDealer;
@@ -28,13 +31,17 @@ interface OrderDetailHeaderProps {
   onDealerChanged?: (result: DealerOverrideResponse) => void;
   /** Called after a successful export. */
   onExported?: () => void;
+  /** Called after a successful order deletion. */
+  onDeleted?: () => void;
+  /** Current user's role — used to show/hide the delete button. */
+  userRole?: UserRole;
 }
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
   uploaded: "Hochgeladen",
   processing: "Wird verarbeitet",
   extracted: "Extrahiert",
-  review: "In Pruefung",
+  review: "In Prüfung",
   approved: "Freigegeben",
   exported: "Exportiert",
   error: "Fehler",
@@ -57,12 +64,12 @@ const STATUS_VARIANTS: Record<
 const LANGUAGE_NAMES: Record<string, string> = {
   DE: "Deutsch",
   EN: "Englisch",
-  FR: "Franzoesisch",
+  FR: "Französisch",
   ES: "Spanisch",
   CS: "Tschechisch",
   PL: "Polnisch",
   IT: "Italienisch",
-  NL: "Niederlaendisch",
+  NL: "Niederländisch",
   PT: "Portugiesisch",
 };
 
@@ -116,9 +123,15 @@ export function OrderDetailHeader({
   wasExported = false,
   onDealerChanged,
   onExported,
+  onDeleted,
+  userRole,
 }: OrderDetailHeaderProps) {
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const primaryFile = order.files[0];
   const fileName = primaryFile?.original_filename ?? "Unbekannte Datei";
+  const canDelete =
+    (userRole === "tenant_admin" || userRole === "platform_admin") &&
+    order.status !== "processing";
 
   return (
     <Card>
@@ -150,6 +163,17 @@ export function OrderDetailHeader({
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0 self-start">
+            {canDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setDeleteDialogOpen(true)}
+                aria-label="Bestellung löschen"
+                className="text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
             <ExportButton
               orderId={order.id}
               orderStatus={order.status}
@@ -171,7 +195,7 @@ export function OrderDetailHeader({
       <CardContent className="space-y-4">
         {/* Dealer Section */}
         <div className="space-y-1">
-          <p className="text-sm font-medium">Haendler</p>
+          <p className="text-sm font-medium">Händler</p>
           <DealerSection
             orderId={order.id}
             dealerId={order.dealer_id}
@@ -203,6 +227,17 @@ export function OrderDetailHeader({
           overrideReason={order.override_reason}
         />
       </CardContent>
+
+      {canDelete && onDeleted && (
+        <DeleteOrderDialog
+          orderId={order.id}
+          fileName={fileName}
+          fileCount={order.files.length}
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onDeleted={onDeleted}
+        />
+      )}
     </Card>
   );
 }

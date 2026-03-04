@@ -28,10 +28,11 @@ const allNavLinks: NavLink[] = [
   { href: "/orders", label: "Bestellungen" },
   { href: "/settings/dealer-mappings", label: "Zuordnungen" },
   { href: "/settings/inbound-email", label: "Eingangs-E-Mail" },
-  { href: "/admin/dealers", label: "Haendler-Profile", adminOnly: true },
+  { href: "/settings/data-protection", label: "Datenschutz" },
+  { href: "/admin/dealers", label: "Händler-Profile", adminOnly: true },
   { href: "/admin/tenants", label: "Mandanten", adminOnly: true },
   { href: "/admin/erp-configs", label: "ERP-Mapping", adminOnly: true },
-  { href: "/admin/email-quarantine", label: "E-Mail-Quarantaene", adminOnly: true },
+  { href: "/admin/email-quarantine", label: "E-Mail-Quarantäne", adminOnly: true },
 ];
 
 export function TopNavigation() {
@@ -57,7 +58,7 @@ export function TopNavigation() {
                 variant="ghost"
                 size="icon"
                 className="md:hidden shrink-0"
-                aria-label="Menue oeffnen"
+                aria-label="Menü öffnen"
               >
                 <Menu className="h-5 w-5" />
               </Button>

@@ -23,6 +23,8 @@ export interface Tenant {
   trial_expires_at: string | null;
   /** OPH-17: Allowed email domains for sender authorization. */
   allowed_email_domains: string[];
+  /** OPH-12: Data retention period in days (30-365, default 90). */
+  data_retention_days: number;
 }
 
 export interface UserProfile {
@@ -726,4 +728,34 @@ export interface OrdersFilterState {
   dateFrom: string;
   dateTo: string;
   page: number;
+}
+
+/**
+ * OPH-12: DSGVO-Compliance & Datenaufbewahrung types.
+ */
+
+export type DeletionType = "manual" | "automatic";
+
+/** Entry in the append-only data deletion audit log. */
+export interface DataDeletionLogEntry {
+  id: string;
+  tenant_id: string;
+  order_id: string;
+  order_created_at: string | null;
+  file_count: number;
+  deleted_by: string | null;
+  deletion_type: DeletionType;
+  deleted_at: string;
+}
+
+/** Response from GET /api/settings/data-retention. */
+export interface DataRetentionSettings {
+  dataRetentionDays: number;
+}
+
+/** Response from DELETE /api/orders/[orderId]. */
+export interface OrderDeleteResponse {
+  orderId: string;
+  filesDeleted: number;
+  deletedAt: string;
 }

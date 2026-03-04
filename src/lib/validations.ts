@@ -630,3 +630,18 @@ export const quarantineActionSchema = z.object({
 });
 
 export type QuarantineActionInput = z.infer<typeof quarantineActionSchema>;
+
+/**
+ * OPH-12: DSGVO-Compliance & Datenaufbewahrung validation schemas.
+ */
+
+/** PATCH /api/settings/data-retention — update data retention days. */
+export const dataRetentionSchema = z.object({
+  dataRetentionDays: z
+    .number()
+    .int("Aufbewahrungsdauer muss eine ganze Zahl sein.")
+    .min(30, "Aufbewahrungsdauer muss mindestens 30 Tage betragen.")
+    .max(365, "Aufbewahrungsdauer darf maximal 365 Tage betragen."),
+});
+
+export type DataRetentionInput = z.infer<typeof dataRetentionSchema>;

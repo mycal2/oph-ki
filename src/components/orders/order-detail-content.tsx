@@ -11,6 +11,7 @@ import { OrderDetailHeader } from "./order-detail-header";
 import { OrderFileList } from "./order-file-list";
 import { ExtractionResultPreview } from "./extraction-result-preview";
 import { useOrderPolling } from "@/hooks/use-order-polling";
+import { useCurrentUserRole } from "@/hooks/use-current-user-role";
 import type { OrderForReview, OrderWithDealer, DealerOverrideResponse, ApiResponse } from "@/lib/types";
 
 interface OrderDetailContentProps {
@@ -23,6 +24,7 @@ interface OrderDetailContentProps {
  */
 export function OrderDetailContent({ orderId }: OrderDetailContentProps) {
   const router = useRouter();
+  const { role } = useCurrentUserRole();
   const [order, setOrder] = useState<OrderForReview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -89,6 +91,11 @@ export function OrderDetailContent({ orderId }: OrderDetailContentProps) {
       });
     }
   }, [order]);
+
+  // OPH-12: Navigate back to orders list after successful deletion
+  const handleDeleted = useCallback(() => {
+    router.push("/orders");
+  }, [router]);
 
   const { isPolling } = useOrderPolling({
     orderId,
@@ -224,6 +231,8 @@ export function OrderDetailContent({ orderId }: OrderDetailContentProps) {
         wasExported={!!order.last_exported_at}
         onDealerChanged={handleDealerChanged}
         onExported={handleExported}
+        onDeleted={handleDeleted}
+        userRole={role ?? undefined}
       />
 
       {/* Unmapped articles warning (OPH-14) */}

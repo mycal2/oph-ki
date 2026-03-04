@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { AppMetadata, ApiResponse, OrderWithDealer, OrderForReview, CanonicalOrderData } from "@/lib/types";
+import type { AppMetadata, ApiResponse, OrderWithDealer, OrderForReview, OrderDeleteResponse, CanonicalOrderData } from "@/lib/types";
 
 /**
  * GET /api/orders/[orderId]
@@ -63,7 +63,7 @@ export async function GET(
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(orderId)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Bestellungs-ID." },
+        { success: false, error: "Ungültige Bestellungs-ID." },
         { status: 400 }
       );
     }
@@ -185,6 +185,208 @@ export async function GET(
     return NextResponse.json({ success: true, data: result });
   } catch (error) {
     console.error("Unexpected error in GET /api/orders/[orderId]:", error);
+    return NextResponse.json(
+      { success: false, error: "Interner Serverfehler." },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE /api/orders/[orderId]
+ *
+ * Hard-deletes an order and all its associated files (storage + DB).
+ * Inserts an entry into the data_deletion_log for DSGVO audit trail.
+ *
+ * Auth required: tenant_admin or platform_admin only.
+ * Orders in "processing" status cannot be deleted (409 Conflict).
+ */
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ orderId: string }> }
+): Promise<NextResponse<ApiResponse<OrderDeleteResponse>>> {
+  try {
+    const { orderId } = await params;
+
+    // 1. Verify authentication
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: "Nicht authentifiziert." },
+        { status: 401 }
+      );
+    }
+
+    // 2. Check user/tenant status and authorization
+    const appMetadata = user.app_metadata as AppMetadata | undefined;
+
+    if (appMetadata?.user_status === "inactive") {
+      return NextResponse.json(
+        { success: false, error: "Ihr Konto ist deaktiviert." },
+        { status: 403 }
+      );
+    }
+
+    if (appMetadata?.tenant_status === "inactive") {
+      return NextResponse.json(
+        { success: false, error: "Ihr Mandant ist deaktiviert." },
+        { status: 403 }
+      );
+    }
+
+    const tenantId = appMetadata?.tenant_id;
+    const role = appMetadata?.role;
+    const isPlatformAdmin = role === "platform_admin";
+
+    if (!tenantId && !isPlatformAdmin) {
+      return NextResponse.json(
+        { success: false, error: "Kein Mandant zugewiesen." },
+        { status: 403 }
+      );
+    }
+
+    // Only tenant_admin or platform_admin can delete orders
+    if (role !== "tenant_admin" && role !== "platform_admin") {
+      return NextResponse.json(
+        { success: false, error: "Nur Administratoren können Bestellungen löschen." },
+        { status: 403 }
+      );
+    }
+
+    // 3. Validate orderId format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(orderId)) {
+      return NextResponse.json(
+        { success: false, error: "Ungültige Bestellungs-ID." },
+        { status: 400 }
+      );
+    }
+
+    const adminClient = createAdminClient();
+
+    // 4. Fetch the order and verify tenant access
+    let orderQuery = adminClient
+      .from("orders")
+      .select("id, tenant_id, status, created_at")
+      .eq("id", orderId);
+
+    if (!isPlatformAdmin && tenantId) {
+      orderQuery = orderQuery.eq("tenant_id", tenantId);
+    }
+
+    const { data: order, error: orderError } = await orderQuery.single();
+
+    if (orderError || !order) {
+      return NextResponse.json(
+        { success: false, error: "Bestellung nicht gefunden." },
+        { status: 404 }
+      );
+    }
+
+    // 5. Orders in "processing" status cannot be deleted
+    if (order.status === "processing") {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Bestellungen im Status 'Verarbeitung' können nicht gelöscht werden.",
+        },
+        { status: 409 }
+      );
+    }
+
+    const effectiveTenantId = order.tenant_id as string;
+
+    // 6. Delete storage files from "order-files" bucket
+    const dirPath = `${effectiveTenantId}/${orderId}`;
+    let filesDeleted = 0;
+
+    const { data: storageFiles } = await adminClient.storage
+      .from("order-files")
+      .list(dirPath);
+
+    if (storageFiles && storageFiles.length > 0) {
+      filesDeleted = storageFiles.length;
+      const filePaths = storageFiles.map((f) => `${dirPath}/${f.name}`);
+      const { error: storageError } = await adminClient.storage
+        .from("order-files")
+        .remove(filePaths);
+
+      if (storageError) {
+        console.error(
+          `Error deleting storage files for order ${orderId}:`,
+          storageError.message
+        );
+        // Continue with DB deletion even if storage cleanup fails
+      }
+    }
+
+    // 7. Delete from order_files table (explicit, even though FK cascades)
+    const { error: filesDeleteError } = await adminClient
+      .from("order_files")
+      .delete()
+      .eq("order_id", orderId);
+
+    if (filesDeleteError) {
+      console.error(
+        `Error deleting order_files for order ${orderId}:`,
+        filesDeleteError.message
+      );
+    }
+
+    // 8. Delete from orders table
+    const { error: orderDeleteError } = await adminClient
+      .from("orders")
+      .delete()
+      .eq("id", orderId);
+
+    if (orderDeleteError) {
+      console.error(
+        `Error deleting order ${orderId}:`,
+        orderDeleteError.message
+      );
+      return NextResponse.json(
+        { success: false, error: "Bestellung konnte nicht gelöscht werden." },
+        { status: 500 }
+      );
+    }
+
+    // 9. Insert into data_deletion_log (append-only audit trail)
+    const deletedAt = new Date().toISOString();
+    const { error: logError } = await adminClient
+      .from("data_deletion_log")
+      .insert({
+        tenant_id: effectiveTenantId,
+        order_id: orderId,
+        order_created_at: order.created_at as string,
+        file_count: filesDeleted,
+        deleted_by: user.id,
+        deletion_type: "manual",
+      });
+
+    if (logError) {
+      console.error(
+        `Error inserting deletion log for order ${orderId}:`,
+        logError.message
+      );
+      // Non-fatal: the order is already deleted, log failure should not roll back
+    }
+
+    // 10. Return success
+    return NextResponse.json({
+      success: true,
+      data: {
+        orderId,
+        filesDeleted,
+        deletedAt,
+      },
+    });
+  } catch (error) {
+    console.error("Unexpected error in DELETE /api/orders/[orderId]:", error);
     return NextResponse.json(
       { success: false, error: "Interner Serverfehler." },
       { status: 500 }
