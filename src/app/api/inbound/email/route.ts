@@ -273,15 +273,14 @@ export async function POST(
     }
 
     // 9. Create order record (include ingestion warnings if any)
-    // OPH-16: For trial tenants, generate a preview token and don't set uploaded_by
-    // (trial tenants have no real user IDs)
+    // Generate a preview token for every email-ingested order so the
+    // confirmation email can link to the public preview page.
+    // Trial tenants additionally skip uploaded_by (no real user IDs).
+    const previewToken = crypto.randomBytes(32).toString("hex");
+    const tokenExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
     const trialOrderFields: Record<string, unknown> = {};
-    let previewToken: string | null = null;
     if (isTrial) {
-      previewToken = crypto.randomBytes(32).toString("hex");
-      const tokenExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
-      trialOrderFields.preview_token = previewToken;
-      trialOrderFields.preview_token_expires_at = tokenExpiresAt.toISOString();
+      // Keep trialOrderFields for any trial-specific fields in the future
     }
 
     const { data: order, error: orderError } = await adminClient
@@ -293,6 +292,8 @@ export async function POST(
         source: "email_inbound",
         message_id: messageId,
         sender_email: senderEmail,
+        preview_token: previewToken,
+        preview_token_expires_at: tokenExpiresAt.toISOString(),
         ...(warnings.length > 0 ? { ingestion_notes: warnings } : {}),
         ...trialOrderFields,
       })
@@ -445,7 +446,7 @@ export async function POST(
               serverApiToken,
               toEmail: senderEmail,
               toName: senderName,
-              orderId,
+              previewToken,
               subject: payload.Subject || "Bestellung",
               siteUrl,
             });

@@ -451,16 +451,16 @@ export async function sendConfirmationEmail(params: {
   serverApiToken: string;
   toEmail: string;
   toName: string;
-  orderId: string;
+  previewToken: string;
   subject: string;
   siteUrl: string;
 }): Promise<void> {
-  const { serverApiToken, toEmail, toName, orderId, subject, siteUrl } = params;
+  const { serverApiToken, toEmail, toName, previewToken, subject, siteUrl } = params;
 
   const fromAddress = resolveSenderAddress(siteUrl);
   if (!fromAddress) return;
 
-  const orderUrl = `${siteUrl}/orders/${orderId}`;
+  const orderUrl = `${siteUrl}/orders/preview/${previewToken}`;
   const textBody = [
     `Hallo ${toName || toEmail},`,
     "",
