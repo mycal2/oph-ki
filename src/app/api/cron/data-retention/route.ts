@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -24,11 +25,20 @@ const DELETABLE_STATUSES = ["approved", "exported", "error"];
 export async function GET(
   request: NextRequest
 ): Promise<NextResponse> {
-  // Verify cron secret
+  // Verify cron secret (timing-safe comparison to prevent timing attacks)
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
 
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || !authHeader) {
+    return NextResponse.json(
+      { success: false, error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
+  const expected = Buffer.from(`Bearer ${cronSecret}`, "utf-8");
+  const received = Buffer.from(authHeader, "utf-8");
+  if (expected.length !== received.length || !timingSafeEqual(expected, received)) {
     return NextResponse.json(
       { success: false, error: "Unauthorized" },
       { status: 401 }

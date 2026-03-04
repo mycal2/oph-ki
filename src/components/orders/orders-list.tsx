@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   FileText,
   Upload,
@@ -10,6 +11,7 @@ import {
   Building2,
   ChevronLeft,
   ChevronRight,
+  Trash2,
 } from "lucide-react";
 import {
   Table,
@@ -33,6 +35,7 @@ import {
 } from "@/components/ui/select";
 import { DealerBadge } from "@/components/orders/dealer/dealer-badge";
 import { ExtractionStatusBadge } from "@/components/orders/extraction-status-badge";
+import { DeleteOrderDialog } from "@/components/orders/delete-order-dialog";
 import { OrdersFilterBar } from "@/components/orders/orders-filter-bar";
 import { useCurrentUserRole } from "@/hooks/use-current-user-role";
 import type {
@@ -49,7 +52,7 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
   uploaded: "Hochgeladen",
   processing: "Wird verarbeitet",
   extracted: "Extrahiert",
-  review: "In Pruefung",
+  review: "In Prüfung",
   approved: "Freigegeben",
   exported: "Exportiert",
   error: "Fehler",
@@ -98,11 +101,13 @@ function formatDate(iso: string): string {
  * OPH-18: Platform admins see a "Mandant" column and a tenant filter dropdown.
  */
 export function OrdersList() {
+  const router = useRouter();
   const [orders, setOrders] = useState<OrderListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<OrdersFilterState>(DEFAULT_FILTERS);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; filename: string; fileCount: number } | null>(null);
   const [selectedTenant, setSelectedTenant] = useState<string>(() => {
     if (typeof window === "undefined") return ALL_TENANTS;
     return sessionStorage.getItem(TENANT_FILTER_KEY) ?? ALL_TENANTS;
@@ -117,7 +122,8 @@ export function OrdersList() {
     }
   }, []);
 
-  const { isPlatformAdmin, isLoading: isRoleLoading } = useCurrentUserRole();
+  const { role, isPlatformAdmin, isLoading: isRoleLoading } = useCurrentUserRole();
+  const canDelete = role === "tenant_admin" || role === "platform_admin";
 
   const fetchOrders = useCallback(
     async (currentFilters: OrdersFilterState, silent = false) => {
@@ -355,24 +361,25 @@ export function OrdersList() {
                     </TableHead>
                   )}
                   <TableHead className="hidden sm:table-cell">
-                    Haendler
+                    Händler
                   </TableHead>
                   <TableHead className="hidden md:table-cell">
                     Hochgeladen von
                   </TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Datum</TableHead>
+                  {canDelete && <TableHead className="w-10" />}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredOrders.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={isPlatformAdmin ? 6 : 5}
+                      colSpan={(isPlatformAdmin ? 6 : 5) + (canDelete ? 1 : 0)}
                       className="h-24 text-center text-muted-foreground"
                     >
                       {hasActiveFilters
-                        ? "Keine Bestellungen fuer die aktiven Filter gefunden. Versuchen Sie, die Filter anzupassen."
+                        ? "Keine Bestellungen für die aktiven Filter gefunden. Versuchen Sie, die Filter anzupassen."
                         : "Keine Bestellungen gefunden."}
                     </TableCell>
                   </TableRow>
@@ -436,6 +443,28 @@ export function OrdersList() {
                       <TableCell className="text-right text-sm text-muted-foreground whitespace-nowrap">
                         {formatDate(order.created_at)}
                       </TableCell>
+                      {canDelete && (
+                        <TableCell className="text-right p-1">
+                          {order.status !== "processing" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive transition-opacity"
+                              aria-label="Bestellung löschen"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setDeleteTarget({
+                                  id: order.id,
+                                  filename: order.primary_filename ?? "Unbekannte Datei",
+                                  fileCount: order.file_count,
+                                });
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))
                 )}
@@ -458,7 +487,7 @@ export function OrdersList() {
                   aria-label="Vorherige Seite"
                 >
                   <ChevronLeft className="h-4 w-4" />
-                  Zurueck
+                  Zurück
                 </Button>
                 <span className="text-sm text-muted-foreground px-2">
                   Seite {filters.page} von {totalPages}
@@ -468,7 +497,7 @@ export function OrdersList() {
                   size="sm"
                   onClick={() => handlePageChange(filters.page + 1)}
                   disabled={filters.page >= totalPages}
-                  aria-label="Naechste Seite"
+                  aria-label="Nächste Seite"
                 >
                   Weiter
                   <ChevronRight className="h-4 w-4" />
@@ -477,6 +506,23 @@ export function OrdersList() {
             </div>
           )}
         </>
+      )}
+
+      {/* OPH-12: Delete order confirmation dialog */}
+      {deleteTarget && (
+        <DeleteOrderDialog
+          orderId={deleteTarget.id}
+          fileName={deleteTarget.filename}
+          fileCount={deleteTarget.fileCount}
+          open={!!deleteTarget}
+          onOpenChange={(open) => {
+            if (!open) setDeleteTarget(null);
+          }}
+          onDeleted={() => {
+            setDeleteTarget(null);
+            fetchOrders(filters);
+          }}
+        />
       )}
     </div>
   );

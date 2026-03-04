@@ -39,9 +39,11 @@ CREATE POLICY "Platform admins can read all deletion logs"
     ((current_setting('request.jwt.claims', true)::jsonb) -> 'app_metadata' ->> 'role') = 'platform_admin'
   );
 
--- Service role can insert deletion log entries
-CREATE POLICY "Service role can insert deletion logs"
+-- Only admins can insert deletion log entries (defense-in-depth; API uses service role which bypasses RLS)
+CREATE POLICY "Admins can insert deletion logs"
   ON public.data_deletion_log FOR INSERT
-  WITH CHECK (true);
+  WITH CHECK (
+    ((current_setting('request.jwt.claims', true)::jsonb) -> 'app_metadata' ->> 'role') IN ('tenant_admin', 'platform_admin')
+  );
 
 -- NO DELETE or UPDATE policies — this table is append-only
