@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { OrderDetailHeader } from "./order-detail-header";
 import { OrderFileList } from "./order-file-list";
 import { ExtractionResultPreview } from "./extraction-result-preview";
+import { EmailBodyPanel } from "./email-body-panel";
 import { useOrderPolling } from "@/hooks/use-order-polling";
 import { useCurrentUserRole } from "@/hooks/use-current-user-role";
 import type { OrderForReview, OrderWithDealer, DealerOverrideResponse, ApiResponse } from "@/lib/types";
@@ -272,6 +273,11 @@ export function OrderDetailContent({ orderId }: OrderDetailContentProps) {
         orderId={orderId}
         orderStatus={order.status}
       />
+
+      {/* OPH-21: Original email body text (collapsible, only when email_body.txt exists) */}
+      {order.files.some((f) => f.original_filename === "email_body.txt") && (
+        <EmailBodyPanel orderId={orderId} />
+      )}
 
       {/* File list */}
       {order.files.length > 0 && <OrderFileList files={order.files} />}

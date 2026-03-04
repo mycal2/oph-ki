@@ -248,6 +248,24 @@ export async function extractOrderData(
         break;
       }
 
+      case "txt": {
+        // OPH-21: Label email_body.txt distinctly so Claude treats it as
+        // supplemental sender text that may add to or override attachment data.
+        const txtContent = file.content.toString("utf-8");
+        if (file.originalFilename === "email_body.txt") {
+          contentBlocks.push({
+            type: "text",
+            text: `## Email Body Text (supplemental info from sender)\nThis is the original email body text written by the sender. It may contain additional order items, corrections, or instructions that supplement or override the attached document(s). Treat this as the most recent communication from the sender.\n\n${txtContent}`,
+          });
+        } else {
+          contentBlocks.push({
+            type: "text",
+            text: `## Text Document: ${file.originalFilename}\n${txtContent}`,
+          });
+        }
+        break;
+      }
+
       default: {
         // Fallback: try as plain text
         const text = file.content.toString("utf-8");

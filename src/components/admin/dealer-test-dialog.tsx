@@ -20,6 +20,7 @@ const METHOD_LABELS: Record<RecognitionMethod, string> = {
   filename: "Dateiname",
   manual: "Manuell",
   ai_content: "KI-Inhalt",
+  body_text_match: "E-Mail-Text",
   none: "Nicht erkannt",
 };
 

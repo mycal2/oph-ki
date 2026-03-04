@@ -123,6 +123,7 @@ export type RecognitionMethod =
   | "filename"
   | "manual"
   | "ai_content"
+  | "body_text_match"
   | "none";
 
 export type DealerFormatType = "email_text" | "pdf_table" | "excel" | "mixed";

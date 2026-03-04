@@ -355,34 +355,79 @@ export async function POST(
       }
     }
 
-    // 11. If no supported attachments but there's a text body, save it as a text file
-    if (supportedAttachments.length === 0 && (payload.TextBody || payload.HtmlBody)) {
-      const textContent = payload.TextBody || payload.HtmlBody;
-      const buffer = Buffer.from(textContent, "utf-8");
-      const storagePath = `${tenant.id}/${orderId}/email_body.txt`;
-
-      const sha256Hash = crypto.createHash("sha256").update(buffer).digest("hex");
-
-      const { error: uploadError } = await adminClient.storage
-        .from("order-files")
-        .upload(storagePath, buffer, {
-          contentType: "text/plain",
-        });
-
-      if (!uploadError) {
-        await adminClient.from("order_files").insert({
-          order_id: orderId,
-          tenant_id: tenant.id,
-          original_filename: "email_body.txt",
-          storage_path: storagePath,
-          file_size_bytes: buffer.length > 0 ? buffer.length : 1,
-          mime_type: "text/plain",
-          sha256_hash: sha256Hash,
-        });
-
-        primaryFilename = "email_body.txt";
-        primaryStoragePath = storagePath;
+    // 11. OPH-21: Always save email body text as email_body.txt (alongside attachments or alone)
+    //     Previously this only saved when no attachments were present. Now we always
+    //     save so that Claude can use both attachment content + supplemental body text.
+    let emailBodyText: string | null = null;
+    {
+      // Prefer TextBody; fall back to HtmlBody stripped of tags
+      let rawBodyText = payload.TextBody || "";
+      if (!rawBodyText.trim() && payload.HtmlBody) {
+        // Strip HTML tags to extract plain text
+        rawBodyText = payload.HtmlBody
+          .replace(/<br\s*\/?>/gi, "\n")
+          .replace(/<\/p>/gi, "\n\n")
+          .replace(/<\/div>/gi, "\n")
+          .replace(/<[^>]+>/g, "")
+          .replace(/&nbsp;/g, " ")
+          .replace(/&amp;/g, "&")
+          .replace(/&lt;/g, "<")
+          .replace(/&gt;/g, ">")
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'");
       }
+
+      const trimmedBody = rawBodyText.trim();
+
+      // Only save if body text is substantial (>50 chars after trimming)
+      if (trimmedBody.length > 50) {
+        // Truncate to 20,000 characters max to avoid excessive storage/API costs
+        let bodyToSave = trimmedBody;
+        if (bodyToSave.length > 20000) {
+          bodyToSave = bodyToSave.slice(0, 20000);
+          // Log truncation warning in ingestion_notes
+          warnings.push(`Email body truncated from ${trimmedBody.length} to 20,000 characters.`);
+        }
+
+        emailBodyText = bodyToSave;
+        const buffer = Buffer.from(bodyToSave, "utf-8");
+        const storagePath = `${tenant.id}/${orderId}/email_body.txt`;
+        const sha256Hash = crypto.createHash("sha256").update(buffer).digest("hex");
+
+        // Use upsert to handle re-ingestion edge case (overwrite existing file)
+        const { error: uploadError } = await adminClient.storage
+          .from("order-files")
+          .upload(storagePath, buffer, {
+            contentType: "text/plain",
+            upsert: true,
+          });
+
+        if (!uploadError) {
+          await adminClient.from("order_files").insert({
+            order_id: orderId,
+            tenant_id: tenant.id,
+            original_filename: "email_body.txt",
+            storage_path: storagePath,
+            file_size_bytes: buffer.length > 0 ? buffer.length : 1,
+            mime_type: "text/plain",
+            sha256_hash: sha256Hash,
+          });
+
+          // Only set as primary file if no attachments were uploaded
+          if (!primaryFilename) {
+            primaryFilename = "email_body.txt";
+            primaryStoragePath = storagePath;
+          }
+        }
+      }
+    }
+
+    // Update ingestion_notes if warnings were added during body processing
+    if (warnings.length > 0) {
+      await adminClient
+        .from("orders")
+        .update({ ingestion_notes: warnings })
+        .eq("id", orderId);
     }
 
     // 12. Archive the original Postmark JSON payload for reference
@@ -398,8 +443,52 @@ export async function POST(
     }
 
     // 13. Run dealer recognition on the primary file
+    let recognitionResult: { dealerId: string | null } = { dealerId: null };
     if (primaryStoragePath && primaryFilename) {
-      await recognizeDealer(adminClient, orderId, primaryStoragePath, primaryFilename);
+      recognitionResult = await recognizeDealer(adminClient, orderId, primaryStoragePath, primaryFilename);
+    }
+
+    // 13b. OPH-21: Dealer body-text fallback — if no dealer was matched by email/file
+    //      metadata, scan the email body text for known dealer names.
+    if (!recognitionResult.dealerId && emailBodyText) {
+      const { data: allDealers } = await adminClient
+        .from("dealers")
+        .select("id, name")
+        .eq("active", true);
+
+      if (allDealers && allDealers.length > 0) {
+        const bodyLower = emailBodyText.toLowerCase();
+        let bestMatch: { id: string; name: string } | null = null;
+        let bestMatchLength = 0;
+
+        for (const dealer of allDealers) {
+          const dealerNameLower = (dealer.name as string).toLowerCase();
+          if (dealerNameLower.length >= 2 && bodyLower.includes(dealerNameLower)) {
+            // Use the most specific (longest) match to resolve ambiguity
+            if (dealerNameLower.length > bestMatchLength) {
+              bestMatch = { id: dealer.id as string, name: dealer.name as string };
+              bestMatchLength = dealerNameLower.length;
+            }
+          }
+        }
+
+        if (bestMatch) {
+          const { error: dealerUpdateError } = await adminClient
+            .from("orders")
+            .update({
+              dealer_id: bestMatch.id,
+              recognition_method: "body_text_match",
+              recognition_confidence: 60,
+            })
+            .eq("id", orderId);
+
+          if (!dealerUpdateError) {
+            console.log(
+              `OPH-21: Dealer "${bestMatch.name}" matched from email body text for order ${orderId}`
+            );
+          }
+        }
+      }
     }
 
     // 14. Trigger AI extraction (same pattern as web upload)
