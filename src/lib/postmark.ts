@@ -11,6 +11,61 @@
 import crypto from "crypto";
 import { z } from "zod";
 
+/** Max retry attempts for Postmark API calls. */
+const POSTMARK_MAX_RETRIES = 3;
+/** Base delay in ms for exponential backoff (doubles each retry). */
+const POSTMARK_RETRY_BASE_MS = 2000;
+
+/**
+ * Sends a request to Postmark with retry + exponential backoff.
+ * Retries on 5xx errors and network failures. Does NOT retry on 4xx (client errors).
+ */
+async function postmarkFetchWithRetry(
+  serverApiToken: string,
+  body: Record<string, unknown>,
+  context: string
+): Promise<void> {
+  let lastError: string | null = null;
+
+  for (let attempt = 0; attempt < POSTMARK_MAX_RETRIES; attempt++) {
+    try {
+      const response = await fetch("https://api.postmarkapp.com/email", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "X-Postmark-Server-Token": serverApiToken,
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (response.ok) return; // Success
+
+      const errorText = await response.text();
+
+      // Don't retry client errors (4xx) — they won't succeed on retry
+      if (response.status >= 400 && response.status < 500) {
+        console.error(`${context}: Postmark client error (${response.status}): ${errorText}`);
+        return;
+      }
+
+      // Server error (5xx) — retry
+      lastError = `${response.status}: ${errorText}`;
+    } catch (err) {
+      // Network error — retry
+      lastError = err instanceof Error ? err.message : String(err);
+    }
+
+    if (attempt < POSTMARK_MAX_RETRIES - 1) {
+      const delay = POSTMARK_RETRY_BASE_MS * Math.pow(2, attempt);
+      console.warn(`${context}: Attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+
+  console.error(`${context}: All ${POSTMARK_MAX_RETRIES} attempts failed. Last error: ${lastError}`);
+}
+
 /**
  * Verifies the webhook request token against the configured secret.
  * Uses constant-time comparison to prevent timing attacks.
@@ -211,26 +266,13 @@ export async function sendQuarantineNotification(params: {
     <a href="${esc(quarantineUrl)}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500">Quarantaene pruefen</a>
   `);
 
-  const response = await fetch("https://api.postmarkapp.com/email", {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      "X-Postmark-Server-Token": serverApiToken,
-    },
-    body: JSON.stringify({
-      From: fromAddress,
-      To: adminEmails.join(","),
-      Subject: `Quarantaene: E-Mail von ${senderEmail}`,
-      HtmlBody: htmlBody,
-      TextBody: textBody,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("Failed to send quarantine notification via Postmark:", errorText);
-  }
+  await postmarkFetchWithRetry(serverApiToken, {
+    From: fromAddress,
+    To: adminEmails.join(","),
+    Subject: `Quarantaene: E-Mail von ${senderEmail}`,
+    HtmlBody: htmlBody,
+    TextBody: textBody,
+  }, "Quarantine notification");
 }
 
 /**
@@ -347,33 +389,20 @@ export async function sendTrialResultEmail(params: {
     "Ihr Order Intelligence Team",
   ].join("\n");
 
-  const response = await fetch("https://api.postmarkapp.com/email", {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      "X-Postmark-Server-Token": serverApiToken,
-    },
-    body: JSON.stringify({
-      From: fromAddress,
-      To: toEmail,
-      Subject: `Extrahierte Bestellung: ${subject}`,
-      HtmlBody: htmlBody,
-      TextBody: textBody,
-      Attachments: [
-        {
-          Name: `bestellung_${orderSummary.orderNumber ?? "export"}.csv`,
-          Content: Buffer.from(csvContent, "utf-8").toString("base64"),
-          ContentType: "text/csv",
-        },
-      ],
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("Failed to send trial result email via Postmark:", errorText);
-  }
+  await postmarkFetchWithRetry(serverApiToken, {
+    From: fromAddress,
+    To: toEmail,
+    Subject: `Extrahierte Bestellung: ${subject}`,
+    HtmlBody: htmlBody,
+    TextBody: textBody,
+    Attachments: [
+      {
+        Name: `bestellung_${orderSummary.orderNumber ?? "export"}.csv`,
+        Content: Buffer.from(csvContent, "utf-8").toString("base64"),
+        ContentType: "text/csv",
+      },
+    ],
+  }, "Trial result email");
 }
 
 /**
@@ -422,26 +451,13 @@ export async function sendTrialFailureEmail(params: {
     <p style="margin:0;font-size:13px;color:#6b7280">Bei Fragen kontaktieren Sie uns gerne: <a href="https://www.ids.online" style="color:#2563eb;text-decoration:none">ids.online</a></p>
   `);
 
-  const response = await fetch("https://api.postmarkapp.com/email", {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      "X-Postmark-Server-Token": serverApiToken,
-    },
-    body: JSON.stringify({
-      From: fromAddress,
-      To: toEmail,
-      Subject: `Extraktion fehlgeschlagen: ${subject}`,
-      HtmlBody: htmlBody,
-      TextBody: textBody,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("Failed to send trial failure email via Postmark:", errorText);
-  }
+  await postmarkFetchWithRetry(serverApiToken, {
+    From: fromAddress,
+    To: toEmail,
+    Subject: `Extraktion fehlgeschlagen: ${subject}`,
+    HtmlBody: htmlBody,
+    TextBody: textBody,
+  }, "Trial failure email");
 }
 
 /**
@@ -492,26 +508,13 @@ export async function sendOrderConfirmationEmail(params: {
     <a href="${esc(orderUrl)}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500">Bestellung ansehen</a>
   `);
 
-  const response = await fetch("https://api.postmarkapp.com/email", {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      "X-Postmark-Server-Token": serverApiToken,
-    },
-    body: JSON.stringify({
-      From: fromAddress,
-      To: toEmail,
-      Subject: `[Bestellung empfangen] – ${fileName}`,
-      HtmlBody: htmlBody,
-      TextBody: textBody,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("Failed to send order confirmation email via Postmark:", errorText);
-  }
+  await postmarkFetchWithRetry(serverApiToken, {
+    From: fromAddress,
+    To: toEmail,
+    Subject: `[Bestellung empfangen] – ${fileName}`,
+    HtmlBody: htmlBody,
+    TextBody: textBody,
+  }, "Order confirmation email");
 }
 
 /**
@@ -524,6 +527,7 @@ export async function sendOrderResultEmail(params: {
   orderId: string;
   siteUrl: string;
   isReExtraction: boolean;
+  confidenceScore?: number | null;
   orderSummary: {
     orderNumber: string | null;
     orderDate: string | null;
@@ -543,7 +547,7 @@ export async function sendOrderResultEmail(params: {
   }>;
   csvContent: string;
 }): Promise<void> {
-  const { serverApiToken, toEmail, toName, orderId, siteUrl, isReExtraction, orderSummary, lineItems, csvContent } = params;
+  const { serverApiToken, toEmail, toName, orderId, siteUrl, isReExtraction, confidenceScore, orderSummary, lineItems, csvContent } = params;
 
   const fromAddress = resolveSenderAddress(siteUrl);
   if (!fromAddress) return;
@@ -556,6 +560,26 @@ export async function sendOrderResultEmail(params: {
 
   const subjectLabel = orderSummary.orderNumber ?? orderId.slice(0, 8);
   const updatedSuffix = isReExtraction ? " (aktualisiert)" : "";
+
+  // Build extraction warnings
+  const warnings: string[] = [];
+  if (confidenceScore != null && confidenceScore < 0.7) {
+    warnings.push(`Niedrige Extraktionssicherheit (${Math.round(confidenceScore * 100)}%) — bitte Daten sorgfältig prüfen.`);
+  }
+  if (!orderSummary.orderNumber) {
+    warnings.push("Bestellnummer konnte nicht erkannt werden.");
+  }
+  if (!orderSummary.orderDate) {
+    warnings.push("Bestelldatum konnte nicht erkannt werden.");
+  }
+  const itemsWithoutArticle = lineItems.filter((i) => !i.article_number).length;
+  if (itemsWithoutArticle > 0) {
+    warnings.push(`${itemsWithoutArticle} ${itemsWithoutArticle === 1 ? "Position ohne" : "Positionen ohne"} Artikelnummer.`);
+  }
+  const unknownUnits = lineItems.filter((i) => typeof i.unit === "string" && i.unit.includes("(unbekannt)")).length;
+  if (unknownUnits > 0) {
+    warnings.push(`${unknownUnits} ${unknownUnits === 1 ? "Position mit unbekannter" : "Positionen mit unbekannter"} Mengeneinheit.`);
+  }
 
   // Build HTML line items table (max 20 in email body)
   const MAX_ITEMS_IN_EMAIL = 20;
@@ -603,9 +627,21 @@ export async function sendOrderResultEmail(params: {
     </table>`;
   }
 
+  // Build warnings HTML block
+  let warningsHtml = "";
+  if (warnings.length > 0) {
+    const warningItems = warnings.map((w) => `<li style="margin-bottom:4px">${esc(w)}</li>`).join("");
+    warningsHtml = `
+    <div style="background:#fffbeb;border:1px solid #f59e0b;border-radius:6px;padding:12px 16px;margin-bottom:20px">
+      <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#92400e">Hinweise zur Extraktion:</p>
+      <ul style="margin:0;padding-left:20px;font-size:13px;color:#92400e">${warningItems}</ul>
+    </div>`;
+  }
+
   const htmlBody = wrapHtmlEmail(siteUrl, `
     <h2 style="margin:0 0 8px;font-size:18px;color:#111827">Bestellung extrahiert${updatedSuffix}</h2>
     <p style="margin:0 0 24px;color:#6b7280;font-size:14px">Die Bestelldaten wurden erfolgreich extrahiert.</p>
+    ${warningsHtml}
     <table style="font-size:14px;margin-bottom:20px">
       <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Bestellnummer:</td><td style="padding:4px 0;font-weight:500">${esc(orderSummary.orderNumber ?? "–")}</td></tr>
       <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Bestelldatum:</td><td style="padding:4px 0;font-weight:500">${esc(orderSummary.orderDate ?? "–")}</td></tr>
@@ -618,6 +654,10 @@ export async function sendOrderResultEmail(params: {
     <a href="${esc(orderUrl)}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500">Bestellung prüfen & freigeben</a>
   `);
 
+  const warningsText = warnings.length > 0
+    ? ["", "  Hinweise:", ...warnings.map((w) => `    - ${w}`), ""].join("\n")
+    : "";
+
   const textBody = [
     `Hallo ${toName || toEmail},`,
     "",
@@ -628,7 +668,7 @@ export async function sendOrderResultEmail(params: {
     `  Händler:       ${orderSummary.dealerName ?? "–"}`,
     `  Positionen:    ${orderSummary.itemCount}`,
     `  Gesamtbetrag:  ${total}`,
-    "",
+    warningsText,
     `Die vollständigen Daten finden Sie als CSV-Datei im Anhang.`,
     "",
     `Bestellung prüfen & freigeben: ${orderUrl}`,
@@ -638,33 +678,20 @@ export async function sendOrderResultEmail(params: {
   ].join("\n");
 
   const csvDate = new Date().toISOString().slice(0, 10);
-  const response = await fetch("https://api.postmarkapp.com/email", {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      "X-Postmark-Server-Token": serverApiToken,
-    },
-    body: JSON.stringify({
-      From: fromAddress,
-      To: toEmail,
-      Subject: `[Bestellung extrahiert] – ${subjectLabel}${updatedSuffix}`,
-      HtmlBody: htmlBody,
-      TextBody: textBody,
-      Attachments: [
-        {
-          Name: `bestellung_${orderId.slice(0, 8)}_${csvDate}.csv`,
-          Content: Buffer.from(csvContent, "utf-8").toString("base64"),
-          ContentType: "text/csv",
-        },
-      ],
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("Failed to send order result email via Postmark:", errorText);
-  }
+  await postmarkFetchWithRetry(serverApiToken, {
+    From: fromAddress,
+    To: toEmail,
+    Subject: `[Bestellung extrahiert] – ${subjectLabel}${updatedSuffix}`,
+    HtmlBody: htmlBody,
+    TextBody: textBody,
+    Attachments: [
+      {
+        Name: `bestellung_${orderId.slice(0, 8)}_${csvDate}.csv`,
+        Content: Buffer.from(csvContent, "utf-8").toString("base64"),
+        ContentType: "text/csv",
+      },
+    ],
+  }, "Order result email");
 }
 
 /**
@@ -703,26 +730,13 @@ export async function sendOrderFailureEmail(params: {
     <a href="${esc(orderUrl)}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500">Bestellung ansehen</a>
   `);
 
-  const response = await fetch("https://api.postmarkapp.com/email", {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      "X-Postmark-Server-Token": serverApiToken,
-    },
-    body: JSON.stringify({
-      From: fromAddress,
-      To: toEmail,
-      Subject: `[Extraktion fehlgeschlagen] – Bestellung`,
-      HtmlBody: htmlBody,
-      TextBody: textBody,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("Failed to send order failure email via Postmark:", errorText);
-  }
+  await postmarkFetchWithRetry(serverApiToken, {
+    From: fromAddress,
+    To: toEmail,
+    Subject: `[Extraktion fehlgeschlagen] – Bestellung`,
+    HtmlBody: htmlBody,
+    TextBody: textBody,
+  }, "Order failure email");
 }
 
 /**
@@ -760,24 +774,11 @@ export async function sendConfirmationEmail(params: {
     <a href="${esc(orderUrl)}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500">Bestellung ansehen</a>
   `);
 
-  const response = await fetch("https://api.postmarkapp.com/email", {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      "X-Postmark-Server-Token": serverApiToken,
-    },
-    body: JSON.stringify({
-      From: fromAddress,
-      To: toEmail,
-      Subject: `Bestellung empfangen: ${subject}`,
-      HtmlBody: htmlBody,
-      TextBody: textBody,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("Failed to send confirmation email via Postmark:", errorText);
-  }
+  await postmarkFetchWithRetry(serverApiToken, {
+    From: fromAddress,
+    To: toEmail,
+    Subject: `Bestellung empfangen: ${subject}`,
+    HtmlBody: htmlBody,
+    TextBody: textBody,
+  }, "Inbound confirmation email");
 }

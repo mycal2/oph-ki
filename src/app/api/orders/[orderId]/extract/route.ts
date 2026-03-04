@@ -628,6 +628,7 @@ export async function POST(
                   orderId,
                   siteUrl,
                   isReExtraction,
+                  confidenceScore: finalExtractedData.extraction_metadata?.confidence_score ?? null,
                   orderSummary: {
                     orderNumber: finalExtractedData.order.order_number ?? null,
                     orderDate: finalExtractedData.order.order_date ?? null,

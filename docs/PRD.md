@@ -20,26 +20,26 @@ Eine mandantenfähige SaaS-Plattform ("Order Intelligence Platform"), die Dental
 
 | Priority | Feature | Status |
 |----------|---------|--------|
-| P0 (MVP) | OPH-1: Multi-Tenant Auth & Benutzerverwaltung | Planned |
-| P0 (MVP) | OPH-2: Bestellungs-Upload (Web: .eml, PDF, Excel) | Planned |
-| P0 (MVP) | OPH-3: Händler-Erkennung & Händler-Profile | Planned |
-| P0 (MVP) | OPH-4: KI-Datenextraktion mit Händler-Kontext (Claude API) | Planned |
-| P0 (MVP) | OPH-5: Bestellprüfung & manuelle Korrektur | Planned |
-| P0 (MVP) | OPH-6: ERP-Export & Download | Planned |
-| P1 | OPH-7: Admin: Händler-Regelwerk-Verwaltung | Planned |
-| P1 | OPH-8: Admin: Mandanten-Management | Planned |
-| P1 | OPH-9: Admin: ERP-Mapping-Konfiguration | Planned |
-| P1 | OPH-10: E-Mail-Weiterleitungs-Ingestion | Planned |
-| P2 | OPH-11: Bestellhistorie & Dashboard | Planned |
-| P2 | OPH-12: DSGVO-Compliance & Datenaufbewahrung | Planned |
-| P1 | OPH-13: Order Submission Email Notifications | Planned |
-| P1 | OPH-14: Händler-Datentransformationen (Artikel-Mapping, Einheiten, Felder) | Planned |
-| P1 | OPH-15: Dealer Column Mapping for Extraction | Planned |
-| P1 | OPH-18: Admin: Cross-Tenant Order View | Planned |
+| P0 (MVP) | OPH-1: Multi-Tenant Auth & Benutzerverwaltung | Deployed |
+| P0 (MVP) | OPH-2: Bestellungs-Upload (Web: .eml, PDF, Excel) | Deployed |
+| P0 (MVP) | OPH-3: Händler-Erkennung & Händler-Profile | Deployed |
+| P0 (MVP) | OPH-4: KI-Datenextraktion mit Händler-Kontext (Claude API) | Deployed |
+| P0 (MVP) | OPH-5: Bestellprüfung & manuelle Korrektur | Deployed |
+| P0 (MVP) | OPH-6: ERP-Export & Download | Deployed |
+| P1 | OPH-7: Admin: Händler-Regelwerk-Verwaltung | Deployed |
+| P1 | OPH-8: Admin: Mandanten-Management | Deployed |
+| P1 | OPH-9: Admin: ERP-Mapping-Konfiguration | Deployed |
+| P1 | OPH-10: E-Mail-Weiterleitungs-Ingestion | Deployed |
+| P2 | OPH-11: Bestellhistorie & Dashboard | Deployed |
+| P2 | OPH-12: DSGVO-Compliance & Datenaufbewahrung | Deployed |
+| P1 | OPH-13: Order Submission Email Notifications | Deployed |
+| P1 | OPH-14: Händler-Datentransformationen (Artikel-Mapping, Einheiten, Felder) | Deployed |
+| P1 | OPH-15: Dealer Column Mapping for Extraction | Deployed |
 | P1 | OPH-16: Trial-/Demo-Modus für Interessenten | Deployed |
-| P1 | OPH-17: Allowed Email Domains für Sender-Autorisierung | Planned |
-| P1 | OPH-19: Customer Number (Kundennummer) Recognition & Editing | Planned |
-| P1 | OPH-20: Sprach-Erkennung & Mengeneinheiten-Normalisierung | Planned |
+| P1 | OPH-17: Allowed Email Domains für Sender-Autorisierung | Deployed |
+| P1 | OPH-18: Admin: Cross-Tenant Order View | Deployed |
+| P1 | OPH-19: Customer Number (Kundennummer) Recognition & Editing | Deployed |
+| P1 | OPH-20: Sprach-Erkennung & Mengeneinheiten-Normalisierung | Deployed |
 
 ## Success Metrics
 - Bearbeitungszeit pro Bestellung: von ~15 Min. manuell auf < 3 Min. mit System
