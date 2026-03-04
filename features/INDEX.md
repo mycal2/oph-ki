@@ -31,7 +31,7 @@
 | OPH-17 | Allowed Email Domains für Sender-Autorisierung | Deployed | [OPH-17-allowed-email-domains.md](OPH-17-allowed-email-domains.md) | 2026-03-03 |
 | OPH-18 | Admin: Cross-Tenant Order View | Deployed | [OPH-18-admin-cross-tenant-order-view.md](OPH-18-admin-cross-tenant-order-view.md) | 2026-03-03 |
 | OPH-19 | Customer Number (Kundennummer) Recognition & Editing | Deployed | [OPH-19-customer-number-recognition.md](OPH-19-customer-number-recognition.md) | 2026-03-03 |
-| OPH-20 | Sprach-Erkennung & Mengeneinheiten-Normalisierung | In Review | [OPH-20-language-detection-unit-normalization.md](OPH-20-language-detection-unit-normalization.md) | 2026-03-03 |
+| OPH-20 | Sprach-Erkennung & Mengeneinheiten-Normalisierung | Deployed | [OPH-20-language-detection-unit-normalization.md](OPH-20-language-detection-unit-normalization.md) | 2026-03-03 |
 
 <!-- Add features above this line -->
 

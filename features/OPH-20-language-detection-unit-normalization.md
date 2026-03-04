@@ -1,6 +1,6 @@
 # OPH-20: Sprach-Erkennung & Mengeneinheiten-Normalisierung
 
-## Status: In Review
+## Status: Deployed
 **Created:** 2026-03-03
 **Last Updated:** 2026-03-04
 
@@ -239,4 +239,19 @@ All required building blocks are already in the project:
 
 ### Verdict: PASS
 
-All 8 acceptance criteria are met (AC3 has a minor cosmetic discrepancy with the "?" badge for unknown languages that is unlikely to occur in practice). Two low-severity bugs documented. No regressions detected. No security issues found. The feature is ready for deployment.
+All 8 acceptance criteria are met (AC3 has a minor cosmetic discrepancy with the "?" badge for unknown languages that is unlikely to occur in practice). Two low-severity bugs documented and fixed. No regressions detected. No security issues found. The feature is ready for deployment.
+
+## Deployment
+
+**Deployed:** 2026-03-04
+**Production URL:** https://oph-ki.ids.online
+**Git commit:** `b3df928`
+**Git tag:** `v1.21.0-OPH-20`
+
+### Files Deployed
+- `src/lib/claude-extraction.ts` — Updated extraction prompt: language detection (rule 13), unit normalization (rule 14), multilingual quantity column recognition (rule 15)
+- `src/lib/unit-normalization.ts` — New server-side unit normalization module (~70 abbreviations → 15 German standard terms)
+- `src/lib/types.ts` — Added `document_language?: string | null` to `CanonicalOrderData`
+- `src/lib/validations.ts` — Added `document_language` to `reviewSaveSchema` to prevent Zod stripping during auto-save
+- `src/app/api/orders/[orderId]/extract/route.ts` — Added `normalizeUnits()` call after extraction
+- `src/components/orders/order-detail-header.tsx` — Added `LanguageBadge` chip with Tooltip
