@@ -1,6 +1,6 @@
 # OPH-24: Platform Error Notification Emails
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-03-05
 **Last Updated:** 2026-03-05
 
@@ -92,7 +92,77 @@ This feature adds a platform-wide admin notification layer: a configurable list 
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Component Structure
+
+```
+Admin Settings Page  (/admin/settings)          ← new page
++-- Page Header ("Platform-Einstellungen")
++-- Error Notifications Card
+    +-- Card title + description text
+    +-- Email Field 1  (pre-filled: michael.mollath@ids.online)
+    +-- Email Field 2  (optional)
+    +-- Email Field 3  (optional)
+    +-- Save Button
+    +-- Toast feedback (success / validation error)
+
+Top Navigation                                  ← existing, +1 link
++-- Händler-Profile    /admin/dealers
++-- Mandanten          /admin/tenants
++-- ERP-Mapping        /admin/erp-configs
++-- E-Mail-Quarantäne  /admin/email-quarantine
++-- Einstellungen      /admin/settings          ← NEW
+```
+
+### Data Model
+
+**New table: `platform_settings`** — singleton, always exactly one row.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | text (PK) | Always `'singleton'` |
+| `error_notification_emails` | text[] | Up to 3 email addresses |
+| `updated_at` | timestamp | Last change time |
+| `updated_by` | uuid | Admin user who last saved |
+
+Seeded in the migration with `michael.mollath@ids.online` as the default first recipient.
+
+**Why a singleton table?** One set of global settings for the whole platform — no per-tenant variation. Future platform-wide settings can be added as columns without schema changes.
+
+**Why `text[]` (array) instead of 3 separate columns?** Cleaner to query, cleaner to update, and trivially extensible if a 4th address is needed later.
+
+### API Routes
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/admin/settings/notifications` | GET | Returns current notification email list |
+| `/api/admin/settings/notifications` | PUT | Saves updated list (validates email format, max 3, admin-only) |
+
+Both routes protected by the existing `requirePlatformAdmin()` guard — same pattern as all other `/api/admin/` routes.
+
+### Email Function
+
+New function `sendPlatformErrorNotification()` added to the existing `src/lib/postmark.ts`:
+- Fetches notification email list from the DB at call time — not cached, so UI changes take effect immediately
+- Sends independently to each configured address — one delivery failure does not block the others
+- Non-blocking: exceptions are logged, never thrown upward to disrupt the processing pipeline
+
+### Error Trigger Wiring
+
+| File | What changes |
+|------|-------------|
+| `src/app/api/orders/[orderId]/extract/route.ts` | Call `sendPlatformErrorNotification()` on final extraction failure |
+| `src/app/api/inbound/email/route.ts` | Call `sendPlatformErrorNotification()` on any processing exception |
+| `src/app/api/orders/[orderId]/export/route.ts` | Call `sendPlatformErrorNotification()` on export generation failure |
+
+Notification fires **only after all retries are exhausted** — not on each retry attempt. No deduplication column needed.
+
+### Dependencies
+
+No new packages required. All infrastructure already installed:
+- **Postmark** (`src/lib/postmark.ts`) — email sending
+- **Zod** — email validation
+- **shadcn/ui** `Input`, `Card`, `Button` — admin form UI
 
 ## QA Test Results
 _To be added by /qa_

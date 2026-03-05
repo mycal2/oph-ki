@@ -35,7 +35,7 @@
 | OPH-21 | E-Mail-Text als Extraktionsquelle | Deployed | [OPH-21-email-body-extraction.md](OPH-21-email-body-extraction.md) | 2026-03-04 |
 | OPH-22 | Kundennummer immer in Extrahierten Bestelldaten anzeigen | Deployed | [OPH-22-kundennummer-always-visible.md](OPH-22-kundennummer-always-visible.md) | 2026-03-05 |
 | OPH-23 | Chunked Extraction for Large Excel Files | Deployed | [OPH-23-chunked-extraction-large-excel.md](OPH-23-chunked-extraction-large-excel.md) | 2026-03-05 |
-| OPH-24 | Platform Error Notification Emails | Planned | [OPH-24-platform-error-notifications.md](OPH-24-platform-error-notifications.md) | 2026-03-05 |
+| OPH-24 | Platform Error Notification Emails | In Progress | [OPH-24-platform-error-notifications.md](OPH-24-platform-error-notifications.md) | 2026-03-05 |
 
 <!-- Add features above this line -->
 
