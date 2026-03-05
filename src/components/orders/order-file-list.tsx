@@ -1,14 +1,19 @@
-import { Mail, FileText, Sheet } from "lucide-react";
+"use client";
+
+import { useState, useCallback } from "react";
+import { Mail, FileText, Sheet, Download, Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { OrderFile } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import type { OrderFile, FilePreviewUrl } from "@/lib/types";
 
 interface OrderFileListProps {
   files: OrderFile[];
+  orderId: string;
 }
 
 function FileTypeIcon({ filename }: { filename: string }) {
@@ -40,16 +45,62 @@ function formatDate(iso: string): string {
 
 /**
  * Displays the list of files attached to an order on the detail page.
+ * Fetches signed download URLs on demand.
  */
-export function OrderFileList({ files }: OrderFileListProps) {
+export function OrderFileList({ files, orderId }: OrderFileListProps) {
+  const [downloadUrls, setDownloadUrls] = useState<Record<string, string>>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasFetched, setHasFetched] = useState(false);
+
+  const fetchDownloadUrls = useCallback(async () => {
+    if (hasFetched) return;
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/orders/${orderId}/preview-url`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data?.files) {
+          const urlMap: Record<string, string> = {};
+          for (const f of json.data.files as FilePreviewUrl[]) {
+            urlMap[f.fileId] = f.signedUrl;
+          }
+          setDownloadUrls(urlMap);
+        }
+      }
+    } catch {
+      // Silently fail — download buttons just won't appear
+    } finally {
+      setIsLoading(false);
+      setHasFetched(true);
+    }
+  }, [orderId, hasFetched]);
+
   if (files.length === 0) return null;
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-base">
           Dateien ({files.length})
         </CardTitle>
+        {!hasFetched && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={fetchDownloadUrls}
+            disabled={isLoading}
+            className="text-xs"
+          >
+            {isLoading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <>
+                <Download className="h-3.5 w-3.5" />
+                Downloads laden
+              </>
+            )}
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
@@ -68,6 +119,19 @@ export function OrderFileList({ files }: OrderFileListProps) {
                   {formatDate(file.created_at)}
                 </p>
               </div>
+              {downloadUrls[file.id] && (
+                <a
+                  href={downloadUrls[file.id]}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download={file.original_filename}
+                  className="shrink-0"
+                >
+                  <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`${file.original_filename} herunterladen`}>
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </a>
+              )}
             </div>
           ))}
         </div>

@@ -280,7 +280,7 @@ export function OrderDetailContent({ orderId }: OrderDetailContentProps) {
       )}
 
       {/* File list */}
-      {order.files.length > 0 && <OrderFileList files={order.files} />}
+      {order.files.length > 0 && <OrderFileList files={order.files} orderId={orderId} />}
     </div>
   );
 }
