@@ -1,6 +1,6 @@
 # OPH-22: Kundennummer immer in Extrahierten Bestelldaten anzeigen
 
-## Status: Planned
+## Status: Deployed
 **Created:** 2026-03-05
 **Last Updated:** 2026-03-05
 
@@ -51,7 +51,23 @@ This is inconsistent with the edit form (which always shows the field) and makes
 _To be added by /architecture_
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-03-05 | **Result: PASS — 5/5 AC, 0 bugs, production ready**
+
+| AC | Criterion | Result |
+|----|-----------|--------|
+| AC-1 | Field always rendered | PASS |
+| AC-2 | Populated value displayed normally | PASS |
+| AC-3 | Null/empty shows em dash | PASS |
+| AC-4 | Consistent icon and label | PASS |
+| AC-5 | Same location in sender block | PASS |
+
+Edge cases (null, empty string, whitespace): all PASS. No security concerns (read-only display, JSX escaping, no API changes).
 
 ## Deployment
-_To be added by /deploy_
+
+- **Deployed:** 2026-03-05
+- **Commit:** `e9e06aa`
+- **Tag:** `v1.22.0-OPH-22`
+- **Vercel:** auto-deployed via push to `main`
+- **No database migration required**
