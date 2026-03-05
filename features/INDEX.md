@@ -38,7 +38,8 @@
 | OPH-24 | Platform Error Notification Emails | Deployed | [OPH-24-platform-error-notifications.md](OPH-24-platform-error-notifications.md) | 2026-03-05 |
 | OPH-25 | E-Mail-Betreff als Extraktionsquelle | Deployed | [OPH-25-email-subject-extraction.md](OPH-25-email-subject-extraction.md) | 2026-03-05 |
 | OPH-26 | Order File Download | Deployed | [OPH-26-order-file-download.md](OPH-26-order-file-download.md) | 2026-03-05 |
+| OPH-27 | Order File Preview (Click-to-Open) | Planned | [OPH-27-order-file-preview.md](OPH-27-order-file-preview.md) | 2026-03-05 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-27
+## Next Available ID: OPH-28
