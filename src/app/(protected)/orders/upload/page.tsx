@@ -13,6 +13,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FileDropzone } from "@/components/orders/file-dropzone";
 import { UploadFileList } from "@/components/orders/upload-file-list";
@@ -30,6 +32,8 @@ export default function UploadPage() {
     pendingCount,
     successCount,
     errorCount,
+    subject,
+    setSubject,
     addFiles,
     removeFile,
     uploadFiles,
@@ -147,6 +151,25 @@ export default function UploadPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* OPH-25: Optional email subject for extraction context */}
+          <div className="space-y-1.5">
+            <Label htmlFor="upload-subject" className="text-sm">
+              Betreff <span className="text-muted-foreground font-normal">(optional)</span>
+            </Label>
+            <Input
+              id="upload-subject"
+              type="text"
+              placeholder="z.B. Bestellung RE-2024-001 von Henry Schein"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              maxLength={500}
+              disabled={isUploading}
+            />
+            <p className="text-xs text-muted-foreground">
+              Falls vorhanden, hilft der E-Mail-Betreff bei der Erkennung von Bestellnummern und Absendern.
+            </p>
+          </div>
+
           <FileDropzone onFilesAdded={handleFilesAdded} disabled={isUploading} />
 
           {validationErrors.length > 0 && (

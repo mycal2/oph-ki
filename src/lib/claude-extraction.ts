@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { ContentBlockParam } from "@anthropic-ai/sdk/resources/messages";
 import * as XLSX from "xlsx";
 import { parseEml } from "@/lib/eml-parser";
+import { sanitizeHints } from "@/lib/validations";
 import type { CanonicalOrderData } from "@/lib/types";
 
 const SCHEMA_VERSION = "1.0.0";
@@ -142,12 +143,16 @@ export interface ExtractionInput {
   mappingsContext?: string;
   /** Formatted column mapping context for the prompt (from OPH-15 column-mapping profiles). */
   columnMappingContext?: string;
+  /** OPH-25: Email subject from the order (Postmark, .eml, or manual input). */
+  emailSubject?: string | null;
 }
 
 export interface ExtractionResult {
   extractedData: CanonicalOrderData;
   inputTokens: number;
   outputTokens: number;
+  /** OPH-25: Subject parsed from a .eml file during extraction (for persistence). */
+  parsedEmailSubject?: string | null;
 }
 
 /**
@@ -189,8 +194,25 @@ export async function extractOrderData(
     contentBlocks.push({ type: "text", text: dealerContext });
   }
 
+  // OPH-25: Add email subject context block if available.
+  // Placed after dealer context, before file content blocks.
+  if (input.emailSubject && input.emailSubject.trim().length > 0) {
+    let subjectText = sanitizeHints(input.emailSubject.trim());
+    if (subjectText.trim().length > 0) {
+      // Truncate to 500 characters
+      if (subjectText.length > 500) {
+        subjectText = subjectText.slice(0, 500) + "[...]";
+      }
+      contentBlocks.push({
+        type: "text",
+        text: `## Email Subject (from forwarded email)\nUse this to help identify the order number or sender if not found in the attachment.\n${subjectText}`,
+      });
+    }
+  }
+
   // Process each file
   const sourceFiles: string[] = [];
+  let parsedEmailSubject: string | null = null;
 
   for (const file of input.files) {
     sourceFiles.push(file.originalFilename);
@@ -211,6 +233,10 @@ export async function extractOrderData(
 
       case "eml": {
         const emlData = await parseEml(file.content);
+        // OPH-25: Capture parsed subject for persistence to orders.subject
+        if (emlData.subject) {
+          parsedEmailSubject = emlData.subject;
+        }
         let emlText = `## Email Document: ${file.originalFilename}\n`;
         if (emlData.subject) emlText += `Subject: ${emlData.subject}\n`;
         if (emlData.from) emlText += `From: ${emlData.from}\n`;
@@ -384,6 +410,7 @@ export async function extractOrderData(
         extractedData,
         inputTokens: message.usage.input_tokens,
         outputTokens: message.usage.output_tokens,
+        parsedEmailSubject,
       };
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));

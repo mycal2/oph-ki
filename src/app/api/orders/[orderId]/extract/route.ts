@@ -115,7 +115,7 @@ export async function POST(
     // --- Fetch order and check concurrency ---
     const { data: order, error: orderError } = await adminClient
       .from("orders")
-      .select("id, tenant_id, status, extraction_status, extraction_attempts, dealer_id, recognition_confidence")
+      .select("id, tenant_id, status, extraction_status, extraction_attempts, dealer_id, recognition_confidence, subject")
       .eq("id", orderId)
       .eq("tenant_id", tenantId)
       .single();
@@ -288,6 +288,9 @@ export async function POST(
       }
     }
 
+    // --- OPH-25: Read order subject for extraction context ---
+    const orderSubject = (order.subject as string | null) ?? null;
+
     // --- Call Claude extraction ---
     try {
       const result = await extractOrderData({
@@ -296,6 +299,7 @@ export async function POST(
         dealer: dealerInfo,
         mappingsContext,
         columnMappingContext,
+        emailSubject: orderSubject,
       });
 
       // --- AI-based dealer matching from extracted sender info ---
@@ -461,6 +465,7 @@ export async function POST(
               dealer: resolvedDealerInfo,
               mappingsContext,
               columnMappingContext: resolvedColumnCtx,
+              emailSubject: orderSubject,
             });
 
             // Preserve the AI-matched dealer info in the re-extracted data
@@ -489,6 +494,12 @@ export async function POST(
       // unexpected abbreviations. Also marks truly unknown units with "(unbekannt)".
       finalExtractedData = normalizeUnits(finalExtractedData);
 
+      // --- OPH-25: Persist parsed EML subject if order doesn't already have one ---
+      const emlSubjectUpdate: Record<string, unknown> = {};
+      if (!orderSubject && result.parsedEmailSubject) {
+        emlSubjectUpdate.subject = result.parsedEmailSubject.slice(0, 500);
+      }
+
       // --- Save extracted data ---
       await adminClient
         .from("orders")
@@ -499,6 +510,7 @@ export async function POST(
           status: "extracted",
           has_unmapped_articles: hasUnmappedArticles,
           ...aiDealerUpdate,
+          ...emlSubjectUpdate,
         })
         .eq("id", orderId);
 

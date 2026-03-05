@@ -147,18 +147,24 @@ export async function POST(
       );
     }
 
-    const { filename, fileSize, mimeType, sha256Hash } = parsed.data;
+    const { filename, fileSize, mimeType, sha256Hash, subject } = parsed.data;
 
     const adminClient = createAdminClient();
 
     // 5. Create the order record
+    // OPH-25: Store optional subject if provided by the user
+    const orderInsert: Record<string, unknown> = {
+      tenant_id: tenantId,
+      uploaded_by: user.id,
+      status: "uploaded",
+    };
+    if (subject && subject.trim().length > 0) {
+      orderInsert.subject = subject.trim();
+    }
+
     const { data: order, error: orderError } = await adminClient
       .from("orders")
-      .insert({
-        tenant_id: tenantId,
-        uploaded_by: user.id,
-        status: "uploaded",
-      })
+      .insert(orderInsert)
       .select("id")
       .single();
 

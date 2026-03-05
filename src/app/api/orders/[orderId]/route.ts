@@ -94,6 +94,7 @@ export async function GET(
         reviewed_by,
         last_exported_at,
         has_unmapped_articles,
+        subject,
         dealers ( id, name, street, postal_code, city, country ),
         uploader:user_profiles!orders_uploaded_by_fkey ( first_name, last_name ),
         overrider:user_profiles!orders_dealer_overridden_by_fkey ( first_name, last_name )
@@ -174,6 +175,8 @@ export async function GET(
       extracted_data: (order.extracted_data as CanonicalOrderData) ?? null,
       extraction_error: (order.extraction_error as string) ?? null,
       has_unmapped_articles: (order.has_unmapped_articles as boolean) ?? false,
+      // OPH-25: Email subject
+      subject: (order.subject as string | null) ?? null,
       // OPH-5: Review fields
       reviewed_data: (order.reviewed_data as CanonicalOrderData) ?? null,
       reviewed_at: (order.reviewed_at as string) ?? null,

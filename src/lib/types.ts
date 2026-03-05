@@ -187,6 +187,8 @@ export interface OrderWithDealer extends Order {
   extracted_data: CanonicalOrderData | null;
   extraction_error: string | null;
   has_unmapped_articles: boolean;
+  /** OPH-25: Email subject stored on the order (from Postmark, .eml parsing, or manual input). */
+  subject: string | null;
 }
 
 /** Lightweight order summary for the orders list page. */

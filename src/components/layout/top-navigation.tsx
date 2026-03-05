@@ -33,6 +33,7 @@ const allNavLinks: NavLink[] = [
   { href: "/admin/tenants", label: "Mandanten", adminOnly: true },
   { href: "/admin/erp-configs", label: "ERP-Mapping", adminOnly: true },
   { href: "/admin/email-quarantine", label: "E-Mail-Quarantäne", adminOnly: true },
+  { href: "/admin/settings", label: "Einstellungen", adminOnly: true },
 ];
 
 export function TopNavigation() {

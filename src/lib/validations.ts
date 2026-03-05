@@ -79,6 +79,12 @@ export const uploadPresignSchema = z.object({
     .string()
     .length(64, "Ungültiger SHA-256-Hash.")
     .regex(/^[a-f0-9]+$/, "Ungültiger SHA-256-Hash."),
+  /** OPH-25: Optional email subject to store on the order for extraction context. */
+  subject: z
+    .string()
+    .max(500, "Betreff darf maximal 500 Zeichen lang sein.")
+    .trim()
+    .optional(),
 });
 
 export const uploadConfirmSchema = z.object({
@@ -273,8 +279,9 @@ export type UpdateMappingInput = z.infer<typeof updateMappingSchema>;
 /**
  * Strips XML-style system/instruction tags that could be used for prompt injection.
  * Only platform_admin users write hints, but defense-in-depth is good practice.
+ * Exported so other modules (e.g. claude-extraction) can reuse the same sanitization.
  */
-const sanitizeHints = (text: string): string =>
+export const sanitizeHints = (text: string): string =>
   text
     .replace(/<\/?system[^>]*>/gi, "")
     .replace(/<\/?instructions?[^>]*>/gi, "")

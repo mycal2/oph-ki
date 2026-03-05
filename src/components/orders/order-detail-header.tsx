@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Calendar, FileText, Trash2, User } from "lucide-react";
+import { Calendar, FileText, Mail, Trash2, User } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -161,6 +161,13 @@ export function OrderDetailHeader({
                 </span>
               )}
             </div>
+            {/* OPH-25: Show email subject if present */}
+            {order.subject && (
+              <div className="flex items-start gap-1.5 text-sm text-muted-foreground">
+                <Mail className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                <span className="line-clamp-2">{order.subject}</span>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2 shrink-0 self-start">
             {canDelete && (

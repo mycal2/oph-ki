@@ -45,6 +45,8 @@ async function hashFile(file: File): Promise<string> {
 export function useFileUpload() {
   const [files, setFiles] = useState<UploadFileEntry[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  /** OPH-25: Optional email subject passed along with every upload presign request. */
+  const [subject, setSubject] = useState("");
 
   const updateFileState = useCallback(
     (id: string, update: Partial<UploadFileEntry>) => {
@@ -154,6 +156,8 @@ export function useFileUpload() {
             fileSize: entry.file.size,
             mimeType: entry.file.type || "application/octet-stream",
             sha256Hash: entry.hash,
+            // OPH-25: Include optional email subject for extraction context
+            ...(subject.trim().length > 0 ? { subject: subject.trim() } : {}),
           }),
         });
 
@@ -281,10 +285,11 @@ export function useFileUpload() {
     }
 
     setIsUploading(false);
-  }, [files, isUploading, updateFileState]);
+  }, [files, isUploading, updateFileState, subject]);
 
   const clearFiles = useCallback(() => {
     setFiles([]);
+    setSubject("");
   }, []);
 
   // Upload is complete when all files have been processed (success or error)
@@ -306,6 +311,9 @@ export function useFileUpload() {
     pendingCount,
     successCount,
     errorCount,
+    /** OPH-25: Optional email subject for extraction context. */
+    subject,
+    setSubject,
     addFiles,
     removeFile,
     uploadFiles,
