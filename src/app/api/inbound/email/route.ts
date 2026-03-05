@@ -9,6 +9,7 @@ import {
   filterAttachments,
   sendConfirmationEmail,
   sendQuarantineNotification,
+  sendPlatformErrorNotification,
   postmarkInboundPayloadSchema,
 } from "@/lib/postmark";
 import type { ApiResponse } from "@/lib/types";
@@ -551,6 +552,30 @@ export async function POST(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Unexpected error in inbound email webhook:", error);
+
+    // --- OPH-24: Send platform admin error notification ---
+    const platformApiToken = process.env.POSTMARK_SERVER_API_TOKEN;
+    if (platformApiToken) {
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+      const errorMsg = error instanceof Error ? error.message : "Unbekannter Fehler bei E-Mail-Verarbeitung.";
+
+      try {
+        const adminClientForNotification = createAdminClient();
+        await sendPlatformErrorNotification({
+          serverApiToken: platformApiToken,
+          adminClient: adminClientForNotification,
+          errorType: "E-Mail-Ingestion fehlgeschlagen",
+          tenantName: null,
+          tenantSlug: null,
+          orderId: null,
+          errorMessage: errorMsg,
+          siteUrl,
+        });
+      } catch (notifyErr) {
+        console.error("Failed to send platform error notification:", notifyErr);
+      }
+    }
+
     // Return 200 to prevent Postmark from retrying on internal errors
     // (the email payload has been received, we just failed processing)
     return NextResponse.json({ success: true });

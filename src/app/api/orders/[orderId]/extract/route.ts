@@ -10,7 +10,7 @@ import { extractOrderData } from "@/lib/claude-extraction";
 import { normalizeUnits } from "@/lib/unit-normalization";
 import { getMappingsForDealer, applyMappings, formatMappingsForPrompt } from "@/lib/dealer-mappings";
 import { mimeTypeToFormatType, getColumnMappingProfile, formatColumnMappingForPrompt } from "@/lib/column-mappings";
-import { sendTrialResultEmail, sendTrialFailureEmail, sendOrderResultEmail, sendOrderFailureEmail } from "@/lib/postmark";
+import { sendTrialResultEmail, sendTrialFailureEmail, sendOrderResultEmail, sendOrderFailureEmail, sendPlatformErrorNotification } from "@/lib/postmark";
 import type { AppMetadata, ApiResponse } from "@/lib/types";
 
 /** Max extraction attempts per order before rejecting further retries. */
@@ -751,6 +751,34 @@ export async function POST(
             });
           }
         }
+      }
+
+      // --- OPH-24: Send platform admin error notification ---
+      if (failureApiToken && tenantId) {
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+        after(async () => {
+          try {
+            const { data: tenantInfo } = await adminClient
+              .from("tenants")
+              .select("name, slug")
+              .eq("id", tenantId)
+              .single();
+
+            await sendPlatformErrorNotification({
+              serverApiToken: failureApiToken,
+              adminClient,
+              errorType: "Extraktion fehlgeschlagen",
+              tenantName: (tenantInfo?.name as string) ?? null,
+              tenantSlug: (tenantInfo?.slug as string) ?? null,
+              orderId,
+              errorMessage,
+              siteUrl,
+            });
+          } catch (err) {
+            console.error("Failed to send platform error notification:", err);
+          }
+        });
       }
 
       return NextResponse.json(

@@ -782,3 +782,90 @@ export async function sendConfirmationEmail(params: {
     TextBody: textBody,
   }, "Inbound confirmation email");
 }
+
+/**
+ * OPH-24: Sends a platform error notification to all configured admin notification emails.
+ * Fetches the recipient list from the platform_settings table at call time.
+ * Non-blocking: errors are logged but never thrown.
+ */
+export async function sendPlatformErrorNotification(params: {
+  serverApiToken: string;
+  adminClient: import("@supabase/supabase-js").SupabaseClient;
+  errorType: string;
+  tenantName: string | null;
+  tenantSlug: string | null;
+  orderId: string | null;
+  errorMessage: string;
+  siteUrl: string;
+}): Promise<void> {
+  const { serverApiToken, adminClient, errorType, tenantName, tenantSlug, orderId, errorMessage, siteUrl } = params;
+
+  try {
+    // Fetch notification emails from platform_settings (admin client bypasses RLS)
+    const { data: settings } = await adminClient
+      .from("platform_settings")
+      .select("error_notification_emails")
+      .eq("id", "singleton")
+      .single();
+
+    const emails: string[] = (settings?.error_notification_emails as string[]) ?? [];
+    if (emails.length === 0) return;
+
+    const fromAddress = resolveSenderAddress(siteUrl);
+    if (!fromAddress) return;
+
+    // Truncate error message to 500 chars
+    const truncatedError = errorMessage.length > 500
+      ? errorMessage.slice(0, 500) + "..."
+      : errorMessage;
+
+    const shortOrderId = orderId ? orderId.slice(0, 8) : "–";
+    const tenantDisplay = tenantName || tenantSlug || "Unbekannt";
+    const subject = `[Fehler] ${errorType} — ${tenantDisplay} / Order ${shortOrderId}`;
+    const timestamp = new Date().toISOString();
+    const orderUrl = orderId ? `${siteUrl}/orders/${orderId}` : null;
+
+    const textBody = [
+      `Fehler: ${errorType}`,
+      "",
+      `Mandant: ${tenantDisplay}${tenantSlug ? ` (${tenantSlug})` : ""}`,
+      `Bestellung: ${orderId ?? "–"}`,
+      `Zeitpunkt: ${timestamp}`,
+      "",
+      `Fehlermeldung:`,
+      truncatedError,
+      "",
+      ...(orderUrl ? [`Bestellung ansehen: ${orderUrl}`, ""] : []),
+      "— Order Intelligence Platform",
+    ].join("\n");
+
+    const htmlBody = wrapHtmlEmail(siteUrl, `
+      <h2 style="margin:0 0 8px;font-size:18px;color:#dc2626">${esc(errorType)}</h2>
+      <table style="margin:0 0 20px;font-size:14px;color:#374151;border-collapse:collapse">
+        <tr><td style="padding:4px 16px 4px 0;color:#6b7280;white-space:nowrap">Mandant:</td><td style="padding:4px 0">${esc(tenantDisplay)}${tenantSlug ? ` <span style="color:#9ca3af">(${esc(tenantSlug)})</span>` : ""}</td></tr>
+        <tr><td style="padding:4px 16px 4px 0;color:#6b7280;white-space:nowrap">Bestellung:</td><td style="padding:4px 0">${orderId ? esc(orderId) : "–"}</td></tr>
+        <tr><td style="padding:4px 16px 4px 0;color:#6b7280;white-space:nowrap">Zeitpunkt:</td><td style="padding:4px 0">${esc(timestamp)}</td></tr>
+      </table>
+      <div style="margin:0 0 20px;padding:12px 16px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;font-size:13px;color:#991b1b;font-family:monospace;white-space:pre-wrap;word-break:break-word">${esc(truncatedError)}</div>
+      ${orderUrl ? `<a href="${esc(orderUrl)}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500">Bestellung ansehen</a>` : ""}
+    `);
+
+    // Send to each configured email independently
+    const sendPromises = emails.map((email) =>
+      postmarkFetchWithRetry(serverApiToken, {
+        From: fromAddress,
+        To: email,
+        Subject: subject,
+        HtmlBody: htmlBody,
+        TextBody: textBody,
+      }, `Platform error notification to ${email}`).catch((err) => {
+        console.error(`Failed to send platform error notification to ${email}:`, err);
+      })
+    );
+
+    await Promise.all(sendPromises);
+  } catch (err) {
+    // Non-blocking: never let notification failures affect the main pipeline
+    console.error("Failed to send platform error notification:", err);
+  }
+}

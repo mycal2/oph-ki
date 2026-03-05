@@ -646,3 +646,20 @@ export const dataRetentionSchema = z.object({
 });
 
 export type DataRetentionInput = z.infer<typeof dataRetentionSchema>;
+
+/**
+ * OPH-24: Platform Error Notification Email configuration.
+ */
+
+export const updateNotificationEmailsSchema = z.object({
+  emails: z
+    .array(
+      z
+        .string()
+        .trim()
+        .email("Bitte geben Sie eine gueltige E-Mail-Adresse ein.")
+    )
+    .max(3, "Maximal 3 Benachrichtigungs-E-Mails erlaubt."),
+});
+
+export type UpdateNotificationEmailsInput = z.infer<typeof updateNotificationEmailsSchema>;

@@ -12,6 +12,7 @@ import {
   generateExportContent,
   validateRequiredFields,
 } from "@/lib/erp-transformations";
+import { sendPlatformErrorNotification } from "@/lib/postmark";
 import type {
   AppMetadata,
   ExportFormat,
@@ -303,6 +304,55 @@ export async function GET(
     return new NextResponse(content, { status: 200, headers });
   } catch (error) {
     console.error("Error in GET /api/orders/[orderId]/export:", error);
+
+    // --- OPH-24: Send platform admin error notification ---
+    const platformApiToken = process.env.POSTMARK_SERVER_API_TOKEN;
+    if (platformApiToken) {
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+      const errorMsg = error instanceof Error ? error.message : "Unbekannter Export-Fehler.";
+
+      try {
+        const notifyAdminClient = createAdminClient();
+
+        // Try to resolve tenant info from the orderId in the URL
+        const { orderId: errorOrderId } = await params;
+        let errorTenantName: string | null = null;
+        let errorTenantSlug: string | null = null;
+
+        if (UUID_REGEX.test(errorOrderId)) {
+          const { data: errorOrder } = await notifyAdminClient
+            .from("orders")
+            .select("tenant_id")
+            .eq("id", errorOrderId)
+            .single();
+
+          if (errorOrder?.tenant_id) {
+            const { data: errorTenant } = await notifyAdminClient
+              .from("tenants")
+              .select("name, slug")
+              .eq("id", errorOrder.tenant_id as string)
+              .single();
+
+            errorTenantName = (errorTenant?.name as string) ?? null;
+            errorTenantSlug = (errorTenant?.slug as string) ?? null;
+          }
+        }
+
+        await sendPlatformErrorNotification({
+          serverApiToken: platformApiToken,
+          adminClient: notifyAdminClient,
+          errorType: "ERP-Export fehlgeschlagen",
+          tenantName: errorTenantName,
+          tenantSlug: errorTenantSlug,
+          orderId: UUID_REGEX.test(errorOrderId) ? errorOrderId : null,
+          errorMessage: errorMsg,
+          siteUrl,
+        });
+      } catch (notifyErr) {
+        console.error("Failed to send platform error notification:", notifyErr);
+      }
+    }
+
     return NextResponse.json(
       { success: false, error: "Interner Serverfehler." },
       { status: 500 }
