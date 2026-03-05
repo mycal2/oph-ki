@@ -285,6 +285,11 @@ export const sanitizeHints = (text: string): string =>
   text
     .replace(/<\/?system[^>]*>/gi, "")
     .replace(/<\/?instructions?[^>]*>/gi, "")
+    .replace(/<\/?human[^>]*>/gi, "")
+    .replace(/<\/?assistant[^>]*>/gi, "")
+    .replace(/<\/?tool_use[^>]*>/gi, "")
+    .replace(/<\/?tool_result[^>]*>/gi, "")
+    .replace(/<\/?thinking[^>]*>/gi, "")
     .replace(/<\|[^|]*\|>/g, "");
 
 /** Extraction hints field with sanitization against prompt injection. */

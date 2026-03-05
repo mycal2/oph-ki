@@ -196,9 +196,15 @@ export async function extractOrderData(
 
   // OPH-25: Add email subject context block if available.
   // Placed after dealer context, before file content blocks.
-  if (input.emailSubject && input.emailSubject.trim().length > 0) {
-    let subjectText = sanitizeHints(input.emailSubject.trim());
-    if (subjectText.trim().length > 0) {
+  // BUG-1 fix: Skip when files include .eml — the EML parser already includes Subject in its block.
+  const hasEmlFile = input.files.some((f) => f.originalFilename.toLowerCase().endsWith(".eml"));
+  // BUG-3 fix: Treat subjects containing only whitespace or punctuation as empty.
+  const hasSubstantiveSubject = input.emailSubject &&
+    input.emailSubject.trim().length > 0 &&
+    /[a-zA-Z0-9\u00C0-\u024F]/.test(input.emailSubject);
+  if (!hasEmlFile && hasSubstantiveSubject) {
+    let subjectText = sanitizeHints(input.emailSubject!.trim());
+    if (subjectText.trim().length > 0 && /[a-zA-Z0-9\u00C0-\u024F]/.test(subjectText)) {
       // Truncate to 500 characters
       if (subjectText.length > 500) {
         subjectText = subjectText.slice(0, 500) + "[...]";
@@ -644,6 +650,8 @@ async function extractChunkedExcel(params: {
     extractedData,
     inputTokens: totalInputTokens,
     outputTokens: totalOutputTokens,
+    // BUG-2 fix: Chunked path is Excel-only, so no EML subject, but return field for interface consistency.
+    parsedEmailSubject: null,
   };
 }
 
