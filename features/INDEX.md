@@ -37,7 +37,8 @@
 | OPH-23 | Chunked Extraction for Large Excel Files | Deployed | [OPH-23-chunked-extraction-large-excel.md](OPH-23-chunked-extraction-large-excel.md) | 2026-03-05 |
 | OPH-24 | Platform Error Notification Emails | Deployed | [OPH-24-platform-error-notifications.md](OPH-24-platform-error-notifications.md) | 2026-03-05 |
 | OPH-25 | E-Mail-Betreff als Extraktionsquelle | Deployed | [OPH-25-email-subject-extraction.md](OPH-25-email-subject-extraction.md) | 2026-03-05 |
+| OPH-26 | Order File Download | Deployed | [OPH-26-order-file-download.md](OPH-26-order-file-download.md) | 2026-03-05 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-26
+## Next Available ID: OPH-27
