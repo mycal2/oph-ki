@@ -33,7 +33,8 @@
 | OPH-19 | Customer Number (Kundennummer) Recognition & Editing | Deployed | [OPH-19-customer-number-recognition.md](OPH-19-customer-number-recognition.md) | 2026-03-03 |
 | OPH-20 | Sprach-Erkennung & Mengeneinheiten-Normalisierung | Deployed | [OPH-20-language-detection-unit-normalization.md](OPH-20-language-detection-unit-normalization.md) | 2026-03-03 |
 | OPH-21 | E-Mail-Text als Extraktionsquelle | Deployed | [OPH-21-email-body-extraction.md](OPH-21-email-body-extraction.md) | 2026-03-04 |
+| OPH-22 | Kundennummer immer in Extrahierten Bestelldaten anzeigen | Planned | [OPH-22-kundennummer-always-visible.md](OPH-22-kundennummer-always-visible.md) | 2026-03-05 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-22
+## Next Available ID: OPH-23

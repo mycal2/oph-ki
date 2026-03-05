@@ -346,12 +346,10 @@ export function ExtractionResultPreview({
                       {order.sender.phone}
                     </span>
                   )}
-                  {order.sender.customer_number && (
-                    <span className="flex items-center gap-1">
-                      <Hash className="h-3 w-3" />
-                      Kd.-Nr.: {order.sender.customer_number}
-                    </span>
-                  )}
+                  <span className="flex items-center gap-1">
+                    <Hash className="h-3 w-3" />
+                    Kd.-Nr.: {order.sender.customer_number?.trim() || "\u2014"}
+                  </span>
                 </div>
               </div>
             </div>
