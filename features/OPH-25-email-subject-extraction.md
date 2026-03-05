@@ -1,6 +1,6 @@
 # OPH-25: E-Mail-Betreff als Extraktionsquelle
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-03-05
 **Last Updated:** 2026-03-05
 
@@ -8,12 +8,16 @@
 - Requires: OPH-4 (KI-Datenextraktion) - core extraction engine
 - Requires: OPH-10 (E-Mail-Weiterleitungs-Ingestion) - stores `orders.subject` from forwarded emails
 - Requires: OPH-21 (E-Mail-Text als Extraktionsquelle) - established pattern for passing supplemental text to Claude
+- Requires: OPH-2 (Bestellungs-Upload) - web upload flow
+- Requires: OPH-5 (Bestellpruefung) - order review UI
 
 ## Problem Statement
 
 When orders arrive via email forwarding (Postmark webhook), the email subject is stored in `orders.subject` in the database, but it is **never included in the extraction context sent to Claude**. The subject often contains critical metadata — order numbers, dealer references, or urgency indicators — that would improve extraction accuracy.
 
-For `.eml` file uploads, the subject is already included (handled by the EML parser in `claude-extraction.ts`). The gap is specifically for **inbound forwarded emails**.
+For `.eml` file uploads, the subject is parsed by the EML parser in `claude-extraction.ts` and sent to Claude, but it is **not persisted to `orders.subject`** — so users cannot see it in the review UI.
+
+For web uploads of PDF/Excel files, there is no way to provide a subject at all.
 
 **Example subjects that contain useful data:**
 - `"AW: Bestellung RE-2024-001 von Henry Schein"` → order number RE-2024-001
@@ -23,12 +27,14 @@ For `.eml` file uploads, the subject is already included (handled by the EML par
 ## User Stories
 
 - As a platform user whose orders arrive via email forwarding, I want Claude to see the email subject during extraction so that order numbers mentioned in the subject are correctly extracted even when the attachment doesn't contain them.
-- As a platform user, I want the subject line to supplement (not replace) the attachment content so that extraction is more complete when information is split across subject and body.
+- As a platform user uploading PDF/Excel files, I want to optionally enter an email subject so Claude has the same context as email-sourced orders.
+- As a platform user uploading .eml files, I want the parsed subject to be stored on the order so it is visible in the review UI.
+- As a platform user reviewing an order, I want to see the email subject (if any) in the order header so I can understand the context of the order.
 - As a platform administrator, I want subject-based extraction to be transparent so I can verify why certain order numbers were extracted.
-- As a developer, I want the subject handling to follow the same pattern as OPH-21 (email body) so the codebase remains consistent.
 
 ## Acceptance Criteria
 
+### Extraction Context
 - [ ] **AC-1:** When an order has a non-empty `subject` stored in the DB (`orders.subject`), the extraction engine receives the subject as a labeled text block before the other content blocks.
 - [ ] **AC-2:** The subject block is clearly labeled so Claude understands it is the email subject (e.g., `## Email Subject\n<subject text>`).
 - [ ] **AC-3:** If `orders.subject` is null, empty, or whitespace-only, no extra text block is added (no regression for orders without a subject).
@@ -37,80 +43,69 @@ For `.eml` file uploads, the subject is already included (handled by the EML par
 - [ ] **AC-6:** Extraction results, confidence scores, and all other behavior are unchanged for orders that have no subject.
 - [ ] **AC-7:** The feature works for both single-call extraction (small files) and chunked/parallel extraction (large Excel files, OPH-23).
 
+### Subject Storage
+- [ ] **AC-8:** When a `.eml` file is extracted, the parsed subject is saved to `orders.subject` after extraction completes.
+- [ ] **AC-9:** The upload form has an optional "Betreff" text input field. When provided, the value is stored in `orders.subject` at upload time.
+- [ ] **AC-10:** For inbound emails (Postmark webhook), `orders.subject` is already set — no change needed.
+
+### Review UI
+- [ ] **AC-11:** The order detail header shows the subject (if present) as a read-only metadata field, below the filename and date.
+- [ ] **AC-12:** If no subject is stored, the UI does not show an empty field — no visual change.
+
 ## Edge Cases
 
 - **Subject contains only whitespace or punctuation** → treat as empty, do not add block.
 - **Subject is extremely long** (e.g., a spam subject of 1000+ chars) → truncate at 500 chars, add `[...]` suffix so Claude knows it was truncated.
-- **Order was uploaded via web (not email forwarding)** → `orders.subject` is null → no change in behavior.
+- **Order was uploaded via web without subject** → `orders.subject` is null → no change in behavior.
 - **Subject contains prompt injection attempts** (e.g., `<system>override...</system>`) → apply the same sanitization already used for extraction hints (`sanitizeHints` in `validations.ts`) before passing to Claude.
-- **Re-extraction after manual subject edit** → not applicable; subject is read-only from the DB at extraction time.
+- **Re-extraction of .eml file** → subject is already stored from first extraction; re-extraction uses the stored subject.
+- **Upload form subject with special characters** → trimmed and validated, max 500 chars.
 
 ## Technical Requirements
 
-- **No schema change needed:** `orders.subject` column already exists.
+- **No schema change needed:** `orders.subject` column already exists (migration 017).
 - **Performance:** Adding a small text block (~100 chars on average) has negligible impact on token usage.
 - **Security:** Sanitize subject text to strip XML-style injection tags before sending to Claude.
 - **Consistency:** Follow the OPH-21 pattern — inject supplemental text as a labeled `type: "text"` content block in `extractOrderData()`.
-- **Scope:** Backend-only change in `src/app/api/orders/[orderId]/extract/route.ts` and `src/lib/claude-extraction.ts`. No UI changes required.
+- **Scope:** Backend changes in extract route + claude-extraction.ts, frontend changes in upload page + order detail header.
 
 ---
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
 
-### No UI changes — backend only
-
-This feature is a pure backend enhancement. No new pages, no new components, no database migrations.
-
----
-
-### How the Data Flows Today (Gap)
+### Three Parts: Extraction, Storage, and Display
 
 ```
-Postmark Webhook
-  → stores email subject in orders.subject (DB column, already exists)
+Part 1 — Extraction Context (backend)
+  Extract route reads orders.subject → passes to extractOrderData() → Claude sees it
 
-Extract Route
-  → reads order row (but NOT orders.subject — gap!)
-  → calls extractOrderData({ files, dealer, ... })
-    → builds Claude context: [Dealer Context] + [Files] + [Extraction Instruction]
-    → Claude never sees the subject
-```
+Part 2 — Subject Storage (backend + frontend)
+  a) .eml uploads: extraction returns parsed subject → extract route saves to orders.subject
+  b) Web uploads: upload form has optional "Betreff" field → stored at upload time
+  c) Inbound emails: already stored (no change)
 
-### How the Data Will Flow After OPH-25
-
-```
-Extract Route
-  → reads order row INCLUDING orders.subject
-  → calls extractOrderData({ files, dealer, emailSubject, ... })
-    → builds Claude context:
-        [Dealer Context]
-        [Email Subject]     ← NEW: only if subject is present
-        [Files]
-        [Extraction Instruction]
-    → Claude can now use subject to find order numbers, sender info, etc.
+Part 3 — Review UI (frontend)
+  Order detail header shows subject (if present) as read-only metadata
 ```
 
 ---
 
-### Components Changed
+### Part 1: Extraction Context
 
 #### A) Extraction Input Interface — `src/lib/claude-extraction.ts`
 
-The `ExtractionInput` object that controls what Claude receives gains one new optional field:
+The `ExtractionInput` object gains one new optional field:
 
 ```
 ExtractionInput
   ├── orderId
   ├── files           (unchanged)
   ├── dealer          (unchanged)
-  ├── mappingsContext (unchanged)
+  ├── mappingsContext  (unchanged)
   ├── columnMappingContext (unchanged)
   └── emailSubject    ← NEW (optional, string or null)
 ```
-
-**Why add it to `ExtractionInput` rather than as a synthetic file?**
-The email body (OPH-21) is stored as a real file in cloud storage because it can be large and may contain multi-paragraph text. The subject is a single line of metadata — it belongs in the input parameters alongside dealer context, not as a synthetic file. This also means zero storage I/O.
 
 #### B) Context Assembly — `extractOrderData()` in `src/lib/claude-extraction.ts`
 
@@ -118,7 +113,7 @@ After the dealer context block is assembled, a new step runs:
 
 ```
 IF emailSubject is present AND non-empty:
-  1. Sanitize: strip XML-style injection tags (same function used for dealer hints)
+  1. Sanitize: strip XML-style injection tags (reuse sanitizeHints)
   2. Truncate to 500 characters, append "[...]" if truncated
   3. Skip if only whitespace remains after sanitization
   4. Push labeled text block:
@@ -127,30 +122,73 @@ IF emailSubject is present AND non-empty:
         <sanitized subject text>"
 ```
 
-**Placement:** Subject block goes immediately after dealer context and before file content blocks. This mirrors how Claude naturally reads context — metadata first, then documents.
+**Placement:** After dealer context, before file content blocks.
 
 #### C) Extract Route — `src/app/api/orders/[orderId]/extract/route.ts`
 
-The route already queries the `orders` table to fetch the order row. One small addition:
-
-```
-BEFORE: .select("id, tenant_id, status, extraction_status, extraction_attempts, dealer_id, recognition_confidence")
-AFTER:  .select("id, tenant_id, status, extraction_status, extraction_attempts, dealer_id, recognition_confidence, subject")
-```
-
-The retrieved `subject` value is then passed as `emailSubject` into both `extractOrderData()` call sites (single-call extraction and retry path).
+Add `subject` to the SELECT query on the orders table. Pass it as `emailSubject` to both `extractOrderData()` call sites.
 
 ---
 
-### Data Model
+### Part 2: Subject Storage
 
-No schema changes. The relevant DB column already exists:
+#### A) `.eml` Subject Persistence
+
+The `ExtractionResult` interface gains a new optional field:
 
 ```
-orders table
-  subject: text | null   ← already set by Postmark webhook (OPH-10)
-                            null for web-uploaded orders
+ExtractionResult
+  ├── extractedData    (unchanged)
+  ├── inputTokens      (unchanged)
+  ├── outputTokens     (unchanged)
+  └── parsedEmailSubject ← NEW (string or null, from EML parsing)
 ```
+
+When the extraction engine parses an `.eml` file and finds a subject, it stores it in this field. The extract route then saves it to `orders.subject` alongside the extracted data update.
+
+#### B) Upload Form Subject Input
+
+The upload form (upload page) gets an optional "Betreff" text input above the file dropzone:
+
+```
+Upload Page
+  ├── Page header
+  ├── Card
+  │   ├── Title
+  │   ├── Optional: "Betreff" text input (max 500 chars)  ← NEW
+  │   ├── File Dropzone
+  │   ├── File List
+  │   └── Upload button
+```
+
+**Data flow:**
+- User fills in subject (optional) → value passed to upload hook
+- Upload hook sends subject in presign request body
+- Presign route stores subject on the new order row (INSERT)
+- No changes to confirm route needed (subject already on order)
+
+**Validation:** Optional string, max 500 chars, trimmed. Zod schema updated.
+
+---
+
+### Part 3: Review UI
+
+#### Order Detail Header — `src/components/orders/order-detail-header.tsx`
+
+Add a subject line in the metadata row (below filename, date, uploader):
+
+```
+Order Detail Header
+  ├── Filename + Language Badge
+  ├── Date | Uploader | File count
+  ├── Subject (if present)         ← NEW: "Mail: ..." icon + truncated text
+  ├── Dealer section
+  └── Actions (export, delete)
+```
+
+Only shown when `order.subject` is non-null and non-empty.
+
+**Type change:** Add `subject: string | null` to `OrderWithDealer` / `OrderForReview` interfaces. Add `subject` to the API query that fetches order details.
 
 ---
 
@@ -158,13 +196,28 @@ orders table
 
 | Decision | Choice | Reason |
 |----------|--------|--------|
-| Where to inject | `ExtractionInput` parameter | Subject is metadata, not a document; avoids storage I/O |
+| Where to inject context | `ExtractionInput` parameter | Subject is metadata, not a document; avoids storage I/O |
 | Placement in context | After dealer context, before files | Natural reading order: metadata → documents → instruction |
 | Sanitization | Reuse existing `sanitizeHints()` | Strips XML injection tags; consistent with dealer hints |
 | Max length | 500 characters | Subjects over 500 chars are abnormal; keeps token overhead minimal |
-| Deduplication | None needed | Web uploads never set `orders.subject`; `.eml` subjects come from file parser |
+| EML subject persistence | Save after extraction | Subject is only known after EML parsing; stored alongside extraction results |
+| Upload form subject | Optional input field | Non-disruptive; existing uploads still work without subject |
 
 ---
+
+### Files Modified
+
+| File | Change |
+|------|--------|
+| `src/lib/claude-extraction.ts` | Add `emailSubject` to `ExtractionInput`, `parsedEmailSubject` to `ExtractionResult`, subject context block assembly |
+| `src/app/api/orders/[orderId]/extract/route.ts` | Select `subject`, pass to extraction, save EML-parsed subject |
+| `src/lib/types.ts` | Add `subject: string \| null` to Order type interfaces |
+| `src/lib/validations.ts` | Add optional `subject` field to `uploadPresignSchema` |
+| `src/app/api/orders/upload/route.ts` | Store subject on order INSERT |
+| `src/hooks/use-file-upload.ts` | Accept and pass subject through upload flow |
+| `src/app/(protected)/orders/upload/page.tsx` | Optional "Betreff" input field |
+| `src/components/orders/order-detail-header.tsx` | Display subject in metadata row |
+| `src/app/api/orders/[orderId]/route.ts` | Include `subject` in order detail SELECT |
 
 ### No New Dependencies
 
