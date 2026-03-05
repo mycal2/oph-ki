@@ -1,6 +1,6 @@
 # OPH-27: Order File Preview (Click-to-Open)
 
-## Status: Planned
+## Status: Deployed
 **Created:** 2026-03-05
 **Last Updated:** 2026-03-05
 
