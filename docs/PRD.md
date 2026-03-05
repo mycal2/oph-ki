@@ -41,7 +41,8 @@ Eine mandantenfähige SaaS-Plattform ("Order Intelligence Platform"), die Dental
 | P1 | OPH-19: Customer Number (Kundennummer) Recognition & Editing | Deployed |
 | P1 | OPH-20: Sprach-Erkennung & Mengeneinheiten-Normalisierung | Deployed |
 | P1 | OPH-21: E-Mail-Text als Extraktionsquelle | Deployed |
-| P1 | OPH-22: Kundennummer immer in Extrahierten Bestelldaten anzeigen | Planned |
+| P1 | OPH-22: Kundennummer immer in Extrahierten Bestelldaten anzeigen | Deployed |
+| P1 | OPH-23: Chunked Extraction for Large Excel Files | Deployed |
 
 ## Success Metrics
 - Bearbeitungszeit pro Bestellung: von ~15 Min. manuell auf < 3 Min. mit System
