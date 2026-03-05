@@ -410,6 +410,11 @@ export function ExtractionResultPreview({
               Spalten-Mapping angewandt
             </Badge>
           )}
+          {meta.chunks_used && meta.chunks_used > 1 && (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+              {meta.chunks_used} Chunks
+            </Badge>
+          )}
           <span>
             Tokens: {meta.input_tokens.toLocaleString("de-DE")} ein / {meta.output_tokens.toLocaleString("de-DE")} aus
           </span>

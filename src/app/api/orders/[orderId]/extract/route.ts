@@ -1,3 +1,6 @@
+/** Allow up to 5 minutes for multi-chunk extractions (large Excel files). */
+export const maxDuration = 300;
+
 import { after, NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { timingSafeEqual } from "node:crypto";

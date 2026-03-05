@@ -8,6 +8,10 @@ const SCHEMA_VERSION = "1.0.0";
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 2000;
+const MAX_OUTPUT_TOKENS = 16384;
+
+/** Excel files with more data rows than this are extracted in chunks. */
+const CHUNK_ROW_THRESHOLD = 200;
 
 const DEFAULT_MODEL = "claude-sonnet-4-6";
 
@@ -228,13 +232,41 @@ export async function extractOrderData(
       case "xlsx":
       case "xls": {
         const workbook = XLSX.read(file.content, { type: "buffer" });
-        let excelText = `## Excel Document: ${file.originalFilename}\n`;
+
+        // Combine all sheets into one CSV block
+        let allCsv = "";
         for (const sheetName of workbook.SheetNames) {
           const sheet = workbook.Sheets[sheetName];
           if (!sheet) continue;
           const csv = XLSX.utils.sheet_to_csv(sheet);
-          excelText += `\n### Sheet: ${sheetName}\n${csv}\n`;
+          if (allCsv) allCsv += "\n";
+          allCsv += csv;
         }
+
+        // Count data rows (all non-empty rows minus header)
+        const allRows = allCsv.split("\n").filter((r) => r.trim().length > 0);
+        const dataRowCount = Math.max(0, allRows.length - 1);
+
+        if (dataRowCount > CHUNK_ROW_THRESHOLD) {
+          // Large file → chunked extraction
+          console.log(
+            `Excel file "${file.originalFilename}" has ${dataRowCount} data rows (> ${CHUNK_ROW_THRESHOLD}). Using chunked extraction.`
+          );
+          const excelChunks = splitCsvIntoChunks(allCsv, CHUNK_ROW_THRESHOLD);
+          return extractChunkedExcel({
+            anthropic,
+            model,
+            systemPrompt: SYSTEM_PROMPT,
+            baseContentBlocks: [...contentBlocks], // snapshot of current blocks (dealer context, other files)
+            excelChunks,
+            filename: file.originalFilename,
+            input,
+            sourceFiles,
+          });
+        }
+
+        // Small file → add as text block, proceed with single-call extraction
+        const excelText = `## Excel Document: ${file.originalFilename}\n${allCsv}`;
         contentBlocks.push({ type: "text", text: excelText });
         break;
       }
@@ -289,7 +321,7 @@ export async function extractOrderData(
     try {
       const message = await anthropic.messages.create({
         model,
-        max_tokens: 8192,
+        max_tokens: MAX_OUTPUT_TOKENS,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: contentBlocks }],
       });
@@ -376,6 +408,194 @@ export async function extractOrderData(
   }
 
   throw lastError ?? new Error("Extraction failed after retries.");
+}
+
+/**
+ * Splits CSV text into chunks of `chunkSize` data rows.
+ * Returns the header row separately so it can be prepended to every chunk.
+ */
+function splitCsvIntoChunks(
+  csvText: string,
+  chunkSize: number
+): { headerRow: string; chunks: string[][] } {
+  const rows = csvText.split("\n");
+  const headerRow = rows[0] ?? "";
+  // Filter out empty trailing rows
+  const dataRows = rows.slice(1).filter((r) => r.trim().length > 0);
+
+  const chunks: string[][] = [];
+  for (let i = 0; i < dataRows.length; i += chunkSize) {
+    chunks.push(dataRows.slice(i, i + chunkSize));
+  }
+  return { headerRow, chunks };
+}
+
+/**
+ * Extracts a large Excel order by splitting it into chunks and calling Claude
+ * for each chunk separately, then merging the results.
+ */
+async function extractChunkedExcel(params: {
+  anthropic: Anthropic;
+  model: string;
+  systemPrompt: string;
+  /** Content blocks that are NOT Excel data (dealer context, email body, etc.) */
+  baseContentBlocks: ContentBlockParam[];
+  /** Excel CSV data split into chunks: { headerRow, chunks } */
+  excelChunks: { headerRow: string; chunks: string[][] };
+  filename: string;
+  input: ExtractionInput;
+  sourceFiles: string[];
+}): Promise<ExtractionResult> {
+  const { anthropic, model, systemPrompt, baseContentBlocks, excelChunks, filename, input, sourceFiles } = params;
+  const { headerRow, chunks } = excelChunks;
+
+  let mergedLineItems: CanonicalOrderData["order"]["line_items"] = [];
+  let headerData: CanonicalOrderData | null = null;
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
+  let minConfidence = 1;
+
+  for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
+    const chunkCsv = [headerRow, ...chunks[chunkIdx]].join("\n");
+    const chunkLabel = `## Excel Document: ${filename} (Chunk ${chunkIdx + 1}/${chunks.length})\n`;
+
+    const chunkContentBlocks: ContentBlockParam[] = [
+      ...baseContentBlocks,
+      { type: "text", text: `${chunkLabel}${chunkCsv}` },
+      {
+        type: "text",
+        text: `Extract the order data from the document(s) above. This is chunk ${chunkIdx + 1} of ${chunks.length} from a large Excel file. Return ONLY valid JSON.`,
+      },
+    ];
+
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const message = await anthropic.messages.create({
+          model,
+          max_tokens: MAX_OUTPUT_TOKENS,
+          system: systemPrompt,
+          messages: [{ role: "user", content: chunkContentBlocks }],
+        });
+
+        const responseText = message.content
+          .filter((block): block is Anthropic.TextBlock => block.type === "text")
+          .map((block) => block.text)
+          .join("");
+
+        const jsonStr = extractJson(responseText);
+        const parsed = JSON.parse(jsonStr) as {
+          document_language?: string | null;
+          order: CanonicalOrderData["order"];
+          extraction_metadata: { confidence_score: number };
+        };
+
+        totalInputTokens += message.usage.input_tokens;
+        totalOutputTokens += message.usage.output_tokens;
+        minConfidence = Math.min(minConfidence, parsed.extraction_metadata?.confidence_score ?? 0);
+
+        // First chunk: capture header info (order number, date, sender, etc.)
+        if (chunkIdx === 0) {
+          const positionOffset = 0;
+          headerData = {
+            document_language: parsed.document_language?.toUpperCase() ?? null,
+            order: {
+              order_number: parsed.order.order_number ?? null,
+              order_date: parsed.order.order_date ?? null,
+              dealer: {
+                id: input.dealer?.id ?? null,
+                name: input.dealer?.name ?? parsed.order.dealer?.name ?? null,
+              },
+              sender: parsed.order.sender ?? null,
+              delivery_address: parsed.order.delivery_address ?? null,
+              billing_address: parsed.order.billing_address ?? null,
+              line_items: (parsed.order.line_items ?? []).map((item, idx) => ({
+                position: item.position ?? idx + 1 + positionOffset,
+                article_number: item.article_number ?? null,
+                description: item.description ?? "",
+                quantity: item.quantity ?? 0,
+                unit: item.unit ?? null,
+                unit_price: item.unit_price ?? null,
+                total_price: item.total_price ?? null,
+                currency: item.currency ?? null,
+              })),
+              total_amount: parsed.order.total_amount ?? null,
+              currency: parsed.order.currency ?? null,
+              notes: parsed.order.notes ?? null,
+            },
+            extraction_metadata: {
+              schema_version: SCHEMA_VERSION,
+              confidence_score: 0, // will be set later
+              model,
+              extracted_at: new Date().toISOString(),
+              source_files: sourceFiles,
+              dealer_hints_applied: !!input.dealer?.extractionHints,
+              column_mapping_applied: !!input.columnMappingContext,
+              input_tokens: 0, // will be set later
+              output_tokens: 0, // will be set later
+              chunks_used: chunks.length,
+            },
+          };
+          mergedLineItems = headerData.order.line_items;
+        } else {
+          // Subsequent chunks: collect line items only, renumber positions
+          const positionOffset = mergedLineItems.length;
+          const chunkItems = (parsed.order.line_items ?? []).map((item, idx) => ({
+            position: positionOffset + idx + 1,
+            article_number: item.article_number ?? null,
+            description: item.description ?? "",
+            quantity: item.quantity ?? 0,
+            unit: item.unit ?? null,
+            unit_price: item.unit_price ?? null,
+            total_price: item.total_price ?? null,
+            currency: item.currency ?? null,
+          }));
+          mergedLineItems = [...mergedLineItems, ...chunkItems];
+        }
+
+        lastError = null;
+        break; // success — exit retry loop
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+
+        const isRetryable =
+          lastError.message.includes("429") ||
+          lastError.message.includes("529") ||
+          lastError.message.includes("overloaded") ||
+          lastError.message.includes("timeout") ||
+          lastError.message.includes("500") ||
+          lastError.message.includes("502") ||
+          lastError.message.includes("503");
+
+        if (!isRetryable || attempt === MAX_RETRIES) {
+          break;
+        }
+
+        await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt));
+      }
+    }
+
+    if (lastError) {
+      throw lastError;
+    }
+  }
+
+  if (!headerData) {
+    throw new Error("Chunked extraction produced no results.");
+  }
+
+  // Merge final result
+  headerData.order.line_items = mergedLineItems;
+  headerData.extraction_metadata.confidence_score = minConfidence;
+  headerData.extraction_metadata.input_tokens = totalInputTokens;
+  headerData.extraction_metadata.output_tokens = totalOutputTokens;
+
+  return {
+    extractedData: headerData,
+    inputTokens: totalInputTokens,
+    outputTokens: totalOutputTokens,
+  };
 }
 
 /**

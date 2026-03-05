@@ -276,6 +276,8 @@ export interface ExtractionMetadata {
   column_mapping_applied: boolean;
   input_tokens: number;
   output_tokens: number;
+  /** OPH-23: Number of chunks used for extraction (>1 = chunked large Excel). */
+  chunks_used?: number;
 }
 
 export interface CanonicalOrderData {
