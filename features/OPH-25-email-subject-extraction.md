@@ -63,7 +63,7 @@ For web uploads of PDF/Excel files, there is no way to provide a subject at all.
 
 ## Technical Requirements
 
-- **No schema change needed:** `orders.subject` column already exists (migration 017).
+- **Schema change:** Added `orders.subject` column (migration 023).
 - **Performance:** Adding a small text block (~100 chars on average) has negligible impact on token usage.
 - **Security:** Sanitize subject text to strip XML-style injection tags before sending to Claude.
 - **Consistency:** Follow the OPH-21 pattern — inject supplemental text as a labeled `type: "text"` content block in `extractOrderData()`.
