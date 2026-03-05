@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, AlertCircle, AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { OrderDetailHeader } from "./order-detail-header";
 import { OrderFileList } from "./order-file-list";
 import { ExtractionResultPreview } from "./extraction-result-preview";
 import { EmailBodyPanel } from "./email-body-panel";
+import type { EmailBodyPanelHandle } from "./email-body-panel";
 import { useOrderPolling } from "@/hooks/use-order-polling";
 import { useCurrentUserRole } from "@/hooks/use-current-user-role";
 import type { OrderForReview, OrderWithDealer, DealerOverrideResponse, ApiResponse } from "@/lib/types";
@@ -56,6 +57,12 @@ export function OrderDetailContent({ orderId }: OrderDetailContentProps) {
   }, [fetchOrder]);
 
   const [isRetrying, setIsRetrying] = useState(false);
+
+  // OPH-27: Ref for EmailBodyPanel to support scroll-to from file list click
+  const emailBodyPanelRef = useRef<EmailBodyPanelHandle>(null);
+  const handleEmailBodyClick = useCallback(() => {
+    emailBodyPanelRef.current?.expandAndScrollTo();
+  }, []);
 
   const handleDealerChanged = useCallback(
     (result: DealerOverrideResponse) => {
@@ -275,12 +282,23 @@ export function OrderDetailContent({ orderId }: OrderDetailContentProps) {
       />
 
       {/* OPH-21: Original email body text (collapsible, only when email_body.txt exists) */}
+      {/* OPH-27: Rendered before file list so email_body.txt click can scroll here */}
       {order.files.some((f) => f.original_filename === "email_body.txt") && (
-        <EmailBodyPanel orderId={orderId} />
+        <EmailBodyPanel orderId={orderId} ref={emailBodyPanelRef} />
       )}
 
-      {/* File list */}
-      {order.files.length > 0 && <OrderFileList files={order.files} orderId={orderId} />}
+      {/* File list — OPH-27: click-to-preview for PDF, open-in-new-tab for others */}
+      {order.files.length > 0 && (
+        <OrderFileList
+          files={order.files}
+          orderId={orderId}
+          onEmailBodyClick={
+            order.files.some((f) => f.original_filename === "email_body.txt")
+              ? handleEmailBodyClick
+              : undefined
+          }
+        />
+      )}
     </div>
   );
 }
