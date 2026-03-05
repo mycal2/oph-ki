@@ -1,6 +1,6 @@
 # OPH-25: E-Mail-Betreff als Extraktionsquelle
 
-## Status: In Progress
+## Status: Deployed
 **Created:** 2026-03-05
 **Last Updated:** 2026-03-05
 
@@ -226,3 +226,9 @@ _To be added by /qa_
 
 ## Deployment
 _To be added by /deploy_
+
+## Deployment
+
+**Deployed:** 2026-03-05
+**Commit:** 947ff71
+**Branch:** main

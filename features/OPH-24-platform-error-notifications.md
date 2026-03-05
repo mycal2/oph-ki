@@ -1,6 +1,6 @@
 # OPH-24: Platform Error Notification Emails
 
-## Status: In Review
+## Status: Deployed
 **Created:** 2026-03-05
 **Last Updated:** 2026-03-05
 
@@ -433,3 +433,9 @@ Verified against `features/INDEX.md` -- no regressions expected:
 
 ## Deployment
 _To be added by /deploy_
+
+## Deployment
+
+**Deployed:** 2026-03-05
+**Commit:** 947ff71
+**Branch:** main
