@@ -47,7 +47,8 @@
       "Bash(git add features/OPH-25-email-subject-extraction.md)",
       "Skill(requirements)",
       "Skill(requirements:*)",
-      "mcp__supabase__list_projects"
+      "mcp__supabase__list_projects",
+      "Bash(git status -u --short)"
     ],
     "additionalDirectories": [
       "/Users/michaelmollath/projects/ai-coding-starter-kit/src/app/api/orders/[orderId]",
