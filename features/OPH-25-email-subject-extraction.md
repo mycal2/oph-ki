@@ -57,7 +57,116 @@ For `.eml` file uploads, the subject is already included (handled by the EML par
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### No UI changes — backend only
+
+This feature is a pure backend enhancement. No new pages, no new components, no database migrations.
+
+---
+
+### How the Data Flows Today (Gap)
+
+```
+Postmark Webhook
+  → stores email subject in orders.subject (DB column, already exists)
+
+Extract Route
+  → reads order row (but NOT orders.subject — gap!)
+  → calls extractOrderData({ files, dealer, ... })
+    → builds Claude context: [Dealer Context] + [Files] + [Extraction Instruction]
+    → Claude never sees the subject
+```
+
+### How the Data Will Flow After OPH-25
+
+```
+Extract Route
+  → reads order row INCLUDING orders.subject
+  → calls extractOrderData({ files, dealer, emailSubject, ... })
+    → builds Claude context:
+        [Dealer Context]
+        [Email Subject]     ← NEW: only if subject is present
+        [Files]
+        [Extraction Instruction]
+    → Claude can now use subject to find order numbers, sender info, etc.
+```
+
+---
+
+### Components Changed
+
+#### A) Extraction Input Interface — `src/lib/claude-extraction.ts`
+
+The `ExtractionInput` object that controls what Claude receives gains one new optional field:
+
+```
+ExtractionInput
+  ├── orderId
+  ├── files           (unchanged)
+  ├── dealer          (unchanged)
+  ├── mappingsContext (unchanged)
+  ├── columnMappingContext (unchanged)
+  └── emailSubject    ← NEW (optional, string or null)
+```
+
+**Why add it to `ExtractionInput` rather than as a synthetic file?**
+The email body (OPH-21) is stored as a real file in cloud storage because it can be large and may contain multi-paragraph text. The subject is a single line of metadata — it belongs in the input parameters alongside dealer context, not as a synthetic file. This also means zero storage I/O.
+
+#### B) Context Assembly — `extractOrderData()` in `src/lib/claude-extraction.ts`
+
+After the dealer context block is assembled, a new step runs:
+
+```
+IF emailSubject is present AND non-empty:
+  1. Sanitize: strip XML-style injection tags (same function used for dealer hints)
+  2. Truncate to 500 characters, append "[...]" if truncated
+  3. Skip if only whitespace remains after sanitization
+  4. Push labeled text block:
+       "## Email Subject (from forwarded email)
+        Use this to help identify the order number or sender if not found in the attachment.
+        <sanitized subject text>"
+```
+
+**Placement:** Subject block goes immediately after dealer context and before file content blocks. This mirrors how Claude naturally reads context — metadata first, then documents.
+
+#### C) Extract Route — `src/app/api/orders/[orderId]/extract/route.ts`
+
+The route already queries the `orders` table to fetch the order row. One small addition:
+
+```
+BEFORE: .select("id, tenant_id, status, extraction_status, extraction_attempts, dealer_id, recognition_confidence")
+AFTER:  .select("id, tenant_id, status, extraction_status, extraction_attempts, dealer_id, recognition_confidence, subject")
+```
+
+The retrieved `subject` value is then passed as `emailSubject` into both `extractOrderData()` call sites (single-call extraction and retry path).
+
+---
+
+### Data Model
+
+No schema changes. The relevant DB column already exists:
+
+```
+orders table
+  subject: text | null   ← already set by Postmark webhook (OPH-10)
+                            null for web-uploaded orders
+```
+
+---
+
+### Tech Decisions
+
+| Decision | Choice | Reason |
+|----------|--------|--------|
+| Where to inject | `ExtractionInput` parameter | Subject is metadata, not a document; avoids storage I/O |
+| Placement in context | After dealer context, before files | Natural reading order: metadata → documents → instruction |
+| Sanitization | Reuse existing `sanitizeHints()` | Strips XML injection tags; consistent with dealer hints |
+| Max length | 500 characters | Subjects over 500 chars are abnormal; keeps token overhead minimal |
+| Deduplication | None needed | Web uploads never set `orders.subject`; `.eml` subjects come from file parser |
+
+---
+
+### No New Dependencies
 
 ## QA Test Results
 _To be added by /qa_
