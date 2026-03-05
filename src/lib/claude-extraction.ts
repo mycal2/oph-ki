@@ -431,8 +431,77 @@ function splitCsvIntoChunks(
 }
 
 /**
+ * Extracts a single chunk with retry logic. Used by extractChunkedExcel.
+ */
+async function extractSingleChunk(params: {
+  anthropic: Anthropic;
+  model: string;
+  systemPrompt: string;
+  contentBlocks: ContentBlockParam[];
+}): Promise<{
+  parsed: {
+    document_language?: string | null;
+    order: CanonicalOrderData["order"];
+    extraction_metadata: { confidence_score: number };
+  };
+  inputTokens: number;
+  outputTokens: number;
+}> {
+  const { anthropic, model, systemPrompt, contentBlocks } = params;
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const message = await anthropic.messages.create({
+        model,
+        max_tokens: MAX_OUTPUT_TOKENS,
+        system: systemPrompt,
+        messages: [{ role: "user", content: contentBlocks }],
+      });
+
+      const responseText = message.content
+        .filter((block): block is Anthropic.TextBlock => block.type === "text")
+        .map((block) => block.text)
+        .join("");
+
+      const jsonStr = extractJson(responseText);
+      const parsed = JSON.parse(jsonStr) as {
+        document_language?: string | null;
+        order: CanonicalOrderData["order"];
+        extraction_metadata: { confidence_score: number };
+      };
+
+      return {
+        parsed,
+        inputTokens: message.usage.input_tokens,
+        outputTokens: message.usage.output_tokens,
+      };
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      const isRetryable =
+        lastError.message.includes("429") ||
+        lastError.message.includes("529") ||
+        lastError.message.includes("overloaded") ||
+        lastError.message.includes("timeout") ||
+        lastError.message.includes("500") ||
+        lastError.message.includes("502") ||
+        lastError.message.includes("503");
+
+      if (!isRetryable || attempt === MAX_RETRIES) {
+        break;
+      }
+
+      await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt));
+    }
+  }
+
+  throw lastError ?? new Error("Chunk extraction failed after retries.");
+}
+
+/**
  * Extracts a large Excel order by splitting it into chunks and calling Claude
- * for each chunk separately, then merging the results.
+ * for all chunks in parallel, then merging the results.
  */
 async function extractChunkedExcel(params: {
   anthropic: Anthropic;
@@ -449,14 +518,9 @@ async function extractChunkedExcel(params: {
   const { anthropic, model, systemPrompt, baseContentBlocks, excelChunks, filename, input, sourceFiles } = params;
   const { headerRow, chunks } = excelChunks;
 
-  let mergedLineItems: CanonicalOrderData["order"]["line_items"] = [];
-  let headerData: CanonicalOrderData | null = null;
-  let totalInputTokens = 0;
-  let totalOutputTokens = 0;
-  let minConfidence = 1;
-
-  for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
-    const chunkCsv = [headerRow, ...chunks[chunkIdx]].join("\n");
+  // Fire all chunk extractions in parallel
+  const chunkPromises = chunks.map((chunkRows, chunkIdx) => {
+    const chunkCsv = [headerRow, ...chunkRows].join("\n");
     const chunkLabel = `## Excel Document: ${filename} (Chunk ${chunkIdx + 1}/${chunks.length})\n`;
 
     const chunkContentBlocks: ContentBlockParam[] = [
@@ -468,131 +532,89 @@ async function extractChunkedExcel(params: {
       },
     ];
 
-    let lastError: Error | null = null;
+    return extractSingleChunk({ anthropic, model, systemPrompt, contentBlocks: chunkContentBlocks });
+  });
 
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        const message = await anthropic.messages.create({
-          model,
-          max_tokens: MAX_OUTPUT_TOKENS,
-          system: systemPrompt,
-          messages: [{ role: "user", content: chunkContentBlocks }],
-        });
+  const chunkResults = await Promise.all(chunkPromises);
 
-        const responseText = message.content
-          .filter((block): block is Anthropic.TextBlock => block.type === "text")
-          .map((block) => block.text)
-          .join("");
+  // Merge results — chunk 0 provides header info, all chunks contribute line items
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
+  let minConfidence = 1;
+  let mergedLineItems: CanonicalOrderData["order"]["line_items"] = [];
 
-        const jsonStr = extractJson(responseText);
-        const parsed = JSON.parse(jsonStr) as {
-          document_language?: string | null;
-          order: CanonicalOrderData["order"];
-          extraction_metadata: { confidence_score: number };
-        };
+  const firstResult = chunkResults[0].parsed;
+  totalInputTokens += chunkResults[0].inputTokens;
+  totalOutputTokens += chunkResults[0].outputTokens;
+  minConfidence = Math.min(minConfidence, firstResult.extraction_metadata?.confidence_score ?? 0);
 
-        totalInputTokens += message.usage.input_tokens;
-        totalOutputTokens += message.usage.output_tokens;
-        minConfidence = Math.min(minConfidence, parsed.extraction_metadata?.confidence_score ?? 0);
+  // First chunk: build the header data structure
+  const firstItems = (firstResult.order.line_items ?? []).map((item, idx) => ({
+    position: item.position ?? idx + 1,
+    article_number: item.article_number ?? null,
+    description: item.description ?? "",
+    quantity: item.quantity ?? 0,
+    unit: item.unit ?? null,
+    unit_price: item.unit_price ?? null,
+    total_price: item.total_price ?? null,
+    currency: item.currency ?? null,
+  }));
+  mergedLineItems = firstItems;
 
-        // First chunk: capture header info (order number, date, sender, etc.)
-        if (chunkIdx === 0) {
-          const positionOffset = 0;
-          headerData = {
-            document_language: parsed.document_language?.toUpperCase() ?? null,
-            order: {
-              order_number: parsed.order.order_number ?? null,
-              order_date: parsed.order.order_date ?? null,
-              dealer: {
-                id: input.dealer?.id ?? null,
-                name: input.dealer?.name ?? parsed.order.dealer?.name ?? null,
-              },
-              sender: parsed.order.sender ?? null,
-              delivery_address: parsed.order.delivery_address ?? null,
-              billing_address: parsed.order.billing_address ?? null,
-              line_items: (parsed.order.line_items ?? []).map((item, idx) => ({
-                position: item.position ?? idx + 1 + positionOffset,
-                article_number: item.article_number ?? null,
-                description: item.description ?? "",
-                quantity: item.quantity ?? 0,
-                unit: item.unit ?? null,
-                unit_price: item.unit_price ?? null,
-                total_price: item.total_price ?? null,
-                currency: item.currency ?? null,
-              })),
-              total_amount: parsed.order.total_amount ?? null,
-              currency: parsed.order.currency ?? null,
-              notes: parsed.order.notes ?? null,
-            },
-            extraction_metadata: {
-              schema_version: SCHEMA_VERSION,
-              confidence_score: 0, // will be set later
-              model,
-              extracted_at: new Date().toISOString(),
-              source_files: sourceFiles,
-              dealer_hints_applied: !!input.dealer?.extractionHints,
-              column_mapping_applied: !!input.columnMappingContext,
-              input_tokens: 0, // will be set later
-              output_tokens: 0, // will be set later
-              chunks_used: chunks.length,
-            },
-          };
-          mergedLineItems = headerData.order.line_items;
-        } else {
-          // Subsequent chunks: collect line items only, renumber positions
-          const positionOffset = mergedLineItems.length;
-          const chunkItems = (parsed.order.line_items ?? []).map((item, idx) => ({
-            position: positionOffset + idx + 1,
-            article_number: item.article_number ?? null,
-            description: item.description ?? "",
-            quantity: item.quantity ?? 0,
-            unit: item.unit ?? null,
-            unit_price: item.unit_price ?? null,
-            total_price: item.total_price ?? null,
-            currency: item.currency ?? null,
-          }));
-          mergedLineItems = [...mergedLineItems, ...chunkItems];
-        }
+  // Subsequent chunks: collect line items, renumber positions
+  for (let i = 1; i < chunkResults.length; i++) {
+    const result = chunkResults[i];
+    totalInputTokens += result.inputTokens;
+    totalOutputTokens += result.outputTokens;
+    minConfidence = Math.min(minConfidence, result.parsed.extraction_metadata?.confidence_score ?? 0);
 
-        lastError = null;
-        break; // success — exit retry loop
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error(String(error));
-
-        const isRetryable =
-          lastError.message.includes("429") ||
-          lastError.message.includes("529") ||
-          lastError.message.includes("overloaded") ||
-          lastError.message.includes("timeout") ||
-          lastError.message.includes("500") ||
-          lastError.message.includes("502") ||
-          lastError.message.includes("503");
-
-        if (!isRetryable || attempt === MAX_RETRIES) {
-          break;
-        }
-
-        await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt));
-      }
-    }
-
-    if (lastError) {
-      throw lastError;
-    }
+    const positionOffset = mergedLineItems.length;
+    const chunkItems = (result.parsed.order.line_items ?? []).map((item, idx) => ({
+      position: positionOffset + idx + 1,
+      article_number: item.article_number ?? null,
+      description: item.description ?? "",
+      quantity: item.quantity ?? 0,
+      unit: item.unit ?? null,
+      unit_price: item.unit_price ?? null,
+      total_price: item.total_price ?? null,
+      currency: item.currency ?? null,
+    }));
+    mergedLineItems = [...mergedLineItems, ...chunkItems];
   }
 
-  if (!headerData) {
-    throw new Error("Chunked extraction produced no results.");
-  }
-
-  // Merge final result
-  headerData.order.line_items = mergedLineItems;
-  headerData.extraction_metadata.confidence_score = minConfidence;
-  headerData.extraction_metadata.input_tokens = totalInputTokens;
-  headerData.extraction_metadata.output_tokens = totalOutputTokens;
+  const extractedData: CanonicalOrderData = {
+    document_language: firstResult.document_language?.toUpperCase() ?? null,
+    order: {
+      order_number: firstResult.order.order_number ?? null,
+      order_date: firstResult.order.order_date ?? null,
+      dealer: {
+        id: input.dealer?.id ?? null,
+        name: input.dealer?.name ?? firstResult.order.dealer?.name ?? null,
+      },
+      sender: firstResult.order.sender ?? null,
+      delivery_address: firstResult.order.delivery_address ?? null,
+      billing_address: firstResult.order.billing_address ?? null,
+      line_items: mergedLineItems,
+      total_amount: firstResult.order.total_amount ?? null,
+      currency: firstResult.order.currency ?? null,
+      notes: firstResult.order.notes ?? null,
+    },
+    extraction_metadata: {
+      schema_version: SCHEMA_VERSION,
+      confidence_score: minConfidence,
+      model,
+      extracted_at: new Date().toISOString(),
+      source_files: sourceFiles,
+      dealer_hints_applied: !!input.dealer?.extractionHints,
+      column_mapping_applied: !!input.columnMappingContext,
+      input_tokens: totalInputTokens,
+      output_tokens: totalOutputTokens,
+      chunks_used: chunks.length,
+    },
+  };
 
   return {
-    extractedData: headerData,
+    extractedData,
     inputTokens: totalInputTokens,
     outputTokens: totalOutputTokens,
   };
