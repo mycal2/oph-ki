@@ -124,7 +124,9 @@ export async function GET(
       const { data: signedUrlData, error: signedUrlError } =
         await adminClient.storage
           .from("order-files")
-          .createSignedUrl(file.storage_path as string, SIGNED_URL_EXPIRY_SECONDS);
+          .createSignedUrl(file.storage_path as string, SIGNED_URL_EXPIRY_SECONDS, {
+            download: file.original_filename as string,
+          });
 
       if (signedUrlError || !signedUrlData?.signedUrl) {
         console.error(

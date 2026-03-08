@@ -16,7 +16,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { toast } from "sonner";
 import type { OrderFile, FilePreviewUrl } from "@/lib/types";
 
 interface OrderFileListProps {
@@ -90,7 +89,7 @@ export function OrderFileList({ files, orderId, onEmailBodyClick }: OrderFileLis
       }
       throw new Error("Failed to fetch URLs");
     } catch {
-      toast.error("Download-URLs konnten nicht geladen werden.");
+      // AC-7: Silent failure — no error message shown, file list unaffected
       return {};
     } finally {
       setIsLoading(false);
@@ -128,7 +127,7 @@ export function OrderFileList({ files, orderId, onEmailBodyClick }: OrderFileLis
 
       const url = await getFileUrl(file.id);
       if (!url) {
-        toast.error("Datei-URL konnte nicht geladen werden.");
+        // AC-7: Silent failure — no error message shown, file list unaffected
         return;
       }
 
