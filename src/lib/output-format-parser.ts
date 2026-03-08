@@ -291,6 +291,8 @@ function parseXML(content: string): OutputFormatParseResponse {
 
 /**
  * Recursively find the first array of objects in a parsed XML structure.
+ * Uses breadth-first search so that data arrays (e.g. `bestexp2`) at the
+ * same level are found before deeply nested schema/XSD definition arrays.
  */
 function findRecordArray(obj: unknown): Record<string, unknown>[] | null {
   if (Array.isArray(obj)) {
@@ -300,9 +302,22 @@ function findRecordArray(obj: unknown): Record<string, unknown>[] | null {
   }
 
   if (typeof obj === "object" && obj !== null) {
-    for (const value of Object.values(obj as Record<string, unknown>)) {
-      const found = findRecordArray(value);
-      if (found) return found;
+    const entries = Object.entries(obj as Record<string, unknown>);
+
+    // Breadth-first: check all direct children for arrays first
+    for (const [, value] of entries) {
+      if (Array.isArray(value) && value.length > 0 && typeof value[0] === "object" && value[0] !== null) {
+        return value as Record<string, unknown>[];
+      }
+    }
+
+    // Then recurse into child objects (skip XSD schema namespaced keys)
+    for (const [key, value] of entries) {
+      if (key.startsWith("xsd:") || key.startsWith("xs:")) continue;
+      if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+        const found = findRecordArray(value);
+        if (found) return found;
+      }
     }
   }
 
