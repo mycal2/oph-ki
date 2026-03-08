@@ -263,7 +263,7 @@ function ColumnRow({
         {/* Required toggle */}
         <div className="flex items-center gap-2 pt-5">
           <Switch
-            checked={column.required}
+            checked={column.required ?? false}
             onCheckedChange={(checked) => onUpdate(index, "required", checked)}
             id={`required-${index}`}
           />

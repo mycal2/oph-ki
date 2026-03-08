@@ -37,9 +37,11 @@ interface ErpTransformationEditorProps {
 }
 
 export function ErpTransformationEditor({
-  transformations,
+  transformations: rawTransformations,
   onChange,
 }: ErpTransformationEditorProps) {
+  // Defensive: old DB rows may lack the transformations array
+  const transformations = rawTransformations ?? [];
   const handleAdd = useCallback(() => {
     onChange([...transformations, { type: "trim" }]);
   }, [transformations, onChange]);
