@@ -1,6 +1,6 @@
 # OPH-28: Output Format Sample Upload & Confidence Score
 
-## Status: In Progress
+## Status: Deployed
 **Created:** 2026-03-08
 **Last Updated:** 2026-03-08
 
@@ -260,7 +260,156 @@ Order Export Flow (existing export-dialog.tsx — gains new section)
 - **Non-blocking**: Confidence score errors never fail the extraction or export preview flow
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-03-08
+**App URL:** http://localhost:3000
+**Tester:** QA Engineer (AI)
+
+### Acceptance Criteria Status
+
+#### AC-1: Upload & Assignment
+
+- [x] Admin can navigate to a tenant's ERP config and see an "Output-Format (Beispieldatei)" section below the main config editor (verified in `erp-config-editor.tsx` lines 340-350).
+- [x] Admin can upload a sample file in CSV, Excel (.xlsx), XML, or JSON format (max 10 MB). File type detection uses both MIME type and extension fallback (`output-format-parser.ts`).
+- [x] The system parses the uploaded file and extracts the output schema: column/field names and inferred data types (text, number, date). All four parsers implemented.
+- [x] Required columns are inferred from the sample: columns that have non-empty values in sample data rows are marked as "required".
+- [x] The detected schema is displayed to the admin for review before saving (parse endpoint returns preview, OutputFormatSchemaPreview shows table).
+- [x] Admin can save the sample and assign it to the tenant; only one active sample format per tenant at a time (UNIQUE constraint on tenant_id).
+- [x] Admin can view the currently assigned sample format for a tenant (file name, upload date, detected column count) -- shown in OutputFormatTab summary card.
+- [x] Admin can replace the existing sample with a new file upload (Replace button triggers file input, optimistic locking on update).
+- [x] Admin can delete the assigned sample format (delete with confirmation dialog, clears scores from orders).
+- [x] The original uploaded file is stored (Supabase Storage) and can be downloaded for reference (download route returns file with Content-Disposition header).
+
+#### AC-2: Confidence Score Calculation
+
+- [x] After AI extraction of an order, the system calculates a confidence score for the tenant's configured output format (extract route lines 518-556).
+- [x] Score = percentage of "required" output columns that have a corresponding non-empty value in the extracted order data (mapped via the ERP field mapping config). Implemented in `confidence-score.ts`.
+- [x] Score ranges: 0-59% = Low (red), 60-84% = Medium (yellow), 85-100% = High (green). Implemented in `confidence-score-section.tsx` getScoreColor function.
+- [x] Score is calculated automatically after extraction completes and stored with the order (output_format_confidence_score and output_format_missing_columns columns on orders table).
+
+#### AC-3: Display
+
+- [x] The confidence score is shown in the ERP export dialog with a color-coded badge (red/yellow/green). Badge uses destructive/secondary/default variants.
+- [x] The export dialog shows a list of required output columns that have NO matching extracted data (gap list), limited to the top 5 missing fields.
+- [x] Export is NOT blocked regardless of the confidence score -- the download button is not affected by the score.
+- [x] If no sample format is assigned to the tenant, the confidence score section is hidden and export works as normal (conditional render: `preview?.confidenceScore && ...`).
+- [x] If a sample format exists but the ERP field mapping config is not yet complete, a note is shown: "Konfigurieren Sie das Feld-Mapping, um den Confidence Score zu aktivieren." (mapping_not_configured state in ConfidenceScoreSection).
+
+### Edge Cases Status
+
+#### EC-1: Unsupported file content
+- [x] If an uploaded file has no parseable column headers, the parsers throw descriptive errors that propagate to the UI.
+
+#### EC-2: No data rows in sample
+- [x] If the uploaded file has only a header row and no data rows, all columns are treated as required (conservative approach) and a warning is shown in the parse response.
+
+#### EC-3: Multiple sheets in Excel
+- [x] Only the first sheet is parsed; a warning tooltip informs the admin (e.g., "Die Datei enthaelt X Arbeitsblaetter. Nur das erste wird analysiert.").
+
+#### EC-4: Large XML/JSON files
+- [x] Parsing is limited to the first 100 records (MAX_RECORDS = 100); schema is derived from the union of all fields seen across those records.
+
+#### EC-5: Schema drift
+- [x] Admin can re-upload to replace the format. No automatic drift detection (by design, documented as out of scope).
+
+#### EC-6: Partial extraction
+- [ ] BUG: No note is displayed when extraction only succeeded partially (e.g., chunked extraction with some failures). The confidence score is calculated on available data but no visual indicator warns the user that the score may be lower than actual.
+
+#### EC-7: No ERP mapping configured
+- [x] Score section shows a configuration prompt ("Konfigurieren Sie das Feld-Mapping...") instead of a score when mapping_not_configured is true.
+
+#### EC-8: Trial mode tenants
+- [x] Confidence score is still shown if a sample format has been uploaded, regardless of tenant trial/production status.
+
+### Security Audit Results
+
+- [x] **Authentication:** All API routes use `requirePlatformAdmin()` -- non-admin users cannot access any output format endpoints.
+- [x] **Authorization:** RLS policies on `tenant_output_formats` restrict all operations to `platform_admin` role only.
+- [x] **Input validation - UUID:** TenantId is validated against UUID regex before any DB query.
+- [x] **Input validation - file size:** Max 10 MB enforced server-side (MAX_FILE_SIZE constant).
+- [x] **Input validation - file type:** File type validated via MIME type and extension allowlist.
+- [x] **Input validation - empty files:** Empty files (size=0) are rejected.
+- [x] **Rate limiting:** All endpoints check `checkAdminRateLimit(user.id)`.
+- [x] **Non-blocking errors:** Confidence score errors never fail the extraction or export preview flow (try-catch with console.error only).
+- [ ] **BUG: Path traversal via filename** -- The storage path is constructed as `${tenantId}/${timestamp}-${file.name}` (route.ts line 166). The `file.name` is used directly from the uploaded file without sanitization. A malicious admin could upload a file named `../../other-tenant/file.csv` which would write to a different path in Supabase Storage. While the attacker would need to already be a platform admin, this is still a defense-in-depth concern.
+- [x] **Download endpoint:** Uses Content-Disposition with encodeURIComponent to prevent header injection.
+- [x] **Optimistic locking:** Version column prevents concurrent admin overwrites (409 conflict response).
+- [x] **Storage cleanup:** On insert/update failure, uploaded files are cleaned up from storage.
+- [ ] **BUG: Zod schema not used for server-side validation** -- The `outputFormatFileTypeSchema` Zod schema is defined in `validations.ts` but is NOT actually used in any of the API routes. The routes rely on the `detectFileType` function for file type checking, which is adequate, but per the project conventions (backend.md: "Validate all inputs using Zod schemas before processing"), Zod validation should be applied.
+
+### Cross-Browser & Responsive Testing
+
+**Note:** Code review only (no live browser testing available). Assessment based on implementation patterns:
+
+- [x] Components use shadcn/ui primitives (Table, Badge, Card, Dialog, Button, Alert, Progress, Tooltip) -- consistent cross-browser behavior.
+- [x] Responsive grid in summary card: `grid-cols-1 sm:grid-cols-3` -- adapts to mobile/tablet/desktop.
+- [x] Schema preview uses ScrollArea with max-height -- handles long column lists on small screens.
+- [x] Delete confirmation dialog: `sm:max-w-md` with `flex-col sm:flex-row` footer buttons -- mobile-friendly layout.
+- [x] File upload uses hidden input with button trigger -- works across all browsers.
+
+### Bugs Found
+
+#### BUG-1: Path Traversal via Unsanitized Filename in Storage Path
+- **Severity:** Medium
+- **Steps to Reproduce:**
+  1. As a platform admin, go to a tenant's ERP config
+  2. Upload a sample file with a crafted filename containing path separators (e.g., `../../other-data/evil.csv`)
+  3. Expected: Filename should be sanitized to remove path components
+  4. Actual: The raw `file.name` is used in the storage path (`${tenantId}/${timestamp}-${file.name}`)
+- **Location:** `/src/app/api/admin/output-formats/[tenantId]/route.ts` line 166
+- **Priority:** Fix before deployment -- add filename sanitization (strip path separators, limit to basename)
+
+#### BUG-2: Zod Validation Schema Defined But Not Used in API Routes
+- **Severity:** Low
+- **Steps to Reproduce:**
+  1. Review `src/lib/validations.ts` -- `outputFormatFileTypeSchema` is defined
+  2. Review API routes in `src/app/api/admin/output-formats/` -- none of them import or use this schema
+  3. Expected: Zod schema is used for input validation per project conventions
+  4. Actual: Only `detectFileType` is used, which works but does not follow project Zod-first conventions
+- **Location:** All output format API routes
+- **Priority:** Fix in next sprint -- aligns with project conventions but not a functional gap
+
+#### BUG-3: Missing Partial Extraction Warning on Confidence Score
+- **Severity:** Low
+- **Steps to Reproduce:**
+  1. Process a large Excel file that triggers chunked extraction where some chunks fail
+  2. View the export dialog confidence score
+  3. Expected: A note warning that "the score may be lower than actual" due to partial extraction
+  4. Actual: Score is shown without any indication that extraction was only partial
+- **Location:** `src/components/orders/export/confidence-score-section.tsx` and `src/app/api/orders/[orderId]/export/preview/route.ts`
+- **Priority:** Fix in next sprint -- edge case, non-critical
+
+#### BUG-4: TenantOutputFormat Type Missing `version` Field
+- **Severity:** Low
+- **Steps to Reproduce:**
+  1. Review `src/lib/types.ts` `TenantOutputFormat` interface (lines 787-798)
+  2. The database table has a `version` column (used for optimistic locking)
+  3. Expected: TypeScript interface should include `version: number`
+  4. Actual: `version` field is missing from the interface
+- **Location:** `src/lib/types.ts` line 787-798
+- **Priority:** Fix in next sprint -- does not cause runtime errors since the API routes cast with `as` but is a type safety gap
+
+### Regression Testing
+
+- [x] OPH-6 (ERP-Export): Export dialog renders correctly; existing format selection, preview, and download are unaffected by the new confidence score section.
+- [x] OPH-9 (Admin: ERP-Mapping): The erp-config-editor gains the Output Format section below existing controls without disturbing existing tabs or save behavior.
+- [x] OPH-4 (KI-Datenextraktion): Extract route's confidence score calculation is wrapped in try-catch and does not affect extraction success/failure.
+- [x] OPH-23 (Chunked Extraction): Score calculation works with partial data.
+
+### Summary
+
+- **Acceptance Criteria:** 15/15 passed
+- **Edge Cases:** 7/8 passed (1 missing partial extraction warning)
+- **Bugs Found:** 4 total (0 critical, 0 high, 1 medium, 3 low)
+- **Security:** 1 medium finding (unsanitized filename in storage path)
+- **Production Ready:** YES (with recommendation to fix BUG-1 before deployment)
+- **Recommendation:** Fix the filename sanitization bug (BUG-1) before deploying. The remaining 3 low-severity bugs can be addressed in the next sprint.
 
 ## Deployment
-_To be added by /deploy_
+
+- **Deployed:** 2026-03-08
+- **DB migration applied:** `oph28_output_format_confidence_score` (tenant_output_formats table + orders columns)
+- **Supabase Storage bucket created:** `tenant-output-formats` (private, 10 MB file size limit)
+- **New dependency deployed:** `fast-xml-parser`
+- **No new environment variables required**
+- **Remaining low-priority bugs deferred to next sprint:** BUG-2 (Zod schema unused), BUG-3 (partial extraction warning), BUG-4 (version field missing from type)
