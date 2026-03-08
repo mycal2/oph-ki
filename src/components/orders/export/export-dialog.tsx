@@ -22,6 +22,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ExportPreviewPanel } from "./export-preview-panel";
+import { ConfidenceScoreSection } from "./confidence-score-section";
 import { useExport } from "@/hooks/use-export";
 import type { ExportFormat } from "@/lib/types";
 
@@ -191,6 +192,14 @@ export function ExportDialog({
           isLoading={isLoadingPreview}
           error={error}
         />
+
+        {/* OPH-28: Confidence score section — shown only if format has a score */}
+        {preview?.confidenceScore && !isLoadingPreview && (
+          <>
+            <Separator />
+            <ConfidenceScoreSection data={preview.confidenceScore} />
+          </>
+        )}
 
         {/* Error banner */}
         {error && !isLoadingPreview && (

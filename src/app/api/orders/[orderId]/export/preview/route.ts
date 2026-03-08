@@ -11,6 +11,7 @@ import {
   generateExportContent,
   getTransformedValue,
 } from "@/lib/erp-transformations";
+import { calculateConfidenceScore } from "@/lib/confidence-score";
 import type {
   AppMetadata,
   ApiResponse,
@@ -18,6 +19,8 @@ import type {
   ExportFormat,
   ErpColumnMappingExtended,
   CanonicalOrderData,
+  ConfidenceScoreData,
+  OutputFormatSchemaColumn,
 } from "@/lib/types";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -200,6 +203,26 @@ export async function GET(
     const totalRows = lineItems.length;
     const previewItems = lineItems.slice(0, MAX_PREVIEW_ROWS);
 
+    // OPH-28: Calculate confidence score if output format is configured
+    let confidenceScore: ConfidenceScoreData | undefined;
+    try {
+      const { data: outputFormat } = await adminClient
+        .from("tenant_output_formats")
+        .select("detected_schema")
+        .eq("tenant_id", effectiveTenantId)
+        .maybeSingle();
+
+      if (outputFormat?.detected_schema) {
+        confidenceScore = calculateConfidenceScore(
+          orderData,
+          outputFormat.detected_schema as OutputFormatSchemaColumn[],
+          erpConfig ? (erpConfig.column_mappings as ErpColumnMappingExtended[]) : null
+        );
+      }
+    } catch (scoreError) {
+      console.error("Error calculating confidence score for preview:", scoreError);
+    }
+
     if (effectiveFormat === "csv") {
       const headers = columnMappings.map((m) => m.target_column_name);
       const rows = previewItems.map((item) =>
@@ -208,7 +231,7 @@ export async function GET(
 
       return NextResponse.json({
         success: true,
-        data: { format: effectiveFormat, headers, rows, totalRows, filename, usingDefaultConfig, tenantDefaultFormat },
+        data: { format: effectiveFormat, headers, rows, totalRows, filename, usingDefaultConfig, tenantDefaultFormat, confidenceScore },
       });
     }
 
@@ -235,6 +258,7 @@ export async function GET(
         rawContent: previewContent,
         usingDefaultConfig,
         tenantDefaultFormat,
+        confidenceScore,
       },
     });
   } catch (error) {

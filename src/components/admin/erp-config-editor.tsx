@@ -46,6 +46,7 @@ import { XmlTemplateEditor } from "@/components/admin/erp-xml-template-editor";
 import { ErpConfigVersionHistory } from "@/components/admin/erp-config-version-history";
 import { ErpConfigTestDialog } from "@/components/admin/erp-config-test-dialog";
 import { ErpConfigCopyDialog } from "@/components/admin/erp-config-copy-dialog";
+import { OutputFormatTab } from "@/components/admin/output-format-tab";
 
 interface ErpConfigEditorProps {
   detail: ErpConfigDetail;
@@ -333,6 +334,20 @@ export function ErpConfigEditor({
           isMutating={isMutating}
         />
       )}
+
+      <Separator />
+
+      {/* OPH-28: Output Format Sample Upload & Management */}
+      <div className="space-y-3">
+        <h3 className="text-lg font-semibold tracking-tight">
+          Output-Format (Beispieldatei)
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Laden Sie eine Beispieldatei im gewuenschten ERP-Ausgabeformat hoch. Das System
+          erkennt die Spaltenstruktur und berechnet einen Confidence Score beim Export.
+        </p>
+        <OutputFormatTab tenantId={detail.tenant.id} />
+      </div>
 
       {/* Test dialog */}
       <ErpConfigTestDialog

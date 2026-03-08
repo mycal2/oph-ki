@@ -11,7 +11,8 @@ import { normalizeUnits } from "@/lib/unit-normalization";
 import { getMappingsForDealer, applyMappings, formatMappingsForPrompt } from "@/lib/dealer-mappings";
 import { mimeTypeToFormatType, getColumnMappingProfile, formatColumnMappingForPrompt } from "@/lib/column-mappings";
 import { sendTrialResultEmail, sendTrialFailureEmail, sendOrderResultEmail, sendOrderFailureEmail, sendPlatformErrorNotification } from "@/lib/postmark";
-import type { AppMetadata, ApiResponse } from "@/lib/types";
+import { calculateConfidenceScore } from "@/lib/confidence-score";
+import type { AppMetadata, ApiResponse, ErpColumnMappingExtended, OutputFormatSchemaColumn } from "@/lib/types";
 
 /** Max extraction attempts per order before rejecting further retries. */
 const MAX_EXTRACTION_ATTEMPTS = 5;
@@ -513,6 +514,46 @@ export async function POST(
           ...emlSubjectUpdate,
         })
         .eq("id", orderId);
+
+      // --- OPH-28: Calculate confidence score if output format is configured ---
+      if (tenantId) {
+        try {
+          const { data: outputFormat } = await adminClient
+            .from("tenant_output_formats")
+            .select("detected_schema")
+            .eq("tenant_id", tenantId)
+            .maybeSingle();
+
+          if (outputFormat?.detected_schema) {
+            const { data: erpConfig } = await adminClient
+              .from("erp_configs")
+              .select("column_mappings")
+              .eq("tenant_id", tenantId)
+              .maybeSingle();
+
+            const erpMappings = erpConfig
+              ? (erpConfig.column_mappings as ErpColumnMappingExtended[])
+              : null;
+
+            const scoreData = calculateConfidenceScore(
+              finalExtractedData,
+              outputFormat.detected_schema as OutputFormatSchemaColumn[],
+              erpMappings
+            );
+
+            await adminClient
+              .from("orders")
+              .update({
+                output_format_confidence_score: scoreData.score,
+                output_format_missing_columns: scoreData.missing_columns,
+              })
+              .eq("id", orderId);
+          }
+        } catch (scoreError) {
+          // Non-critical: log but don't fail extraction
+          console.error("Error calculating confidence score:", scoreError);
+        }
+      }
 
       // --- OPH-16: Trial post-processing (CSV + result email) ---
       // --- OPH-13: Non-trial result email with notification toggle ---

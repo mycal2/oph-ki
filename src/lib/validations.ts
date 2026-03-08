@@ -675,3 +675,11 @@ export const updateNotificationEmailsSchema = z.object({
 });
 
 export type UpdateNotificationEmailsInput = z.infer<typeof updateNotificationEmailsSchema>;
+
+/**
+ * OPH-28: Output Format validation schemas.
+ */
+
+export const outputFormatFileTypeSchema = z.enum(["csv", "xlsx", "xml", "json"], {
+  message: "Erlaubte Dateitypen: CSV, Excel (.xlsx), XML, JSON",
+});

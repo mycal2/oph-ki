@@ -387,6 +387,8 @@ export interface ExportPreviewResponse {
   usingDefaultConfig?: boolean;
   /** The tenant's default export format (from erp_configs where is_default = true). */
   tenantDefaultFormat?: ExportFormat;
+  /** OPH-28: Confidence score for the output format, if configured. */
+  confidenceScore?: ConfidenceScoreData;
 }
 
 /** Response metadata after an export download. */
@@ -765,4 +767,56 @@ export interface OrderDeleteResponse {
   orderId: string;
   filesDeleted: number;
   deletedAt: string;
+}
+
+/**
+ * OPH-28: Output Format Sample Upload & Confidence Score types.
+ */
+
+export type OutputFormatFileType = "csv" | "xlsx" | "xml" | "json";
+export type OutputFormatDataType = "text" | "number" | "date";
+
+/** A single detected column/field from the sample file. */
+export interface OutputFormatSchemaColumn {
+  column_name: string;
+  data_type: OutputFormatDataType;
+  is_required: boolean;
+}
+
+/** Stored output format record for a tenant. */
+export interface TenantOutputFormat {
+  id: string;
+  tenant_id: string;
+  file_name: string;
+  file_path: string;
+  file_type: OutputFormatFileType;
+  detected_schema: OutputFormatSchemaColumn[];
+  column_count: number;
+  required_column_count: number;
+  uploaded_at: string;
+  uploaded_by: string;
+}
+
+/** Response from POST /api/admin/output-formats/[tenantId]/parse (preview before save). */
+export interface OutputFormatParseResponse {
+  file_name: string;
+  file_type: OutputFormatFileType;
+  detected_schema: OutputFormatSchemaColumn[];
+  column_count: number;
+  required_column_count: number;
+  warnings: string[];
+}
+
+/** Confidence score data included in the export preview response. */
+export interface ConfidenceScoreData {
+  /** Score 0-100, null if not calculable. */
+  score: number | null;
+  /** Missing required output columns (top 5). */
+  missing_columns: string[];
+  /** Total required columns in the output format. */
+  total_required: number;
+  /** Number of required columns that have data. */
+  filled_required: number;
+  /** True if ERP field mapping is not yet configured. */
+  mapping_not_configured: boolean;
 }
