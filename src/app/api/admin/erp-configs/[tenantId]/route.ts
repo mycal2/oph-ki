@@ -128,7 +128,7 @@ export async function GET(
             ),
             separator: config.separator as string,
             quote_char: config.quote_char as string,
-            encoding: (config.encoding as ErpConfigAdmin["encoding"]) ?? "utf-8",
+            encoding: ((config.encoding as string)?.toLowerCase() as ErpConfigAdmin["encoding"]) ?? "utf-8",
             line_ending: (config.line_ending as ErpConfigAdmin["line_ending"]) ?? "LF",
             decimal_separator: (config.decimal_separator as ErpConfigAdmin["decimal_separator"]) ?? ".",
             fallback_mode: (config.fallback_mode as ErpConfigAdmin["fallback_mode"]) ?? "block",
