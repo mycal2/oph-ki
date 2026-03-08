@@ -123,7 +123,9 @@ export async function GET(
             id: config.id as string,
             tenant_id: config.tenant_id as string,
             format: config.format as ErpConfigAdmin["format"],
-            column_mappings: (config.column_mappings ?? []) as ErpConfigAdmin["column_mappings"],
+            column_mappings: ((config.column_mappings ?? []) as ErpConfigAdmin["column_mappings"]).map(
+              (m) => ({ ...m, transformations: m.transformations ?? [], required: m.required ?? false })
+            ),
             separator: config.separator as string,
             quote_char: config.quote_char as string,
             encoding: (config.encoding as ErpConfigAdmin["encoding"]) ?? "utf-8",
