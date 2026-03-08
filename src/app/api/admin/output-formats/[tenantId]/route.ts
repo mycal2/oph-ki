@@ -162,8 +162,10 @@ export async function POST(
     const parseResult = await parseOutputFormatSample(buffer, file.name, fileType);
 
     // Upload file to Supabase Storage
+    // Sanitize filename: strip path separators to prevent path traversal
+    const sanitizedName = file.name.replace(/[/\\]/g, "_").replace(/\.\./g, "_");
     const timestamp = Date.now();
-    const storagePath = `${tenantId}/${timestamp}-${file.name}`;
+    const storagePath = `${tenantId}/${timestamp}-${sanitizedName}`;
 
     const { error: uploadError } = await adminClient.storage
       .from("tenant-output-formats")
