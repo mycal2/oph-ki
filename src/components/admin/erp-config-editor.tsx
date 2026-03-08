@@ -512,14 +512,14 @@ function TechnicalSettingsPanel({
 
                   <div className="space-y-1.5">
                     <Label className="text-sm">Anführungszeichen</Label>
-                    <Select value={quoteChar} onValueChange={onQuoteCharChange}>
+                    <Select value={quoteChar || "none"} onValueChange={(v) => onQuoteCharChange(v === "none" ? "" : v)}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value={'"'}>Doppeltes Anfuehrungszeichen (&quot;)</SelectItem>
                         <SelectItem value="'">Einfaches Anfuehrungszeichen (&apos;)</SelectItem>
-                        <SelectItem value="">Keins</SelectItem>
+                        <SelectItem value="none">Keins</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
