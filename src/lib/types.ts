@@ -786,6 +786,18 @@ export interface OutputFormatSchemaColumn {
   is_required: boolean;
 }
 
+/** OPH-32: A single field mapping from an output format column to canonical order data. */
+export interface FieldMapping {
+  target_field: string;
+  variable_path: string;
+  transformation_type: "none" | "date" | "number" | "prefix_suffix";
+  transformation_options?: {
+    format?: string;
+    prefix?: string;
+    suffix?: string;
+  };
+}
+
 /** Stored output format record (can be per-tenant or per-config). */
 export interface TenantOutputFormat {
   id: string;
@@ -802,6 +814,8 @@ export interface TenantOutputFormat {
   uploaded_by: string;
   /** OPH-30: XML structure tree for template generation (only for XML files). */
   xml_structure?: XmlStructureNode | null;
+  /** OPH-32: User-defined field mappings from output columns to order data paths. */
+  field_mappings?: FieldMapping[] | null;
 }
 
 /** Response from POST /api/admin/output-formats/[tenantId]/parse (preview before save). */

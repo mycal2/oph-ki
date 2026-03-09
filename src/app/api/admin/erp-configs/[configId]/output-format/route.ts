@@ -13,8 +13,10 @@ import type {
   ErpColumnMappingExtended,
   CanonicalOrderData,
   OutputFormatSchemaColumn,
+  FieldMapping,
 } from "@/lib/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { z } from "zod";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -201,6 +203,7 @@ export async function POST(
           column_count: parseResult.column_count,
           required_column_count: parseResult.required_column_count,
           xml_structure: parseResult.xml_structure ?? null,
+          field_mappings: null, // OPH-32 BUG-1: reset stale mappings on re-upload
           uploaded_at: new Date().toISOString(),
           uploaded_by: user.id,
           version: (existing.version as number) + 1,
@@ -356,6 +359,124 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error in DELETE /api/admin/erp-configs/[configId]/output-format:", error);
+    return NextResponse.json(
+      { success: false, error: "Interner Serverfehler." },
+      { status: 500 }
+    );
+  }
+}
+
+// ---------- Zod schema for field mappings ----------
+
+const fieldMappingSchema = z.object({
+  target_field: z.string().min(1, "target_field darf nicht leer sein."),
+  variable_path: z.string().min(1, "variable_path darf nicht leer sein."),
+  transformation_type: z.enum(["none", "date", "number", "prefix_suffix"]),
+  transformation_options: z
+    .object({
+      format: z.string().optional(),
+      prefix: z.string().optional(),
+      suffix: z.string().optional(),
+    })
+    .optional(),
+});
+
+const putBodySchema = z.object({
+  field_mappings: z.array(fieldMappingSchema),
+});
+
+/**
+ * PUT /api/admin/erp-configs/[configId]/output-format
+ *
+ * OPH-32: Updates the field_mappings on the output format for this ERP config.
+ * Platform admin only.
+ */
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ configId: string }> }
+): Promise<NextResponse> {
+  try {
+    const { configId } = await params;
+    const auth = await requirePlatformAdmin();
+    if (isErrorResponse(auth)) return auth;
+    const { user, adminClient } = auth;
+
+    const rateLimitError = checkAdminRateLimit(user.id);
+    if (rateLimitError) return rateLimitError;
+
+    if (!UUID_REGEX.test(configId)) {
+      return NextResponse.json(
+        { success: false, error: "Ungueltige Konfigurations-ID." },
+        { status: 400 }
+      );
+    }
+
+    // Parse and validate request body
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { success: false, error: "Ungueltiger JSON-Body." },
+        { status: 400 }
+      );
+    }
+
+    const parseResult = putBodySchema.safeParse(body);
+    if (!parseResult.success) {
+      const firstError = parseResult.error.issues[0];
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Validierungsfehler: ${firstError?.path.join(".")} - ${firstError?.message}`,
+        },
+        { status: 400 }
+      );
+    }
+
+    const { field_mappings } = parseResult.data;
+
+    // Verify output format exists for this config
+    const { data: existing, error: fetchError } = await adminClient
+      .from("tenant_output_formats")
+      .select("id")
+      .eq("erp_config_id", configId)
+      .maybeSingle();
+
+    if (fetchError) {
+      console.error("Error fetching output format for PUT:", fetchError);
+      return NextResponse.json(
+        { success: false, error: "Fehler beim Laden des Output-Formats." },
+        { status: 500 }
+      );
+    }
+
+    if (!existing) {
+      return NextResponse.json(
+        { success: false, error: "Kein Output-Format fuer diese Konfiguration vorhanden. Bitte zuerst eine Datei hochladen." },
+        { status: 404 }
+      );
+    }
+
+    // Update only the field_mappings column
+    const { data: updated, error: updateError } = await adminClient
+      .from("tenant_output_formats")
+      .update({ field_mappings })
+      .eq("id", existing.id as string)
+      .select("*")
+      .single();
+
+    if (updateError || !updated) {
+      console.error("Error updating field_mappings:", updateError);
+      return NextResponse.json(
+        { success: false, error: "Fehler beim Speichern der Feld-Zuordnungen." },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true, data: updated as TenantOutputFormat });
+  } catch (error) {
+    console.error("Error in PUT /api/admin/erp-configs/[configId]/output-format:", error);
     return NextResponse.json(
       { success: false, error: "Interner Serverfehler." },
       { status: 500 }

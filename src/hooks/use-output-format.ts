@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import type {
   TenantOutputFormat,
   OutputFormatParseResponse,
+  FieldMapping,
   ApiResponse,
 } from "@/lib/types";
 
@@ -21,6 +22,8 @@ interface UseOutputFormatReturn {
   saveFormat: (file: File) => Promise<boolean>;
   /** Delete the current format. */
   deleteFormat: () => Promise<boolean>;
+  /** OPH-32: Save field mappings for the current output format. */
+  saveFieldMappings: (mappings: FieldMapping[]) => Promise<boolean>;
   clearMutationError: () => void;
 }
 
@@ -160,6 +163,40 @@ export function useOutputFormat(configId: string): UseOutputFormatReturn {
     }
   }, [configId]);
 
+  /** OPH-32: Save field mappings via PUT. */
+  const saveFieldMappings = useCallback(
+    async (mappings: FieldMapping[]): Promise<boolean> => {
+      setIsMutating(true);
+      setMutationError(null);
+
+      try {
+        const res = await fetch(`/api/admin/erp-configs/${configId}/output-format`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ field_mappings: mappings }),
+        });
+        const json = (await res.json()) as ApiResponse<TenantOutputFormat>;
+
+        if (!res.ok || !json.success) {
+          setMutationError(json.error ?? "Feld-Zuordnungen konnten nicht gespeichert werden.");
+          return false;
+        }
+
+        // Update local state with the returned format (includes field_mappings)
+        if (json.data) {
+          setFormat(json.data);
+        }
+        return true;
+      } catch {
+        setMutationError("Verbindungsfehler beim Speichern der Feld-Zuordnungen.");
+        return false;
+      } finally {
+        setIsMutating(false);
+      }
+    },
+    [configId]
+  );
+
   const clearMutationError = useCallback(() => {
     setMutationError(null);
   }, []);
@@ -174,6 +211,7 @@ export function useOutputFormat(configId: string): UseOutputFormatReturn {
     parseFile,
     saveFormat,
     deleteFormat,
+    saveFieldMappings,
     clearMutationError,
   };
 }

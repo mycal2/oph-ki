@@ -41,6 +41,8 @@ import type {
   ErpDecimalSeparator,
   ErpFallbackMode,
   TenantOutputFormat,
+  FieldMapping,
+  ApiResponse,
 } from "@/lib/types";
 import { CsvColumnBuilder } from "@/components/admin/erp-csv-column-builder";
 import { XmlTemplateEditor } from "@/components/admin/erp-xml-template-editor";
@@ -48,6 +50,7 @@ import { ErpConfigVersionHistory } from "@/components/admin/erp-config-version-h
 import { ErpConfigTestDialog } from "@/components/admin/erp-config-test-dialog";
 import { OutputFormatTab } from "@/components/admin/output-format-tab";
 import { XmlTemplateSuggestion } from "@/components/admin/xml-template-suggestion";
+import { FieldMapperPanel } from "@/components/admin/field-mapper-panel";
 import { generateXmlTemplate } from "@/lib/xml-template-generator";
 
 interface ErpConfigEditorProps {
@@ -121,6 +124,9 @@ export function ErpConfigEditor({
   const savedOutputFormatRef = useRef<TenantOutputFormat | null>(null);
   const isInitialFormatLoadRef = useRef(true);
 
+  // OPH-32: Field mapper saving state
+  const [isFieldMapperSaving, setIsFieldMapperSaving] = useState(false);
+
   // Test dialog
   const [testOpen, setTestOpen] = useState(false);
 
@@ -184,6 +190,50 @@ export function ErpConfigEditor({
   const handleDismissTemplateSuggestion = useCallback(() => {
     setShowTemplateSuggestion(false);
   }, []);
+
+  // OPH-32: Save field mappings via PUT endpoint
+  const handleSaveFieldMappings = useCallback(
+    async (mappings: FieldMapping[]): Promise<boolean> => {
+      setIsFieldMapperSaving(true);
+      try {
+        const res = await fetch(`/api/admin/erp-configs/${config.id}/output-format`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ field_mappings: mappings }),
+        });
+        const json = (await res.json()) as ApiResponse<TenantOutputFormat>;
+
+        if (!res.ok || !json.success) {
+          return false;
+        }
+
+        // Update the saved output format with new field_mappings
+        if (json.data) {
+          savedOutputFormatRef.current = json.data;
+          setSavedOutputFormat(json.data);
+        }
+        return true;
+      } catch {
+        return false;
+      } finally {
+        setIsFieldMapperSaving(false);
+      }
+    },
+    [config.id]
+  );
+
+  // OPH-32: Accept generated template from field mapper
+  const handleFieldMapperGenerateTemplate = useCallback(
+    (template: string) => {
+      setXmlTemplate(template);
+      // Switch to XML format if not already selected
+      if (format !== "xml") {
+        setFormat("xml");
+      }
+      markDirty();
+    },
+    [format, markDirty]
+  );
 
   const buildPayload = useCallback((): ErpConfigSavePayload => {
     return {
@@ -433,6 +483,31 @@ export function ErpConfigEditor({
         </p>
         <OutputFormatTab configId={config.id} onFormatChange={handleOutputFormatChange} />
       </div>
+
+      {/* OPH-32: Field Mapper Panel — shown when an output format with schema is saved */}
+      {savedOutputFormat &&
+        savedOutputFormat.detected_schema.length > 0 && (
+          <>
+            <Separator />
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold tracking-tight">
+                Feld-Zuordnung (Visual Field Mapper)
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Ordnen Sie die erkannten Felder aus der Beispieldatei den Handlebars-Variablen
+                zu. Nach dem Zuordnen koennen Sie ein XML-Template automatisch generieren lassen.
+              </p>
+              <FieldMapperPanel
+                outputFormat={savedOutputFormat}
+                configName={configName}
+                currentTemplate={xmlTemplate}
+                onGenerateTemplate={handleFieldMapperGenerateTemplate}
+                onSaveMappings={handleSaveFieldMappings}
+                isSaving={isFieldMapperSaving}
+              />
+            </div>
+          </>
+        )}
 
       {/* Test dialog */}
       <ErpConfigTestDialog

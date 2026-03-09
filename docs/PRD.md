@@ -51,7 +51,7 @@ Eine mandantenfähige SaaS-Plattform ("Order Intelligence Platform"), die Dental
 | P1 | OPH-29: Shared ERP Configurations (Decoupled from Tenants) | Deployed |
 | P1 | OPH-30: Auto-Generate XML Template from Output Format Sample | Deployed |
 | P1 | OPH-31: Variable Click-to-Insert in XML Template Editor | Deployed |
-| P1 | OPH-32: Visual Field Mapper for ERP Output Format | Planned |
+| P1 | OPH-32: Visual Field Mapper for ERP Output Format | Deployed |
 
 ## Success Metrics
 - Bearbeitungszeit pro Bestellung: von ~15 Min. manuell auf < 3 Min. mit System
