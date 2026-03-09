@@ -44,7 +44,8 @@
 | OPH-30 | Auto-Generate XML Template from Output Format Sample | Deployed | [OPH-30-xml-template-from-output-format.md](OPH-30-xml-template-from-output-format.md) | 2026-03-09 |
 | OPH-31 | Variable Click-to-Insert in XML Template Editor | Deployed | [OPH-31-variable-click-to-insert.md](OPH-31-variable-click-to-insert.md) | 2026-03-09 |
 | OPH-32 | Visual Field Mapper for ERP Output Format | Deployed | [OPH-32-visual-field-mapper.md](OPH-32-visual-field-mapper.md) | 2026-03-09 |
+| OPH-33 | Field Mapper Output for All Formats (CSV, JSON, XML) | In Progress | [OPH-33-csv-field-mapper-prefill.md](OPH-33-csv-field-mapper-prefill.md) | 2026-03-09 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-33
+## Next Available ID: OPH-34
