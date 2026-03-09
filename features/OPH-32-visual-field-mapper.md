@@ -61,7 +61,72 @@ The transformation picker should offer:
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Component Structure
+
+```
+ErpConfigEditor (existing)
+└── XML Tab
+    ├── OutputFormatTab (existing — upload stays unchanged)
+    │
+    ├── FieldMapperPanel (NEW — appears only when output format is saved)
+    │   ├── Left column: TargetFieldList
+    │   │   ├── Section: "Bestellkopf-Felder"
+    │   │   │   └── TargetFieldRow × N
+    │   │   │       ├── Field name + type badge
+    │   │   │       └── DropZone
+    │   │   │           ├── (empty) "Hierher ziehen"
+    │   │   │           └── (filled) MappingBadge
+    │   │   │               ├── {{variable.path}}
+    │   │   │               ├── Transformation label (if any)
+    │   │   │               └── × Remove button
+    │   │   └── Section: "Bestellpositionen (Wiederholend)"
+    │   │       └── TargetFieldRow × N (same structure)
+    │   │
+    │   └── Right column: VariablePanel
+    │       ├── VariableGroup "Bestellung"
+    │       ├── VariableGroup "Absender"
+    │       ├── VariableGroup "Lieferadresse"
+    │       └── VariableGroup "Bestellpositionen"
+    │           └── DraggableVariableChip × N per group
+    │
+    ├── TransformationPicker (Popover — opens after drop or badge click)
+    │   ├── Type selector: Kein / Datum / Zahl / Praefix-Suffix
+    │   └── Options inputs (format string, prefix, suffix)
+    │
+    ├── Warning: unmapped required fields (if any)
+    ├── Button: "Template generieren"
+    │
+    └── XmlTemplateEditor (existing — shows generated result)
+```
+
+### Data Model
+
+Each field mapping stores:
+- **Target field name** — e.g. "ArticleNumber" (from detected schema)
+- **Handlebars variable path** — e.g. "this.article_number"
+- **Transformation type** — none / date / number / prefix-suffix
+- **Transformation options** — format string, or prefix + suffix text
+
+**Stored as:** New `field_mappings` JSONB column on the existing `tenant_output_formats` table — same row as `detected_schema` and `xml_structure`.
+
+### Tech Decisions
+
+- **Drag-and-drop: `@dnd-kit/core`** — HTML5 native drag-and-drop breaks on mobile and is hard to style. `@dnd-kit` is accessibility-first (keyboard + screen reader support), touch-friendly, and the modern React standard.
+- **JSONB column (not separate table)** — Mappings are tightly coupled to the format row. A column keeps them co-located with `detected_schema` and `xml_structure` and avoids extra joins.
+- **Client-side template generation** — Mappings + schema are already in memory. Template generation is a pure string transformation, consistent with OPH-30's approach. No API call needed.
+- **Placement:** Mapper appears between the format upload section and the XML template editor in the XML tab. Hidden until a format is saved.
+- **OPH-30 suggestion banner** — Replaced by the mapper for the "start from scratch" use case. The XML editor below remains available for manual fine-tuning.
+
+### Backend Changes
+1. New migration: `field_mappings JSONB DEFAULT NULL` on `tenant_output_formats`
+2. Extend existing `GET` and `PUT /api/admin/erp-configs/[configId]/output-format` to include `field_mappings`
+
+### New Dependencies
+| Package | Purpose |
+|---|---|
+| `@dnd-kit/core` | Drag-and-drop engine |
+| `@dnd-kit/utilities` | Helper utilities for dnd-kit |
 
 ## QA Test Results
 _To be added by /qa_

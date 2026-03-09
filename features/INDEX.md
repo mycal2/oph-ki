@@ -43,7 +43,7 @@
 | OPH-29 | Shared ERP Configurations (Decoupled from Tenants) | Deployed | [OPH-29-shared-erp-configurations.md](OPH-29-shared-erp-configurations.md) | 2026-03-09 |
 | OPH-30 | Auto-Generate XML Template from Output Format Sample | Deployed | [OPH-30-xml-template-from-output-format.md](OPH-30-xml-template-from-output-format.md) | 2026-03-09 |
 | OPH-31 | Variable Click-to-Insert in XML Template Editor | Deployed | [OPH-31-variable-click-to-insert.md](OPH-31-variable-click-to-insert.md) | 2026-03-09 |
-| OPH-32 | Visual Field Mapper for ERP Output Format | Planned | [OPH-32-visual-field-mapper.md](OPH-32-visual-field-mapper.md) | 2026-03-09 |
+| OPH-32 | Visual Field Mapper for ERP Output Format | In Progress | [OPH-32-visual-field-mapper.md](OPH-32-visual-field-mapper.md) | 2026-03-09 |
 
 <!-- Add features above this line -->
 
