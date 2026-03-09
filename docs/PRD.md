@@ -47,7 +47,8 @@ Eine mandantenfähige SaaS-Plattform ("Order Intelligence Platform"), die Dental
 | P1 | OPH-25: E-Mail-Betreff als Extraktionsquelle | Deployed |
 | P2 | OPH-26: Order File Download | Deployed |
 | P2 | OPH-27: Order File Preview (Click-to-Open) | Deployed |
-| P1 | OPH-28: Output Format Sample Upload & Confidence Score | Planned |
+| P1 | OPH-28: Output Format Sample Upload & Confidence Score | Deployed |
+| P1 | OPH-29: Shared ERP Configurations (Decoupled from Tenants) | Planned |
 
 ## Success Metrics
 - Bearbeitungszeit pro Bestellung: von ~15 Min. manuell auf < 3 Min. mit System

@@ -40,7 +40,8 @@
 | OPH-26 | Order File Download | Deployed | [OPH-26-order-file-download.md](OPH-26-order-file-download.md) | 2026-03-05 |
 | OPH-27 | Order File Preview (Click-to-Open) | Deployed | [OPH-27-order-file-preview.md](OPH-27-order-file-preview.md) | 2026-03-05 |
 | OPH-28 | Output Format Sample Upload & Confidence Score | Deployed | [OPH-28-output-format-sample-upload-confidence-score.md](OPH-28-output-format-sample-upload-confidence-score.md) | 2026-03-08 |
+| OPH-29 | Shared ERP Configurations (Decoupled from Tenants) | Planned | [OPH-29-shared-erp-configurations.md](OPH-29-shared-erp-configurations.md) | 2026-03-09 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-29
+## Next Available ID: OPH-30
