@@ -74,7 +74,78 @@ Refactor the ERP mapping system so that ERP configurations are standalone, reusa
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Component Structure
+
+```
+/admin/erp-configs (page — redesigned)
++-- ErpConfigListTable (NEW — shows named configs, not tenants)
+|   +-- Row: config name, format badge, # assigned tenants, last updated, version
+|   +-- Actions: Edit | Duplicate | Delete (disabled if tenants assigned)
++-- "New Configuration" Button → opens ErpConfigEditor sheet
+
+/admin/erp-configs/[configId] (page — URL param changes from tenantId to configId)
++-- ErpConfigEditor (refactored — same UI, different data source)
+|   +-- Name + Description fields (NEW at top)
+|   +-- Format / Column Mappings / Separator / etc. (unchanged)
+|   +-- "Assigned Tenants" section (NEW, read-only list)
+|   +-- OutputFormatTab (moved here from per-tenant, OPH-28)
+|   +-- Version History Tab (unchanged, already config-keyed in DB)
++-- Impact warning banner: "Wird von X Mandanten verwendet"
+
+/admin/tenants (unchanged page)
++-- TenantFormSheet (updated)
+    +-- ERP-Konfiguration dropdown (NEW)
+        +-- Option: "Keine"
+        +-- Option per config: name + format badge + # tenants assigned
+```
+
+### Data Model Changes
+
+**`erp_configs` table — refactored:**
+- REMOVE: `tenant_id` column + its unique constraint
+- REMOVE: `is_default` column (meaningless without tenant link)
+- ADD: `name` (text, required, unique) — e.g. "Majesty XML Export"
+- ADD: `description` (text, optional)
+- KEEP: all other columns unchanged (format, column_mappings, separator, quote_char, encoding, xml_template, line_ending, decimal_separator, fallback_mode, timestamps)
+
+**`tenants` table — one new column:**
+- ADD: `erp_config_id` (nullable FK → erp_configs.id, ON DELETE SET NULL)
+
+**`erp_config_versions` table — no change:**
+Already references `erp_config_id`, not `tenant_id`. Version history works automatically for shared configs.
+
+**`tenant_output_formats` table — minor addition:**
+- ADD: `erp_config_id` (nullable FK → erp_configs.id) for OPH-28 output formats to attach to configs
+- KEEP: `tenant_id` column for backward compatibility with existing rows
+
+### API Routes
+
+| Current | New | Change |
+|---|---|---|
+| `GET /api/admin/erp-configs` | Same URL | Returns named configs (not tenants) |
+| — | `POST /api/admin/erp-configs` | NEW: Create a config |
+| `GET/PUT /api/admin/erp-configs/[tenantId]` | `GET/PUT /api/admin/erp-configs/[configId]` | Config-keyed, not tenant-keyed |
+| — | `DELETE /api/admin/erp-configs/[configId]` | NEW: Delete if no tenants assigned |
+| — | `POST /api/admin/erp-configs/[configId]/duplicate` | NEW: Duplicate |
+| `.../[tenantId]/copy-from/[srcId]` | (removed) | Replaced by duplicate |
+| `.../[tenantId]/rollback/[vId]` | `.../[configId]/rollback/[vId]` | Config-keyed |
+| `.../[tenantId]/test` | `.../[configId]/test` | Config-keyed |
+| `.../[tenantId]/orders` | `.../[configId]/orders` | Fetches across all assigned tenants |
+| `GET/POST/DELETE /api/admin/output-formats/[tenantId]` | `.../output-formats/config/[configId]` | Config-keyed for OPH-29 |
+
+**Internal-only changes (URL unchanged):**
+- `GET /api/orders/[orderId]/export` — ERP config lookup changes from `WHERE tenant_id = X` to joining through `tenants.erp_config_id`
+- `GET /api/orders/[orderId]/export/preview` — same
+- `POST /api/orders/[orderId]/extract` — same (confidence scoring)
+- `PUT /api/admin/tenants/[id]` — accepts new `erp_config_id` field in payload
+
+### Key Technical Decisions
+
+- **`ON DELETE SET NULL`** on `tenants.erp_config_id`: if a config is deleted, tenants safely lose their assignment rather than breaking
+- **No junction table**: one tenant → one config (simple FK, not many-to-many)
+- **Version history already config-keyed**: `erp_config_versions` requires no schema changes
+- **No new packages**: pure refactor using existing Supabase, Zod, React, shadcn/ui
 
 ## QA Test Results
 _To be added by /qa_
