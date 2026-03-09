@@ -103,10 +103,10 @@ interface TenantFormSheetProps {
 function generateSlug(name: string): string {
   return name
     .toLowerCase()
-    .replace(/[aeAE]/g, "ae")
-    .replace(/[oeOE]/g, "oe")
-    .replace(/[ueUE]/g, "ue")
-    .replace(/ss/g, "ss")
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 50);
