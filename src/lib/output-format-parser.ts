@@ -13,6 +13,7 @@ import type {
   OutputFormatDataType,
   OutputFormatSchemaColumn,
   OutputFormatParseResponse,
+  XmlStructureNode,
 } from "@/lib/types";
 
 /** Max records to scan in XML/JSON for schema inference. */
@@ -279,6 +280,9 @@ function parseXML(content: string): OutputFormatParseResponse {
     });
   }
 
+  // OPH-30: Extract the XML structure tree for template generation
+  const xml_structure = buildXmlStructureTree(parsed);
+
   return {
     file_name: "",
     file_type: "xml",
@@ -286,7 +290,107 @@ function parseXML(content: string): OutputFormatParseResponse {
     column_count: detected_schema.length,
     required_column_count: detected_schema.filter((c) => c.is_required).length,
     warnings,
+    xml_structure,
   };
+}
+
+/**
+ * OPH-30: Build a simplified XML structure tree from a parsed XML object.
+ * Preserves element hierarchy, attributes, and marks repeating arrays.
+ */
+function buildXmlStructureTree(parsed: unknown): XmlStructureNode | null {
+  if (typeof parsed !== "object" || parsed === null) return null;
+
+  const entries = Object.entries(parsed as Record<string, unknown>);
+  // Skip processing hints like ?xml declaration
+  const contentEntries = entries.filter(([key]) => !key.startsWith("?"));
+
+  if (contentEntries.length === 0) return null;
+
+  // The root is typically a single element wrapping everything
+  if (contentEntries.length === 1) {
+    const [tag, value] = contentEntries[0];
+    return buildNode(tag, value);
+  }
+
+  // Multiple root-level elements — wrap in a virtual root
+  const children: XmlStructureNode[] = [];
+  for (const [tag, value] of contentEntries) {
+    const node = buildNode(tag, value);
+    if (node) children.push(node);
+  }
+  return children.length === 1 ? children[0] : { tag: "root", children };
+}
+
+function buildNode(tag: string, value: unknown): XmlStructureNode | null {
+  // Skip XSD schema definitions
+  if (tag.startsWith("xsd:") || tag.startsWith("xs:")) return null;
+
+  if (value === null || value === undefined) {
+    return { tag, text: "" };
+  }
+
+  if (typeof value !== "object") {
+    return { tag, text: String(value) };
+  }
+
+  if (Array.isArray(value)) {
+    // This is a repeating element — take the first record as representative
+    const node: XmlStructureNode = { tag, is_array: true };
+    if (value.length > 0 && typeof value[0] === "object" && value[0] !== null) {
+      node.children = buildChildNodes(value[0] as Record<string, unknown>);
+    }
+    return node;
+  }
+
+  // Object — check for attributes and child elements
+  const obj = value as Record<string, unknown>;
+  const attributes: Record<string, string> = {};
+  const childEntries: [string, unknown][] = [];
+
+  for (const [key, val] of Object.entries(obj)) {
+    if (key.startsWith("@_")) {
+      attributes[key.slice(2)] = String(val ?? "");
+    } else {
+      childEntries.push([key, val]);
+    }
+  }
+
+  const node: XmlStructureNode = { tag };
+  if (Object.keys(attributes).length > 0) {
+    node.attributes = attributes;
+  }
+
+  if (childEntries.length === 0) {
+    // Element with only attributes, no children
+    node.text = "";
+    return node;
+  }
+
+  // Check if it's a text-only element (single #text child from parser)
+  if (childEntries.length === 1 && childEntries[0][0] === "#text") {
+    node.text = String(childEntries[0][1] ?? "");
+    return node;
+  }
+
+  const children = buildChildNodes(
+    Object.fromEntries(childEntries) as Record<string, unknown>
+  );
+  if (children.length > 0) {
+    node.children = children;
+  }
+
+  return node;
+}
+
+function buildChildNodes(obj: Record<string, unknown>): XmlStructureNode[] {
+  const children: XmlStructureNode[] = [];
+  for (const [key, val] of Object.entries(obj)) {
+    if (key.startsWith("@_") || key.startsWith("?")) continue;
+    const node = buildNode(key, val);
+    if (node) children.push(node);
+  }
+  return children;
 }
 
 /**

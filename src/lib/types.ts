@@ -800,6 +800,8 @@ export interface TenantOutputFormat {
   required_column_count: number;
   uploaded_at: string;
   uploaded_by: string;
+  /** OPH-30: XML structure tree for template generation (only for XML files). */
+  xml_structure?: XmlStructureNode | null;
 }
 
 /** Response from POST /api/admin/output-formats/[tenantId]/parse (preview before save). */
@@ -810,6 +812,22 @@ export interface OutputFormatParseResponse {
   column_count: number;
   required_column_count: number;
   warnings: string[];
+  /** OPH-30: Raw XML structure for template generation (only set for XML files). */
+  xml_structure?: XmlStructureNode | null;
+}
+
+/** OPH-30: Represents a node in the parsed XML tree for template generation. */
+export interface XmlStructureNode {
+  /** Element tag name. */
+  tag: string;
+  /** XML attributes (key-value pairs). */
+  attributes?: Record<string, string>;
+  /** Child elements. */
+  children?: XmlStructureNode[];
+  /** Whether this node represents a repeating array of records. */
+  is_array?: boolean;
+  /** Text content (leaf nodes only). */
+  text?: string;
 }
 
 /** Confidence score data included in the export preview response. */

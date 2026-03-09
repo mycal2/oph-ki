@@ -200,6 +200,7 @@ export async function POST(
           detected_schema: parseResult.detected_schema,
           column_count: parseResult.column_count,
           required_column_count: parseResult.required_column_count,
+          xml_structure: parseResult.xml_structure ?? null,
           uploaded_at: new Date().toISOString(),
           uploaded_by: user.id,
           version: (existing.version as number) + 1,
@@ -233,6 +234,7 @@ export async function POST(
           detected_schema: parseResult.detected_schema,
           column_count: parseResult.column_count,
           required_column_count: parseResult.required_column_count,
+          xml_structure: parseResult.xml_structure ?? null,
           uploaded_by: user.id,
         })
         .select("*")
