@@ -196,12 +196,17 @@ export async function POST(
         const sanitizedSubject = (payload.Subject || "no-subject")
           .replace(/[^a-z0-9-]/gi, "_")
           .slice(0, 50);
-        storagePath = `${tenant.id}/quarantine/${Date.now()}_${sanitizedSubject}.json`;
-        await adminClient.storage
+        const targetPath = `${tenant.id}/quarantine/${Date.now()}_${sanitizedSubject}.json`;
+        const { error: archiveError } = await adminClient.storage
           .from("order-files")
-          .upload(storagePath, emlBuffer, {
+          .upload(targetPath, emlBuffer, {
             contentType: "application/json",
           });
+        if (archiveError) {
+          console.error("Failed to archive quarantined email:", archiveError.message);
+        } else {
+          storagePath = targetPath;
+        }
       } catch (err) {
         console.error("Failed to archive quarantined email:", err);
       }

@@ -68,7 +68,7 @@ export async function POST(
     if (downloadError || !fileData) {
       console.error("Failed to download archived email:", downloadError?.message);
       return NextResponse.json(
-        { success: false, error: "Archivierte E-Mail konnte nicht geladen werden." },
+        { success: false, error: "Archivierte E-Mail konnte nicht geladen werden. Die E-Mail muss erneut gesendet werden." },
         { status: 500 }
       );
     }
