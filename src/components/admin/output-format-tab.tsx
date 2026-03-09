@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import {
   Upload,
   Loader2,
@@ -29,10 +29,12 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useOutputFormat } from "@/hooks/use-output-format";
 import { OutputFormatSchemaPreview } from "@/components/admin/output-format-schema-preview";
-import type { OutputFormatParseResponse } from "@/lib/types";
+import type { OutputFormatParseResponse, TenantOutputFormat } from "@/lib/types";
 
 interface OutputFormatTabProps {
   configId: string;
+  /** OPH-30: Callback when the saved output format changes (saved, replaced, or deleted). */
+  onFormatChange?: (format: TenantOutputFormat | null) => void;
 }
 
 const ALLOWED_EXTENSIONS = [".csv", ".xlsx", ".xml", ".json"];
@@ -42,7 +44,7 @@ const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
  * Admin tab for uploading and managing tenant output format samples.
  * Provides file upload, schema preview, and format management (replace/delete/download).
  */
-export function OutputFormatTab({ configId }: OutputFormatTabProps) {
+export function OutputFormatTab({ configId, onFormatChange }: OutputFormatTabProps) {
   const {
     format,
     isLoading,
@@ -55,6 +57,13 @@ export function OutputFormatTab({ configId }: OutputFormatTabProps) {
     deleteFormat,
     clearMutationError,
   } = useOutputFormat(configId);
+
+  // OPH-30: Notify parent when the saved format changes
+  useEffect(() => {
+    if (!isLoading) {
+      onFormatChange?.(format);
+    }
+  }, [format, isLoading, onFormatChange]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
