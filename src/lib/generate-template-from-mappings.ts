@@ -212,7 +212,7 @@ function renderMappedNode(
     } else {
       // Leaf array node
       const mapping = mappingMap.get(node.tag);
-      const content = mapping ? renderVariable(mapping) : node.tag;
+      const content = mapping ? renderVariable(mapping) : "";
       lines.push(`${indent}${insideEach ? "" : "  "}${openTag}${content}</${node.tag}>`);
     }
 
@@ -225,7 +225,7 @@ function renderMappedNode(
   // Leaf node
   if (node.text !== undefined && (!node.children || node.children.length === 0)) {
     const mapping = mappingMap.get(node.tag);
-    const content = mapping ? renderVariable(mapping) : node.tag;
+    const content = mapping ? renderVariable(mapping) : "";
     lines.push(`${indent}<${node.tag}${attrStr}>${content}</${node.tag}>`);
     return;
   }
