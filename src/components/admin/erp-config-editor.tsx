@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   Save,
   Loader2,
@@ -40,12 +40,15 @@ import type {
   ErpLineEnding,
   ErpDecimalSeparator,
   ErpFallbackMode,
+  TenantOutputFormat,
 } from "@/lib/types";
 import { CsvColumnBuilder } from "@/components/admin/erp-csv-column-builder";
 import { XmlTemplateEditor } from "@/components/admin/erp-xml-template-editor";
 import { ErpConfigVersionHistory } from "@/components/admin/erp-config-version-history";
 import { ErpConfigTestDialog } from "@/components/admin/erp-config-test-dialog";
 import { OutputFormatTab } from "@/components/admin/output-format-tab";
+import { XmlTemplateSuggestion } from "@/components/admin/xml-template-suggestion";
+import { generateXmlTemplate } from "@/lib/xml-template-generator";
 
 interface ErpConfigEditorProps {
   detail: ErpConfigDetail;
@@ -112,12 +115,74 @@ export function ErpConfigEditor({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
 
+  // OPH-30: Output format and template suggestion state
+  const [savedOutputFormat, setSavedOutputFormat] = useState<TenantOutputFormat | null>(null);
+  const [showTemplateSuggestion, setShowTemplateSuggestion] = useState(false);
+  const savedOutputFormatRef = useRef<TenantOutputFormat | null>(null);
+  const isInitialFormatLoadRef = useRef(true);
+
   // Test dialog
   const [testOpen, setTestOpen] = useState(false);
 
   const markDirty = useCallback(() => {
     setIsDirty(true);
     setSuccessMessage(null);
+  }, []);
+
+  // OPH-30: Track format changes.
+  // - XML samples: auto-fill the XML Template field directly (the uploaded XML IS the template)
+  // - Non-XML samples (CSV/XLSX/JSON): show a suggestion banner since it's a conversion
+  const handleOutputFormatChange = useCallback((fmt: TenantOutputFormat | null) => {
+    const previousFormat = savedOutputFormatRef.current;
+    savedOutputFormatRef.current = fmt;
+    setSavedOutputFormat(fmt);
+
+    // Skip on initial load (pre-existing format)
+    if (isInitialFormatLoadRef.current) {
+      isInitialFormatLoadRef.current = false;
+      return;
+    }
+
+    if (
+      fmt &&
+      fmt.detected_schema.length > 0 &&
+      (!previousFormat || previousFormat.id !== fmt.id || previousFormat.uploaded_at !== fmt.uploaded_at)
+    ) {
+      // For XML samples: auto-fill the XML template field directly
+      if (fmt.file_type === "xml") {
+        const result = generateXmlTemplate(
+          fmt.detected_schema,
+          fmt.file_type,
+          configName,
+          fmt.xml_structure
+        );
+        if (result.template) {
+          setXmlTemplate(result.template);
+          // Also switch to XML format tab if not already
+          if (format !== "xml") {
+            setFormat("xml");
+          }
+          markDirty();
+        }
+        setShowTemplateSuggestion(false);
+      } else {
+        // Non-XML: show suggestion banner
+        setShowTemplateSuggestion(true);
+      }
+    }
+    if (!fmt) {
+      setShowTemplateSuggestion(false);
+    }
+  }, [configName, format, markDirty]);
+
+  const handleAcceptTemplateSuggestion = useCallback((template: string) => {
+    setXmlTemplate(template);
+    setShowTemplateSuggestion(false);
+    markDirty();
+  }, [markDirty]);
+
+  const handleDismissTemplateSuggestion = useCallback(() => {
+    setShowTemplateSuggestion(false);
   }, []);
 
   const buildPayload = useCallback((): ErpConfigSavePayload => {
@@ -284,6 +349,17 @@ export function ErpConfigEditor({
         </TabsContent>
       </Tabs>
 
+      {/* OPH-30: Template suggestion from output format sample */}
+      {showTemplateSuggestion && savedOutputFormat && (
+        <XmlTemplateSuggestion
+          outputFormat={savedOutputFormat}
+          configName={configName}
+          currentTemplate={xmlTemplate}
+          onAccept={handleAcceptTemplateSuggestion}
+          onDismiss={handleDismissTemplateSuggestion}
+        />
+      )}
+
       <Separator />
 
       {/* Action bar */}
@@ -355,7 +431,7 @@ export function ErpConfigEditor({
           Laden Sie eine Beispieldatei im gewuenschten ERP-Ausgabeformat hoch. Das System
           erkennt die Spaltenstruktur und berechnet einen Confidence Score beim Export.
         </p>
-        <OutputFormatTab configId={config.id} />
+        <OutputFormatTab configId={config.id} onFormatChange={handleOutputFormatChange} />
       </div>
 
       {/* Test dialog */}
