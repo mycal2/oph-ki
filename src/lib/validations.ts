@@ -563,7 +563,6 @@ const erpTransformationStepSchema = z.object({
 const erpColumnMappingExtendedSchema = z.object({
   source_field: z
     .string()
-    .min(1, "Quellfeld ist erforderlich.")
     .max(200, "Quellfeld darf maximal 200 Zeichen lang sein.")
     .trim(),
   target_column_name: z

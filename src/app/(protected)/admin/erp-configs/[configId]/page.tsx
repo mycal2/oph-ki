@@ -145,6 +145,7 @@ export default function AdminErpConfigDetailPage({ params }: PageProps) {
         onTest={testConfig}
         onFetchOrders={fetchApprovedOrders}
         isMutating={isMutating}
+        mutationError={mutationError}
       />
     </div>
   );

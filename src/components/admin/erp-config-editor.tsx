@@ -65,6 +65,7 @@ interface ErpConfigEditorProps {
   ) => Promise<ErpConfigTestResult | null>;
   onFetchOrders: () => Promise<{ id: string; order_number: string | null; created_at: string }[]>;
   isMutating: boolean;
+  mutationError?: string | null;
 }
 
 /** Default config values when no config exists yet. */
@@ -89,6 +90,7 @@ export function ErpConfigEditor({
   onTest,
   onFetchOrders,
   isMutating,
+  mutationError,
 }: ErpConfigEditorProps) {
   const config = detail.config;
   const defaults = getDefaults();
@@ -526,6 +528,7 @@ export function ErpConfigEditor({
         onTest={onTest}
         onFetchOrders={onFetchOrders}
         isMutating={isMutating}
+        mutationError={mutationError}
       />
 
     </div>

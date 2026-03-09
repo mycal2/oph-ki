@@ -104,6 +104,7 @@ interface ErpConfigTestDialogProps {
   ) => Promise<ErpConfigTestResult | null>;
   onFetchOrders: () => Promise<{ id: string; order_number: string | null; created_at: string }[]>;
   isMutating: boolean;
+  mutationError?: string | null;
 }
 
 export function ErpConfigTestDialog({
@@ -113,6 +114,7 @@ export function ErpConfigTestDialog({
   onTest,
   onFetchOrders,
   isMutating,
+  mutationError,
 }: ErpConfigTestDialogProps) {
   const [mode, setMode] = useState<"json" | "order">("json");
   const [jsonInput, setJsonInput] = useState(SAMPLE_JSON);
@@ -148,7 +150,7 @@ export function ErpConfigTestDialog({
     if (testResult) {
       setResult(testResult);
     } else {
-      setTestError("Test fehlgeschlagen. Bitte pruefen Sie die Konfiguration.");
+      setTestError(mutationError ?? "Test fehlgeschlagen. Bitte pruefen Sie die Konfiguration.");
     }
   }, [config, mode, jsonInput, selectedOrderId, onTest]);
 
