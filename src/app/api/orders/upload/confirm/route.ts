@@ -56,15 +56,7 @@ export async function POST(
       );
     }
 
-    const tenantId = appMetadata?.tenant_id;
-    if (!tenantId) {
-      return NextResponse.json(
-        { success: false, error: "Kein Mandant zugewiesen." },
-        { status: 403 }
-      );
-    }
-
-    // 3. Parse and validate JSON body
+    // 3. Parse and validate JSON body (moved up for OPH-34 tenantId extraction)
     let body: unknown;
     try {
       body = await request.json();
@@ -73,6 +65,30 @@ export async function POST(
         { success: false, error: "Ungültiges JSON im Anfrage-Body." },
         { status: 400 }
       );
+    }
+
+    // OPH-34: Resolve tenant — admin override or JWT tenant
+    const bodyObj = body as Record<string, unknown>;
+    const adminTenantOverride = typeof bodyObj?.tenantId === "string" ? bodyObj.tenantId : null;
+
+    let tenantId: string;
+    if (adminTenantOverride) {
+      if (appMetadata?.role !== "platform_admin") {
+        return NextResponse.json(
+          { success: false, error: "Nur Plattform-Admins duerfen einen Mandanten ueberschreiben." },
+          { status: 403 }
+        );
+      }
+      tenantId = adminTenantOverride;
+    } else {
+      const jwtTenantId = appMetadata?.tenant_id;
+      if (!jwtTenantId) {
+        return NextResponse.json(
+          { success: false, error: "Kein Mandant zugewiesen." },
+          { status: 403 }
+        );
+      }
+      tenantId = jwtTenantId;
     }
 
     const parsed = uploadConfirmSchema.safeParse(body);

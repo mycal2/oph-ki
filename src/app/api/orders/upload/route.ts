@@ -105,12 +105,40 @@ export async function POST(
       );
     }
 
-    const tenantId = appMetadata?.tenant_id;
-    if (!tenantId) {
+    // 3. Parse and validate JSON body (moved up for OPH-34 tenantId extraction)
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
       return NextResponse.json(
-        { success: false, error: "Kein Mandant zugewiesen." },
-        { status: 403 }
+        { success: false, error: "Ungültiges JSON im Anfrage-Body." },
+        { status: 400 }
       );
+    }
+
+    // OPH-34: Resolve tenant — admin override or JWT tenant
+    const bodyObj = body as Record<string, unknown>;
+    const adminTenantOverride = typeof bodyObj?.tenantId === "string" ? bodyObj.tenantId : null;
+
+    let tenantId: string;
+    if (adminTenantOverride) {
+      // Only platform_admin may override the tenant
+      if (appMetadata?.role !== "platform_admin") {
+        return NextResponse.json(
+          { success: false, error: "Nur Plattform-Admins duerfen einen Mandanten ueberschreiben." },
+          { status: 403 }
+        );
+      }
+      tenantId = adminTenantOverride;
+    } else {
+      const jwtTenantId = appMetadata?.tenant_id;
+      if (!jwtTenantId) {
+        return NextResponse.json(
+          { success: false, error: "Kein Mandant zugewiesen." },
+          { status: 403 }
+        );
+      }
+      tenantId = jwtTenantId;
     }
 
     // 3. IP-based upload rate limiting
@@ -127,17 +155,7 @@ export async function POST(
       );
     }
 
-    // 4. Parse and validate JSON body
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      return NextResponse.json(
-        { success: false, error: "Ungültiges JSON im Anfrage-Body." },
-        { status: 400 }
-      );
-    }
-
+    // 4. Validate body against schema
     const parsed = uploadPresignSchema.safeParse(body);
     if (!parsed.success) {
       const firstError = parsed.error.issues[0]?.message ?? "Ungültige Eingabe.";

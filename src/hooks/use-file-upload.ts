@@ -42,7 +42,13 @@ async function hashFile(file: File): Promise<string> {
     .join("");
 }
 
-export function useFileUpload() {
+interface UseFileUploadOptions {
+  /** OPH-34: Optional tenant ID override for admin uploads on behalf of a tenant. */
+  tenantId?: string;
+}
+
+export function useFileUpload(options: UseFileUploadOptions = {}) {
+  const { tenantId } = options;
   const [files, setFiles] = useState<UploadFileEntry[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   /** OPH-25: Optional email subject passed along with every upload presign request. */
@@ -158,6 +164,8 @@ export function useFileUpload() {
             sha256Hash: entry.hash,
             // OPH-25: Include optional email subject for extraction context
             ...(subject.trim().length > 0 ? { subject: subject.trim() } : {}),
+            // OPH-34: Include optional tenant ID override for admin uploads
+            ...(tenantId ? { tenantId } : {}),
           }),
         });
 
@@ -225,6 +233,8 @@ export function useFileUpload() {
             storagePath: presignData.storagePath,
             sha256Hash: entry.hash,
             originalFilename: entry.file.name,
+            // OPH-34: Include optional tenant ID override for admin uploads
+            ...(tenantId ? { tenantId } : {}),
           }),
         });
 
@@ -285,7 +295,7 @@ export function useFileUpload() {
     }
 
     setIsUploading(false);
-  }, [files, isUploading, updateFileState, subject]);
+  }, [files, isUploading, updateFileState, subject, tenantId]);
 
   const clearFiles = useCallback(() => {
     setFiles([]);
