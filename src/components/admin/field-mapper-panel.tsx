@@ -25,7 +25,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
@@ -511,8 +510,29 @@ export function FieldMapperPanel({
             onDragCancel={handleDragCancel}
           >
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+              {/* Right column: Available variables (shown first on mobile, sticky on desktop) */}
+              <div className="lg:order-2 lg:sticky lg:top-4 lg:self-start space-y-3">
+                <h4 className="text-sm font-medium text-muted-foreground">
+                  Verfuegbare Variablen
+                </h4>
+                <div className="space-y-4">
+                    {VARIABLE_GROUPS.map((group) => (
+                      <div key={group.label} className="space-y-1.5">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          {group.label}
+                        </p>
+                        <div className="space-y-1">
+                          {group.variables.map((v) => (
+                            <DraggableVariableChip key={v.path} variable={v} />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+              </div>
+
               {/* Left column: Target fields */}
-              <div className="space-y-4">
+              <div className="lg:order-1 space-y-4">
                 {/* Header fields (only for XML with structure) */}
                 {headerFields.length > 0 && (
                   <div className="space-y-2">
@@ -547,8 +567,7 @@ export function FieldMapperPanel({
                         ? "Bestellpositionen (Wiederholend)"
                         : "Zielfelder"}
                     </h4>
-                    <ScrollArea className="max-h-[400px]">
-                      <div className="space-y-1.5 pr-3">
+                    <div className="space-y-1.5">
                         {lineItemFields.map((col) => (
                           <TargetFieldDropZone
                             key={col.column_name}
@@ -561,7 +580,6 @@ export function FieldMapperPanel({
                           />
                         ))}
                       </div>
-                    </ScrollArea>
                   </div>
                 )}
 
@@ -579,28 +597,6 @@ export function FieldMapperPanel({
                 </div>
               </div>
 
-              {/* Right column: Available variables */}
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium text-muted-foreground">
-                  Verfuegbare Variablen
-                </h4>
-                <ScrollArea className="max-h-[500px]">
-                  <div className="space-y-4 pr-3">
-                    {VARIABLE_GROUPS.map((group) => (
-                      <div key={group.label} className="space-y-1.5">
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                          {group.label}
-                        </p>
-                        <div className="space-y-1">
-                          {group.variables.map((v) => (
-                            <DraggableVariableChip key={v.path} variable={v} />
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </div>
             </div>
 
             {/* Drag overlay */}
