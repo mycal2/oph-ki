@@ -388,7 +388,11 @@ export default function EmailQuarantinePage() {
                   ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   : ""
               }
-              onClick={() => {
+              onClick={(e) => {
+                // Prevent Radix from auto-closing the dialog — we close it
+                // manually in the finally block after the async action completes.
+                // This keeps the loading state visible to the user.
+                e.preventDefault();
                 if (!confirmDialog) return;
                 if (confirmDialog.action === "reprocess") {
                   handleReprocess(confirmDialog.entryId);
@@ -397,7 +401,12 @@ export default function EmailQuarantinePage() {
                 }
               }}
             >
-              {confirmDialog?.action === "approved"
+              {actionLoading ? (
+                <>
+                  <RotateCcw className="h-4 w-4 mr-1 animate-spin" />
+                  Wird verarbeitet...
+                </>
+              ) : confirmDialog?.action === "approved"
                 ? "Freigeben"
                 : confirmDialog?.action === "rejected"
                   ? "Ablehnen"

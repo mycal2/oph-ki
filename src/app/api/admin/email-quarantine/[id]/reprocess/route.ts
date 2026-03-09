@@ -109,10 +109,14 @@ export async function POST(
     const orderId = order.id;
 
     // 4. Link quarantine entry to the new order
-    await adminClient
+    const { error: linkError } = await adminClient
       .from("email_quarantine")
       .update({ order_id: orderId })
       .eq("id", id);
+
+    if (linkError) {
+      console.error("Failed to link quarantine entry to order:", linkError.message);
+    }
 
     // 5. Upload attachments
     const { supported: supportedAttachments } = filterAttachments(
