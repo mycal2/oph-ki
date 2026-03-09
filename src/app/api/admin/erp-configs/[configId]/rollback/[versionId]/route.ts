@@ -5,18 +5,18 @@ import { requirePlatformAdmin, isErrorResponse, checkAdminRateLimit } from "@/li
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * POST /api/admin/erp-configs/[tenantId]/rollback/[versionId]
+ * POST /api/admin/erp-configs/[configId]/rollback/[versionId]
  *
- * Restores a previous version as the new active config.
+ * OPH-29: Restores a previous version as the new active config.
  * Creates a new version entry (copy of the old snapshot) so history is preserved.
  * Platform admin only.
  */
 export async function POST(
   _request: NextRequest,
-  { params }: { params: Promise<{ tenantId: string; versionId: string }> }
+  { params }: { params: Promise<{ configId: string; versionId: string }> }
 ): Promise<NextResponse> {
   try {
-    const { tenantId, versionId } = await params;
+    const { configId, versionId } = await params;
     const auth = await requirePlatformAdmin();
     if (isErrorResponse(auth)) return auth;
     const { user, adminClient } = auth;
@@ -24,28 +24,26 @@ export async function POST(
     const rateLimitError = checkAdminRateLimit(user.id);
     if (rateLimitError) return rateLimitError;
 
-    if (!UUID_REGEX.test(tenantId) || !UUID_REGEX.test(versionId)) {
+    if (!UUID_REGEX.test(configId) || !UUID_REGEX.test(versionId)) {
       return NextResponse.json(
         { success: false, error: "Ungueltige ID." },
         { status: 400 }
       );
     }
 
-    // Fetch the config for this tenant
+    // Verify config exists
     const { data: config, error: configError } = await adminClient
       .from("erp_configs")
       .select("id")
-      .eq("tenant_id", tenantId)
+      .eq("id", configId)
       .single();
 
     if (configError || !config) {
       return NextResponse.json(
-        { success: false, error: "Keine ERP-Konfiguration fuer diesen Mandanten." },
+        { success: false, error: "ERP-Konfiguration nicht gefunden." },
         { status: 404 }
       );
     }
-
-    const configId = config.id as string;
 
     // Fetch the version to restore
     const { data: version, error: versionError } = await adminClient
@@ -64,10 +62,12 @@ export async function POST(
 
     const snapshot = version.snapshot as Record<string, unknown>;
 
-    // Apply snapshot to active config
+    // Apply snapshot to active config (including name/description if present)
     const { error: updateError } = await adminClient
       .from("erp_configs")
       .update({
+        name: snapshot.name ?? undefined,
+        description: snapshot.description ?? null,
         format: snapshot.format,
         column_mappings: snapshot.column_mappings,
         separator: snapshot.separator,
@@ -100,20 +100,13 @@ export async function POST(
 
     const nextVersion = ((lastVersion?.version_number as number) ?? 0) + 1;
 
-    const { error: newVersionError } = await adminClient
-      .from("erp_config_versions")
-      .insert({
-        erp_config_id: configId,
-        version_number: nextVersion,
-        snapshot,
-        comment: `Wiederhergestellt von Version ${version.version_number}`,
-        created_by: user.id,
-      });
-
-    if (newVersionError) {
-      console.error("Error creating rollback version:", newVersionError.message);
-      // Non-fatal — config was restored, just version tracking failed
-    }
+    await adminClient.from("erp_config_versions").insert({
+      erp_config_id: configId,
+      version_number: nextVersion,
+      snapshot,
+      comment: `Wiederhergestellt von Version ${version.version_number}`,
+      created_by: user.id,
+    });
 
     return NextResponse.json({
       success: true,
@@ -124,7 +117,7 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error("Error in POST /api/admin/erp-configs/[tenantId]/rollback/[versionId]:", error);
+    console.error("Error in POST /api/admin/erp-configs/[configId]/rollback/[versionId]:", error);
     return NextResponse.json(
       { success: false, error: "Interner Serverfehler." },
       { status: 500 }

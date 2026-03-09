@@ -12,23 +12,25 @@ import type {
   TenantOutputFormat,
   ErpColumnMappingExtended,
   CanonicalOrderData,
+  OutputFormatSchemaColumn,
 } from "@/lib/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * GET /api/admin/output-formats/[tenantId]
+ * GET /api/admin/erp-configs/[configId]/output-format
  *
- * Returns the currently assigned output format for a tenant.
- * Returns 404 if none is assigned (frontend treats this as valid "no format" state).
+ * OPH-29: Returns the output format assigned to this ERP config.
+ * Returns 404 if none is assigned.
  * Platform admin only.
  */
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ tenantId: string }> }
+  { params }: { params: Promise<{ configId: string }> }
 ): Promise<NextResponse> {
   try {
-    const { tenantId } = await params;
+    const { configId } = await params;
     const auth = await requirePlatformAdmin();
     if (isErrorResponse(auth)) return auth;
     const { user, adminClient } = auth;
@@ -36,9 +38,9 @@ export async function GET(
     const rateLimitError = checkAdminRateLimit(user.id);
     if (rateLimitError) return rateLimitError;
 
-    if (!UUID_REGEX.test(tenantId)) {
+    if (!UUID_REGEX.test(configId)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Mandanten-ID." },
+        { success: false, error: "Ungueltige Konfigurations-ID." },
         { status: 400 }
       );
     }
@@ -46,7 +48,7 @@ export async function GET(
     const { data, error } = await adminClient
       .from("tenant_output_formats")
       .select("*")
-      .eq("tenant_id", tenantId)
+      .eq("erp_config_id", configId)
       .maybeSingle();
 
     if (error) {
@@ -66,7 +68,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, data: data as TenantOutputFormat });
   } catch (error) {
-    console.error("Error in GET /api/admin/output-formats/[tenantId]:", error);
+    console.error("Error in GET /api/admin/erp-configs/[configId]/output-format:", error);
     return NextResponse.json(
       { success: false, error: "Interner Serverfehler." },
       { status: 500 }
@@ -75,19 +77,17 @@ export async function GET(
 }
 
 /**
- * POST /api/admin/output-formats/[tenantId]
+ * POST /api/admin/erp-configs/[configId]/output-format
  *
- * Saves a sample output format for a tenant: parses the file, stores the
- * original in Supabase Storage, and saves the detected schema to the database.
- * If a format already exists, it is replaced (optimistic locking via version).
+ * OPH-29: Saves a sample output format for an ERP config.
  * Platform admin only.
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ tenantId: string }> }
+  { params }: { params: Promise<{ configId: string }> }
 ): Promise<NextResponse> {
   try {
-    const { tenantId } = await params;
+    const { configId } = await params;
     const auth = await requirePlatformAdmin();
     if (isErrorResponse(auth)) return auth;
     const { user, adminClient } = auth;
@@ -95,23 +95,23 @@ export async function POST(
     const rateLimitError = checkAdminRateLimit(user.id);
     if (rateLimitError) return rateLimitError;
 
-    if (!UUID_REGEX.test(tenantId)) {
+    if (!UUID_REGEX.test(configId)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Mandanten-ID." },
+        { success: false, error: "Ungueltige Konfigurations-ID." },
         { status: 400 }
       );
     }
 
-    // Verify tenant exists
-    const { data: tenant, error: tenantError } = await adminClient
-      .from("tenants")
-      .select("id")
-      .eq("id", tenantId)
+    // Verify config exists
+    const { data: config, error: configError } = await adminClient
+      .from("erp_configs")
+      .select("id, column_mappings")
+      .eq("id", configId)
       .single();
 
-    if (tenantError || !tenant) {
+    if (configError || !config) {
       return NextResponse.json(
-        { success: false, error: "Mandant nicht gefunden." },
+        { success: false, error: "ERP-Konfiguration nicht gefunden." },
         { status: 404 }
       );
     }
@@ -162,10 +162,9 @@ export async function POST(
     const parseResult = await parseOutputFormatSample(buffer, file.name, fileType);
 
     // Upload file to Supabase Storage
-    // Sanitize filename: strip path separators to prevent path traversal
     const sanitizedName = file.name.replace(/[/\\]/g, "_").replace(/\.\./g, "_");
     const timestamp = Date.now();
-    const storagePath = `${tenantId}/${timestamp}-${sanitizedName}`;
+    const storagePath = `configs/${configId}/${timestamp}-${sanitizedName}`;
 
     const { error: uploadError } = await adminClient.storage
       .from("tenant-output-formats")
@@ -186,13 +185,12 @@ export async function POST(
     const { data: existing } = await adminClient
       .from("tenant_output_formats")
       .select("id, file_path, version")
-      .eq("tenant_id", tenantId)
+      .eq("erp_config_id", configId)
       .maybeSingle();
 
     let savedFormat: TenantOutputFormat;
 
     if (existing) {
-      // Replace existing: update with version increment
       const { data: updated, error: updateError } = await adminClient
         .from("tenant_output_formats")
         .update({
@@ -212,8 +210,6 @@ export async function POST(
         .single();
 
       if (updateError || !updated) {
-        // Version conflict — another admin updated concurrently
-        // Clean up uploaded file
         await adminClient.storage.from("tenant-output-formats").remove([storagePath]);
         return NextResponse.json(
           { success: false, error: "Das Format wurde gleichzeitig von einem anderen Admin geaendert. Bitte laden Sie die Seite neu." },
@@ -221,18 +217,16 @@ export async function POST(
         );
       }
 
-      // Delete old file from storage
       if (existing.file_path) {
         await adminClient.storage.from("tenant-output-formats").remove([existing.file_path as string]);
       }
 
       savedFormat = updated as TenantOutputFormat;
     } else {
-      // Insert new
       const { data: inserted, error: insertError } = await adminClient
         .from("tenant_output_formats")
         .insert({
-          tenant_id: tenantId,
+          erp_config_id: configId,
           file_name: file.name,
           file_path: storagePath,
           file_type: fileType,
@@ -246,7 +240,6 @@ export async function POST(
 
       if (insertError || !inserted) {
         console.error("Insert error:", insertError);
-        // Clean up uploaded file
         await adminClient.storage.from("tenant-output-formats").remove([storagePath]);
         return NextResponse.json(
           { success: false, error: "Fehler beim Speichern des Output-Formats." },
@@ -257,14 +250,18 @@ export async function POST(
       savedFormat = inserted as TenantOutputFormat;
     }
 
-    // Recalculate confidence scores for current orders of this tenant
-    // Only for orders in "extracted" or "approved" status
-    await recalculateConfidenceScores(adminClient, tenantId, parseResult.detected_schema);
+    // Recalculate confidence scores for orders of all tenants assigned to this config
+    await recalculateConfidenceScoresForConfig(
+      adminClient,
+      configId,
+      config.column_mappings as ErpColumnMappingExtended[] | null,
+      parseResult.detected_schema
+    );
 
     return NextResponse.json({ success: true, data: savedFormat });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Interner Serverfehler.";
-    console.error("Error in POST /api/admin/output-formats/[tenantId]:", error);
+    console.error("Error in POST /api/admin/erp-configs/[configId]/output-format:", error);
     return NextResponse.json(
       { success: false, error: message },
       { status: 500 }
@@ -273,18 +270,17 @@ export async function POST(
 }
 
 /**
- * DELETE /api/admin/output-formats/[tenantId]
+ * DELETE /api/admin/erp-configs/[configId]/output-format
  *
- * Removes the assigned output format for a tenant. Deletes the record
- * from the database and the file from Supabase Storage.
+ * OPH-29: Removes the output format for an ERP config.
  * Platform admin only.
  */
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: Promise<{ tenantId: string }> }
+  { params }: { params: Promise<{ configId: string }> }
 ): Promise<NextResponse> {
   try {
-    const { tenantId } = await params;
+    const { configId } = await params;
     const auth = await requirePlatformAdmin();
     if (isErrorResponse(auth)) return auth;
     const { user, adminClient } = auth;
@@ -292,18 +288,17 @@ export async function DELETE(
     const rateLimitError = checkAdminRateLimit(user.id);
     if (rateLimitError) return rateLimitError;
 
-    if (!UUID_REGEX.test(tenantId)) {
+    if (!UUID_REGEX.test(configId)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Mandanten-ID." },
+        { success: false, error: "Ungueltige Konfigurations-ID." },
         { status: 400 }
       );
     }
 
-    // Fetch existing format
     const { data: existing, error: fetchError } = await adminClient
       .from("tenant_output_formats")
       .select("id, file_path")
-      .eq("tenant_id", tenantId)
+      .eq("erp_config_id", configId)
       .maybeSingle();
 
     if (fetchError) {
@@ -321,7 +316,6 @@ export async function DELETE(
       );
     }
 
-    // Delete from database
     const { error: deleteError } = await adminClient
       .from("tenant_output_formats")
       .delete()
@@ -335,24 +329,31 @@ export async function DELETE(
       );
     }
 
-    // Delete file from storage
     if (existing.file_path) {
       await adminClient.storage.from("tenant-output-formats").remove([existing.file_path as string]);
     }
 
-    // Clear confidence scores for current orders of this tenant
-    await adminClient
-      .from("orders")
-      .update({
-        output_format_confidence_score: null,
-        output_format_missing_columns: null,
-      })
-      .eq("tenant_id", tenantId)
-      .in("status", ["extracted", "approved"]);
+    // Clear confidence scores for orders of all tenants assigned to this config
+    const { data: tenants } = await adminClient
+      .from("tenants")
+      .select("id")
+      .eq("erp_config_id", configId);
+
+    if (tenants && tenants.length > 0) {
+      const tenantIds = tenants.map((t) => t.id as string);
+      await adminClient
+        .from("orders")
+        .update({
+          output_format_confidence_score: null,
+          output_format_missing_columns: null,
+        })
+        .in("tenant_id", tenantIds)
+        .in("status", ["extracted", "approved"]);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error in DELETE /api/admin/output-formats/[tenantId]:", error);
+    console.error("Error in DELETE /api/admin/erp-configs/[configId]/output-format:", error);
     return NextResponse.json(
       { success: false, error: "Interner Serverfehler." },
       { status: 500 }
@@ -362,50 +363,36 @@ export async function DELETE(
 
 // ---------- Helper: Recalculate confidence scores ----------
 
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { OutputFormatSchemaColumn } from "@/lib/types";
-
 /**
- * Recalculates confidence scores for all current orders of a tenant
- * that are in "extracted" or "approved" status.
+ * Recalculates confidence scores for all orders across all tenants
+ * assigned to a given ERP config.
  */
-async function recalculateConfidenceScores(
+async function recalculateConfidenceScoresForConfig(
   adminClient: SupabaseClient,
-  tenantId: string,
+  configId: string,
+  erpMappings: ErpColumnMappingExtended[] | null,
   outputSchema: OutputFormatSchemaColumn[]
 ): Promise<void> {
   try {
-    // OPH-29: Get ERP config via tenant's erp_config_id
-    const { data: tenantRow } = await adminClient
+    // Find all tenant IDs assigned to this config
+    const { data: tenants } = await adminClient
       .from("tenants")
-      .select("erp_config_id")
-      .eq("id", tenantId)
-      .single();
+      .select("id")
+      .eq("erp_config_id", configId);
 
-    let erpConfig: { column_mappings: unknown } | null = null;
-    if (tenantRow?.erp_config_id) {
-      const { data } = await adminClient
-        .from("erp_configs")
-        .select("column_mappings")
-        .eq("id", tenantRow.erp_config_id as string)
-        .maybeSingle();
-      erpConfig = data;
-    }
+    if (!tenants || tenants.length === 0) return;
 
-    const erpMappings = erpConfig
-      ? (erpConfig.column_mappings as ErpColumnMappingExtended[])
-      : null;
+    const tenantIds = tenants.map((t) => t.id as string);
 
     // Fetch orders with extracted data
     const { data: orders } = await adminClient
       .from("orders")
       .select("id, extracted_data, reviewed_data")
-      .eq("tenant_id", tenantId)
+      .in("tenant_id", tenantIds)
       .in("status", ["extracted", "approved"]);
 
     if (!orders || orders.length === 0) return;
 
-    // Calculate and update each order
     for (const order of orders) {
       const orderData = (order.reviewed_data ?? order.extracted_data) as CanonicalOrderData | null;
       const scoreData = calculateConfidenceScore(orderData, outputSchema, erpMappings);
@@ -419,7 +406,6 @@ async function recalculateConfidenceScores(
         .eq("id", order.id as string);
     }
   } catch (error) {
-    // Non-critical: log but don't fail the main operation
     console.error("Error recalculating confidence scores:", error);
   }
 }

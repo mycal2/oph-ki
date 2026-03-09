@@ -438,6 +438,8 @@ export const createTenantSchema = z.object({
     message: "Ungueltiger Status.",
   }).default("active"),
   allowed_email_domains: allowedEmailDomainsField,
+  /** OPH-28: Assign an ERP config to this tenant on creation. */
+  erp_config_id: z.string().uuid("Ungueltige ERP-Konfigurations-ID.").nullable().optional(),
 });
 
 export const updateTenantSchema = z.object({
@@ -460,6 +462,8 @@ export const updateTenantSchema = z.object({
   }).optional(),
   allowed_email_domains: allowedEmailDomainsField.optional(),
   email_notifications_enabled: z.boolean().optional(),
+  /** OPH-29: Assign an ERP config to this tenant. */
+  erp_config_id: z.string().uuid("Ungueltige ERP-Konfigurations-ID.").nullable().optional(),
 });
 
 /** Invite user on behalf of a specific tenant (platform admin). */
@@ -575,6 +579,16 @@ const erpColumnMappingExtendedSchema = z.object({
 });
 
 export const erpConfigSaveSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Name ist erforderlich.")
+    .max(200, "Name darf maximal 200 Zeichen lang sein.")
+    .trim(),
+  description: z
+    .string()
+    .max(1000, "Beschreibung darf maximal 1000 Zeichen lang sein.")
+    .nullable()
+    .default(null),
   format: z.enum(["csv", "xml", "json"], {
     message: "Ungueltiges Format. Erlaubt: csv, xml, json",
   }),
@@ -616,8 +630,8 @@ export const erpConfigTestSchema = z.object({
   jsonInput: z.string().max(100000).optional(),
   /** Order ID for mode=order. */
   orderId: z.string().uuid("Ungueltige Bestell-ID.").optional(),
-  /** The config to test (same shape as save payload, minus comment). */
-  config: erpConfigSaveSchema.omit({ comment: true }),
+  /** The config to test (same shape as save payload, minus comment/name/description). */
+  config: erpConfigSaveSchema.omit({ comment: true, name: true, description: true }),
 }).refine(
   (data) => {
     if (data.mode === "json") return !!data.jsonInput?.trim();

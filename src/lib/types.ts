@@ -25,6 +25,8 @@ export interface Tenant {
   allowed_email_domains: string[];
   /** OPH-12: Data retention period in days (30-365, default 90). */
   data_retention_days: number;
+  /** OPH-29: Assigned ERP configuration ID (nullable). */
+  erp_config_id: string | null;
 }
 
 export interface UserProfile {
@@ -345,16 +347,16 @@ export interface ErpColumnMapping {
   required?: boolean;
 }
 
-/** ERP export configuration for a tenant. */
+/** OPH-29: Shared ERP export configuration. */
 export interface ErpConfig {
   id: string;
-  tenant_id: string;
+  name: string;
+  description: string | null;
   format: ExportFormat;
   column_mappings: ErpColumnMapping[];
   separator: string;
   quote_char: string;
   encoding: string;
-  is_default: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -447,6 +449,10 @@ export interface TenantAdminListItem {
   trial_expires_at: string | null;
   /** OPH-17: Allowed email domains for sender authorization. */
   allowed_email_domains: string[];
+  /** OPH-29: Assigned ERP config ID. */
+  erp_config_id: string | null;
+  /** OPH-29: Assigned ERP config name (for display). */
+  erp_config_name: string | null;
 }
 
 /** User belonging to a tenant, shown in the admin user tab. */
@@ -568,10 +574,11 @@ export interface ErpColumnMappingExtended {
   transformations: ErpTransformationStep[];
 }
 
-/** Full ERP config for a tenant as used in the admin UI. */
+/** OPH-29: Full ERP config as used in the admin UI. */
 export interface ErpConfigAdmin {
   id: string;
-  tenant_id: string;
+  name: string;
+  description: string | null;
   format: ExportFormat;
   column_mappings: ErpColumnMappingExtended[];
   separator: string;
@@ -581,7 +588,6 @@ export interface ErpConfigAdmin {
   decimal_separator: ErpDecimalSeparator;
   fallback_mode: ErpFallbackMode;
   xml_template: string | null;
-  is_default: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -598,28 +604,23 @@ export interface ErpConfigVersion {
   created_at: string;
 }
 
-/** Tenant with ERP config summary for the list view. */
+/** OPH-29: Named ERP config for the list view. */
 export interface ErpConfigListItem {
-  tenant_id: string;
-  tenant_name: string;
-  tenant_status: TenantStatus;
-  erp_type: ErpType;
-  has_config: boolean;
-  format: ExportFormat | null;
-  fallback_mode: ErpFallbackMode | null;
+  id: string;
+  name: string;
+  description: string | null;
+  format: ExportFormat;
+  fallback_mode: ErpFallbackMode;
+  assigned_tenant_count: number;
   version_count: number;
-  last_updated: string | null;
+  last_updated: string;
 }
 
-/** Full config data returned from GET /api/admin/erp-configs/[tenantId]. */
+/** OPH-29: Full config data returned from GET /api/admin/erp-configs/[configId]. */
 export interface ErpConfigDetail {
-  config: ErpConfigAdmin | null;
+  config: ErpConfigAdmin;
   versions: ErpConfigVersion[];
-  tenant: {
-    id: string;
-    name: string;
-    erp_type: ErpType;
-  };
+  assigned_tenants: { id: string; name: string }[];
 }
 
 /** Test result from the ERP config test endpoint. */
@@ -629,8 +630,10 @@ export interface ErpConfigTestResult {
   format: ExportFormat;
 }
 
-/** Payload for saving an ERP config. */
+/** OPH-29: Payload for saving an ERP config. */
 export interface ErpConfigSavePayload {
+  name: string;
+  description?: string | null;
   format: ExportFormat;
   column_mappings: ErpColumnMappingExtended[];
   separator: string;
@@ -783,10 +786,12 @@ export interface OutputFormatSchemaColumn {
   is_required: boolean;
 }
 
-/** Stored output format record for a tenant. */
+/** Stored output format record (can be per-tenant or per-config). */
 export interface TenantOutputFormat {
   id: string;
-  tenant_id: string;
+  tenant_id: string | null;
+  /** OPH-29: Output format linked to a shared ERP config. */
+  erp_config_id: string | null;
   file_name: string;
   file_path: string;
   file_type: OutputFormatFileType;

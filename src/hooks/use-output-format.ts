@@ -8,17 +8,12 @@ import type {
 } from "@/lib/types";
 
 interface UseOutputFormatReturn {
-  /** Current output format for the tenant, null if none assigned. */
+  /** Current output format for the config, null if none assigned. */
   format: TenantOutputFormat | null;
-  /** Whether the format is loading. */
   isLoading: boolean;
-  /** Error message, if any. */
   error: string | null;
-  /** Whether a mutation is in progress. */
   isMutating: boolean;
-  /** Mutation error message, if any. */
   mutationError: string | null;
-  /** Re-fetch the current format. */
   refetch: () => void;
   /** Parse a sample file and return the detected schema (no save). */
   parseFile: (file: File) => Promise<OutputFormatParseResponse | null>;
@@ -26,14 +21,14 @@ interface UseOutputFormatReturn {
   saveFormat: (file: File) => Promise<boolean>;
   /** Delete the current format. */
   deleteFormat: () => Promise<boolean>;
-  /** Clear mutation error. */
   clearMutationError: () => void;
 }
 
 /**
- * Hook for managing tenant output format samples (OPH-28).
+ * Hook for managing output format samples.
+ * OPH-29: Uses configId (ERP config) instead of tenantId.
  */
-export function useOutputFormat(tenantId: string): UseOutputFormatReturn {
+export function useOutputFormat(configId: string): UseOutputFormatReturn {
   const [format, setFormat] = useState<TenantOutputFormat | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,15 +36,14 @@ export function useOutputFormat(tenantId: string): UseOutputFormatReturn {
   const [mutationError, setMutationError] = useState<string | null>(null);
 
   const fetchFormat = useCallback(async () => {
-    if (!tenantId) return;
+    if (!configId) return;
     setIsLoading(true);
     setError(null);
 
     try {
-      const res = await fetch(`/api/admin/output-formats/${tenantId}`);
+      const res = await fetch(`/api/admin/erp-configs/${configId}/output-format`);
 
       if (res.status === 404) {
-        // No format assigned yet — this is a valid state
         setFormat(null);
         return;
       }
@@ -69,7 +63,7 @@ export function useOutputFormat(tenantId: string): UseOutputFormatReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [tenantId]);
+  }, [configId]);
 
   useEffect(() => {
     fetchFormat();
@@ -85,7 +79,7 @@ export function useOutputFormat(tenantId: string): UseOutputFormatReturn {
         formData.append("file", file);
 
         const res = await fetch(
-          `/api/admin/output-formats/${tenantId}/parse`,
+          `/api/admin/erp-configs/${configId}/output-format/parse`,
           {
             method: "POST",
             body: formData,
@@ -106,7 +100,7 @@ export function useOutputFormat(tenantId: string): UseOutputFormatReturn {
         setIsMutating(false);
       }
     },
-    [tenantId]
+    [configId]
   );
 
   const saveFormat = useCallback(
@@ -118,7 +112,7 @@ export function useOutputFormat(tenantId: string): UseOutputFormatReturn {
         const formData = new FormData();
         formData.append("file", file);
 
-        const res = await fetch(`/api/admin/output-formats/${tenantId}`, {
+        const res = await fetch(`/api/admin/erp-configs/${configId}/output-format`, {
           method: "POST",
           body: formData,
         });
@@ -138,7 +132,7 @@ export function useOutputFormat(tenantId: string): UseOutputFormatReturn {
         setIsMutating(false);
       }
     },
-    [tenantId, fetchFormat]
+    [configId, fetchFormat]
   );
 
   const deleteFormat = useCallback(async (): Promise<boolean> => {
@@ -146,7 +140,7 @@ export function useOutputFormat(tenantId: string): UseOutputFormatReturn {
     setMutationError(null);
 
     try {
-      const res = await fetch(`/api/admin/output-formats/${tenantId}`, {
+      const res = await fetch(`/api/admin/erp-configs/${configId}/output-format`, {
         method: "DELETE",
       });
       const json = (await res.json()) as ApiResponse;
@@ -164,7 +158,7 @@ export function useOutputFormat(tenantId: string): UseOutputFormatReturn {
     } finally {
       setIsMutating(false);
     }
-  }, [tenantId]);
+  }, [configId]);
 
   const clearMutationError = useCallback(() => {
     setMutationError(null);

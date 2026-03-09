@@ -516,24 +516,41 @@ export async function POST(
         .eq("id", orderId);
 
       // --- OPH-28: Calculate confidence score if output format is configured ---
+      // OPH-29: Resolve ERP config and output format via tenant's erp_config_id
       if (tenantId) {
         try {
-          const { data: outputFormat } = await adminClient
-            .from("tenant_output_formats")
-            .select("detected_schema")
-            .eq("tenant_id", tenantId)
-            .maybeSingle();
+          const { data: tenantForConfig } = await adminClient
+            .from("tenants")
+            .select("erp_config_id")
+            .eq("id", tenantId)
+            .single();
+
+          const configId = tenantForConfig?.erp_config_id as string | null;
+
+          const { data: outputFormat } = configId
+            ? await adminClient
+                .from("tenant_output_formats")
+                .select("detected_schema")
+                .eq("erp_config_id", configId)
+                .maybeSingle()
+            : await adminClient
+                .from("tenant_output_formats")
+                .select("detected_schema")
+                .eq("tenant_id", tenantId)
+                .maybeSingle();
 
           if (outputFormat?.detected_schema) {
-            const { data: erpConfig } = await adminClient
-              .from("erp_configs")
-              .select("column_mappings")
-              .eq("tenant_id", tenantId)
-              .maybeSingle();
-
-            const erpMappings = erpConfig
-              ? (erpConfig.column_mappings as ErpColumnMappingExtended[])
-              : null;
+            let erpMappings: ErpColumnMappingExtended[] | null = null;
+            if (configId) {
+              const { data: erpConfig } = await adminClient
+                .from("erp_configs")
+                .select("column_mappings")
+                .eq("id", configId)
+                .maybeSingle();
+              erpMappings = erpConfig
+                ? (erpConfig.column_mappings as ErpColumnMappingExtended[])
+                : null;
+            }
 
             const scoreData = calculateConfidenceScore(
               finalExtractedData,

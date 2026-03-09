@@ -139,6 +139,11 @@ export function TenantFormSheet({
   const [allowedEmailDomains, setAllowedEmailDomains] = useState<string[]>([]);
   // OPH-13: Email notifications toggle
   const [emailNotifications, setEmailNotifications] = useState(true);
+  // OPH-28: ERP config selector
+  const [erpConfigId, setErpConfigId] = useState<string | null>(null);
+  const [erpConfigs, setErpConfigs] = useState<
+    { id: string; name: string; description: string | null; format: string; fallback_mode: string; assigned_tenant_count: number; version_count: number; last_updated: string }[]
+  >([]);
 
   // UI state
   const [isLoadingTenant, setIsLoadingTenant] = useState(false);
@@ -168,6 +173,7 @@ export function TenantFormSheet({
     setTrialExpiresAt(null);
     setAllowedEmailDomains([]);
     setEmailNotifications(true);
+    setErpConfigId(null);
     setUsers([]);
     setActiveTab("profile");
     setTenantName("");
@@ -186,8 +192,18 @@ export function TenantFormSheet({
     setTrialExpiresAt(tenant.trial_expires_at);
     setAllowedEmailDomains(tenant.allowed_email_domains ?? []);
     setEmailNotifications(tenant.email_notifications_enabled);
+    setErpConfigId(tenant.erp_config_id ?? null);
     setTenantName(tenant.name);
   }, []);
+
+  // OPH-28: Fetch ERP configs on mount
+  useEffect(() => {
+    if (!open) return;
+    fetch("/api/admin/erp-configs")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => setErpConfigs(json?.data ?? []))
+      .catch(() => setErpConfigs([]));
+  }, [open]);
 
   // Load tenant on open
   useEffect(() => {
@@ -246,6 +262,7 @@ export function TenantFormSheet({
         erp_type: erpType,
         status,
         allowed_email_domains: allowedEmailDomains,
+        erp_config_id: erpConfigId,
       };
       const result = await onSave(data, true);
       if (result) {
@@ -259,6 +276,7 @@ export function TenantFormSheet({
         status,
         allowed_email_domains: allowedEmailDomains,
         email_notifications_enabled: emailNotifications,
+        erp_config_id: erpConfigId,
       };
       const result = await onSave(data, false);
       if (result) {
@@ -410,6 +428,27 @@ export function TenantFormSheet({
                           {ERP_OPTIONS.map((opt) => (
                             <SelectItem key={opt.value} value={opt.value}>
                               {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* OPH-28: ERP config selector */}
+                    <div className="space-y-2">
+                      <Label htmlFor="tenant-erp-config">ERP-Konfiguration</Label>
+                      <Select
+                        value={erpConfigId ?? "none"}
+                        onValueChange={(v) => setErpConfigId(v === "none" ? null : v)}
+                      >
+                        <SelectTrigger id="tenant-erp-config">
+                          <SelectValue placeholder="Keine" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Keine</SelectItem>
+                          {erpConfigs.map((config) => (
+                            <SelectItem key={config.id} value={config.id}>
+                              {config.name}
                             </SelectItem>
                           ))}
                         </SelectContent>

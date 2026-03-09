@@ -173,12 +173,22 @@ export async function GET(
 
     const tenantSlug = (tenant?.slug as string) ?? "export";
 
-    // 7. Get ERP config (OPH-9: one config per tenant)
-    const { data: erpConfig } = await adminClient
-      .from("erp_configs")
-      .select("*")
-      .eq("tenant_id", effectiveTenantId)
-      .maybeSingle();
+    // 7. Get ERP config (OPH-29: resolve via tenant's erp_config_id)
+    const { data: tenantConfig } = await adminClient
+      .from("tenants")
+      .select("erp_config_id")
+      .eq("id", effectiveTenantId)
+      .single();
+
+    let erpConfig: Record<string, unknown> | null = null;
+    if (tenantConfig?.erp_config_id) {
+      const { data } = await adminClient
+        .from("erp_configs")
+        .select("*")
+        .eq("id", tenantConfig.erp_config_id as string)
+        .maybeSingle();
+      erpConfig = data;
+    }
 
     const usingDefaultConfig = !erpConfig;
 
@@ -204,13 +214,20 @@ export async function GET(
     const previewItems = lineItems.slice(0, MAX_PREVIEW_ROWS);
 
     // OPH-28: Calculate confidence score if output format is configured
+    // OPH-29: Look up output format via erp_config_id (fallback to tenant_id)
     let confidenceScore: ConfidenceScoreData | undefined;
     try {
-      const { data: outputFormat } = await adminClient
-        .from("tenant_output_formats")
-        .select("detected_schema")
-        .eq("tenant_id", effectiveTenantId)
-        .maybeSingle();
+      const { data: outputFormat } = tenantConfig?.erp_config_id
+        ? await adminClient
+            .from("tenant_output_formats")
+            .select("detected_schema")
+            .eq("erp_config_id", tenantConfig.erp_config_id as string)
+            .maybeSingle()
+        : await adminClient
+            .from("tenant_output_formats")
+            .select("detected_schema")
+            .eq("tenant_id", effectiveTenantId)
+            .maybeSingle();
 
       if (outputFormat?.detected_schema) {
         confidenceScore = calculateConfidenceScore(

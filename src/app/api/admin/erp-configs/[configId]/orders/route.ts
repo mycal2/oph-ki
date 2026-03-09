@@ -5,17 +5,18 @@ import { requirePlatformAdmin, isErrorResponse, checkAdminRateLimit } from "@/li
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * GET /api/admin/erp-configs/[tenantId]/orders
+ * GET /api/admin/erp-configs/[configId]/orders
  *
- * Returns approved/exported orders for a tenant (for the ERP config test dialog).
+ * OPH-29: Returns approved/exported orders across all tenants assigned to this config.
+ * Used in the ERP config test dialog.
  * Platform admin only.
  */
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ tenantId: string }> }
+  { params }: { params: Promise<{ configId: string }> }
 ): Promise<NextResponse> {
   try {
-    const { tenantId } = await params;
+    const { configId } = await params;
     const auth = await requirePlatformAdmin();
     if (isErrorResponse(auth)) return auth;
     const { user, adminClient } = auth;
@@ -23,18 +24,30 @@ export async function GET(
     const rateLimitError = checkAdminRateLimit(user.id);
     if (rateLimitError) return rateLimitError;
 
-    if (!UUID_REGEX.test(tenantId)) {
+    if (!UUID_REGEX.test(configId)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Mandanten-ID." },
+        { success: false, error: "Ungueltige Konfigurations-ID." },
         { status: 400 }
       );
     }
 
-    // Fetch approved/exported orders with extracted data
+    // Find all tenant IDs assigned to this config
+    const { data: tenants } = await adminClient
+      .from("tenants")
+      .select("id")
+      .eq("erp_config_id", configId);
+
+    const tenantIds = (tenants ?? []).map((t) => t.id as string);
+
+    if (tenantIds.length === 0) {
+      return NextResponse.json({ success: true, data: [] });
+    }
+
+    // Fetch approved/exported orders from all assigned tenants
     const { data: orders, error } = await adminClient
       .from("orders")
       .select("id, status, extracted_data, reviewed_data, created_at")
-      .eq("tenant_id", tenantId)
+      .in("tenant_id", tenantIds)
       .in("status", ["approved", "exported"])
       .order("created_at", { ascending: false })
       .limit(50);
@@ -47,7 +60,6 @@ export async function GET(
       );
     }
 
-    // Map to lightweight response
     const result = (orders ?? []).map((o) => {
       const data = (o.reviewed_data ?? o.extracted_data) as { order?: { order_number?: string } } | null;
       return {
@@ -59,7 +71,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, data: result });
   } catch (error) {
-    console.error("Error in GET /api/admin/erp-configs/[tenantId]/orders:", error);
+    console.error("Error in GET /api/admin/erp-configs/[configId]/orders:", error);
     return NextResponse.json(
       { success: false, error: "Interner Serverfehler." },
       { status: 500 }

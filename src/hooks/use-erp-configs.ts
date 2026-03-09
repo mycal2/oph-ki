@@ -11,23 +11,31 @@ import type {
 } from "@/lib/types";
 
 interface UseErpConfigsReturn {
-  /** List of tenants with their ERP config status. */
+  /** List of named ERP configurations. */
   configs: ErpConfigListItem[];
   isLoading: boolean;
   error: string | null;
   refetch: () => void;
+  /** Create a new ERP config. Returns the new config ID on success. */
+  createConfig: (payload: ErpConfigSavePayload) => Promise<string | null>;
+  /** Duplicate an existing config. Returns the new config ID on success. */
+  duplicateConfig: (configId: string) => Promise<string | null>;
+  /** Delete an ERP config. Returns true on success. */
+  deleteConfig: (configId: string) => Promise<boolean>;
   isMutating: boolean;
   mutationError: string | null;
+  clearMutationError: () => void;
 }
 
 /**
- * Hook for the ERP config list page (all tenants).
+ * Hook for the ERP config list page.
+ * OPH-29: Lists named configs (not per-tenant).
  */
 export function useErpConfigs(): UseErpConfigsReturn {
   const [configs, setConfigs] = useState<ErpConfigListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isMutating] = useState(false);
+  const [isMutating, setIsMutating] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
 
   const fetchConfigs = useCallback(async () => {
@@ -58,18 +66,112 @@ export function useErpConfigs(): UseErpConfigsReturn {
     fetchConfigs();
   }, [fetchConfigs]);
 
+  const createConfig = useCallback(
+    async (payload: ErpConfigSavePayload): Promise<string | null> => {
+      setIsMutating(true);
+      setMutationError(null);
+
+      try {
+        const res = await fetch("/api/admin/erp-configs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const json = (await res.json()) as ApiResponse<{ id: string }>;
+
+        if (!res.ok || !json.success || !json.data) {
+          setMutationError(json.error ?? "Konfiguration konnte nicht erstellt werden.");
+          return null;
+        }
+
+        await fetchConfigs();
+        return json.data.id;
+      } catch {
+        setMutationError("Verbindungsfehler beim Erstellen.");
+        return null;
+      } finally {
+        setIsMutating(false);
+      }
+    },
+    [fetchConfigs]
+  );
+
+  const duplicateConfig = useCallback(
+    async (configId: string): Promise<string | null> => {
+      setIsMutating(true);
+      setMutationError(null);
+
+      try {
+        const res = await fetch(`/api/admin/erp-configs/${configId}/duplicate`, {
+          method: "POST",
+        });
+        const json = (await res.json()) as ApiResponse<{ id: string }>;
+
+        if (!res.ok || !json.success || !json.data) {
+          setMutationError(json.error ?? "Duplizieren fehlgeschlagen.");
+          return null;
+        }
+
+        await fetchConfigs();
+        return json.data.id;
+      } catch {
+        setMutationError("Verbindungsfehler beim Duplizieren.");
+        return null;
+      } finally {
+        setIsMutating(false);
+      }
+    },
+    [fetchConfigs]
+  );
+
+  const deleteConfig = useCallback(
+    async (configId: string): Promise<boolean> => {
+      setIsMutating(true);
+      setMutationError(null);
+
+      try {
+        const res = await fetch(`/api/admin/erp-configs/${configId}`, {
+          method: "DELETE",
+        });
+        const json = (await res.json()) as ApiResponse;
+
+        if (!res.ok || !json.success) {
+          setMutationError(json.error ?? "Loeschen fehlgeschlagen.");
+          return false;
+        }
+
+        await fetchConfigs();
+        return true;
+      } catch {
+        setMutationError("Verbindungsfehler beim Loeschen.");
+        return false;
+      } finally {
+        setIsMutating(false);
+      }
+    },
+    [fetchConfigs]
+  );
+
+  const clearMutationError = useCallback(() => {
+    setMutationError(null);
+  }, []);
+
   return {
     configs,
     isLoading,
     error,
     refetch: fetchConfigs,
+    createConfig,
+    duplicateConfig,
+    deleteConfig,
     isMutating,
     mutationError,
+    clearMutationError,
   };
 }
 
 interface UseErpConfigDetailReturn {
-  /** Full config detail for one tenant. */
+  /** Full config detail. */
   detail: ErpConfigDetail | null;
   isLoading: boolean;
   error: string | null;
@@ -78,16 +180,14 @@ interface UseErpConfigDetailReturn {
   saveConfig: (payload: ErpConfigSavePayload) => Promise<boolean>;
   /** Rollback to a specific version. */
   rollbackToVersion: (versionId: string) => Promise<boolean>;
-  /** Copy config from another tenant. */
-  copyFromTenant: (sourceTenantId: string) => Promise<boolean>;
   /** Test config against sample data. */
   testConfig: (
     mode: "json" | "order",
-    config: Omit<ErpConfigSavePayload, "comment">,
+    config: Omit<ErpConfigSavePayload, "comment" | "name" | "description">,
     jsonInput?: string,
     orderId?: string
   ) => Promise<ErpConfigTestResult | null>;
-  /** Fetch approved orders for this tenant (for test dialog). */
+  /** Fetch approved orders for this config (for test dialog). */
   fetchApprovedOrders: () => Promise<{ id: string; order_number: string | null; created_at: string }[]>;
   isMutating: boolean;
   mutationError: string | null;
@@ -95,9 +195,10 @@ interface UseErpConfigDetailReturn {
 }
 
 /**
- * Hook for the ERP config detail page (single tenant).
+ * Hook for the ERP config detail page (single config by ID).
+ * OPH-29: Uses configId instead of tenantId.
  */
-export function useErpConfigDetail(tenantId: string): UseErpConfigDetailReturn {
+export function useErpConfigDetail(configId: string): UseErpConfigDetailReturn {
   const [detail, setDetail] = useState<ErpConfigDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -105,12 +206,12 @@ export function useErpConfigDetail(tenantId: string): UseErpConfigDetailReturn {
   const [mutationError, setMutationError] = useState<string | null>(null);
 
   const fetchDetail = useCallback(async () => {
-    if (!tenantId) return;
+    if (!configId) return;
     setIsLoading(true);
     setError(null);
 
     try {
-      const res = await fetch(`/api/admin/erp-configs/${tenantId}`);
+      const res = await fetch(`/api/admin/erp-configs/${configId}`);
       const json = (await res.json()) as ApiResponse<ErpConfigDetail>;
 
       if (!res.ok || !json.success || !json.data) {
@@ -126,7 +227,7 @@ export function useErpConfigDetail(tenantId: string): UseErpConfigDetailReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [tenantId]);
+  }, [configId]);
 
   useEffect(() => {
     fetchDetail();
@@ -138,7 +239,7 @@ export function useErpConfigDetail(tenantId: string): UseErpConfigDetailReturn {
       setMutationError(null);
 
       try {
-        const res = await fetch(`/api/admin/erp-configs/${tenantId}`, {
+        const res = await fetch(`/api/admin/erp-configs/${configId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -159,7 +260,7 @@ export function useErpConfigDetail(tenantId: string): UseErpConfigDetailReturn {
         setIsMutating(false);
       }
     },
-    [tenantId, fetchDetail]
+    [configId, fetchDetail]
   );
 
   const rollbackToVersion = useCallback(
@@ -169,7 +270,7 @@ export function useErpConfigDetail(tenantId: string): UseErpConfigDetailReturn {
 
       try {
         const res = await fetch(
-          `/api/admin/erp-configs/${tenantId}/rollback/${versionId}`,
+          `/api/admin/erp-configs/${configId}/rollback/${versionId}`,
           { method: "POST" }
         );
         const json = (await res.json()) as ApiResponse;
@@ -188,42 +289,13 @@ export function useErpConfigDetail(tenantId: string): UseErpConfigDetailReturn {
         setIsMutating(false);
       }
     },
-    [tenantId, fetchDetail]
-  );
-
-  const copyFromTenant = useCallback(
-    async (sourceTenantId: string): Promise<boolean> => {
-      setIsMutating(true);
-      setMutationError(null);
-
-      try {
-        const res = await fetch(
-          `/api/admin/erp-configs/${tenantId}/copy-from/${sourceTenantId}`,
-          { method: "POST" }
-        );
-        const json = (await res.json()) as ApiResponse;
-
-        if (!res.ok || !json.success) {
-          setMutationError(json.error ?? "Kopieren fehlgeschlagen.");
-          return false;
-        }
-
-        await fetchDetail();
-        return true;
-      } catch {
-        setMutationError("Verbindungsfehler beim Kopieren.");
-        return false;
-      } finally {
-        setIsMutating(false);
-      }
-    },
-    [tenantId, fetchDetail]
+    [configId, fetchDetail]
   );
 
   const testConfig = useCallback(
     async (
       mode: "json" | "order",
-      config: Omit<ErpConfigSavePayload, "comment">,
+      config: Omit<ErpConfigSavePayload, "comment" | "name" | "description">,
       jsonInput?: string,
       orderId?: string
     ): Promise<ErpConfigTestResult | null> => {
@@ -231,7 +303,7 @@ export function useErpConfigDetail(tenantId: string): UseErpConfigDetailReturn {
       setMutationError(null);
 
       try {
-        const res = await fetch(`/api/admin/erp-configs/${tenantId}/test`, {
+        const res = await fetch(`/api/admin/erp-configs/${configId}/test`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ mode, config, jsonInput, orderId }),
@@ -251,12 +323,12 @@ export function useErpConfigDetail(tenantId: string): UseErpConfigDetailReturn {
         setIsMutating(false);
       }
     },
-    [tenantId]
+    [configId]
   );
 
   const fetchApprovedOrders = useCallback(async () => {
     try {
-      const res = await fetch(`/api/admin/erp-configs/${tenantId}/orders`);
+      const res = await fetch(`/api/admin/erp-configs/${configId}/orders`);
       const json = (await res.json()) as ApiResponse<
         { id: string; order_number: string | null; created_at: string }[]
       >;
@@ -269,7 +341,7 @@ export function useErpConfigDetail(tenantId: string): UseErpConfigDetailReturn {
     } catch {
       return [];
     }
-  }, [tenantId]);
+  }, [configId]);
 
   const clearMutationError = useCallback(() => {
     setMutationError(null);
@@ -282,7 +354,6 @@ export function useErpConfigDetail(tenantId: string): UseErpConfigDetailReturn {
     refetch: fetchDetail,
     saveConfig,
     rollbackToVersion,
-    copyFromTenant,
     testConfig,
     fetchApprovedOrders,
     isMutating,

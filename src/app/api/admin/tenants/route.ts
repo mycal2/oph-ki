@@ -16,10 +16,10 @@ export async function GET(): Promise<NextResponse> {
     if (isErrorResponse(auth)) return auth;
     const { adminClient } = auth;
 
-    // Fetch all tenants (OPH-16: include trial date columns)
+    // Fetch all tenants (OPH-16: trial dates, OPH-29: erp_config_id)
     const { data: tenants, error: tenantsError } = await adminClient
       .from("tenants")
-      .select("id, name, slug, status, erp_type, contact_email, created_at, trial_started_at, trial_expires_at, allowed_email_domains")
+      .select("id, name, slug, status, erp_type, contact_email, created_at, trial_started_at, trial_expires_at, allowed_email_domains, erp_config_id")
       .order("name", { ascending: true })
       .limit(1000);
 
@@ -46,8 +46,27 @@ export async function GET(): Promise<NextResponse> {
       }
     }
 
+    // OPH-29: Fetch ERP config names for tenants that have one assigned
+    const configIds = [...new Set(
+      (tenants ?? [])
+        .map((t) => t.erp_config_id as string | null)
+        .filter((id): id is string => !!id)
+    )];
+
+    const configNameMap = new Map<string, string>();
+    if (configIds.length > 0) {
+      const { data: configs } = await adminClient
+        .from("erp_configs")
+        .select("id, name")
+        .in("id", configIds);
+      for (const c of configs ?? []) {
+        configNameMap.set(c.id as string, c.name as string);
+      }
+    }
+
     const result: TenantAdminListItem[] = (tenants ?? []).map((t) => {
       const stats = statsByTenant.get(t.id as string);
+      const erpConfigId = (t.erp_config_id as string) ?? null;
       return {
         id: t.id as string,
         name: t.name as string,
@@ -64,6 +83,9 @@ export async function GET(): Promise<NextResponse> {
         trial_expires_at: (t.trial_expires_at as string) ?? null,
         // OPH-17: Allowed email domains
         allowed_email_domains: (t.allowed_email_domains as string[]) ?? [],
+        // OPH-29: ERP config assignment
+        erp_config_id: erpConfigId,
+        erp_config_name: erpConfigId ? (configNameMap.get(erpConfigId) ?? null) : null,
       };
     });
 

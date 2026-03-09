@@ -15,18 +15,18 @@ import type {
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * POST /api/admin/erp-configs/[tenantId]/test
+ * POST /api/admin/erp-configs/[configId]/test
  *
- * Tests an ERP config against sample data or an existing order.
- * Returns the generated export content and any warnings.
+ * OPH-29: Tests an ERP config against sample data or an existing order.
+ * Orders can come from any tenant assigned to this config.
  * Platform admin only.
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ tenantId: string }> }
+  { params }: { params: Promise<{ configId: string }> }
 ): Promise<NextResponse> {
   try {
-    const { tenantId } = await params;
+    const { configId } = await params;
     const auth = await requirePlatformAdmin();
     if (isErrorResponse(auth)) return auth;
     const { user, adminClient } = auth;
@@ -34,9 +34,9 @@ export async function POST(
     const rateLimitError = checkAdminRateLimit(user.id);
     if (rateLimitError) return rateLimitError;
 
-    if (!UUID_REGEX.test(tenantId)) {
+    if (!UUID_REGEX.test(configId)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Mandanten-ID." },
+        { success: false, error: "Ungueltige Konfigurations-ID." },
         { status: 400 }
       );
     }
@@ -69,7 +69,6 @@ export async function POST(
     if (mode === "json") {
       try {
         const raw = JSON.parse(jsonInput!);
-        // Accept both { order: {...}, extraction_metadata: {...} } and bare { order: {...} }
         if (raw.order) {
           orderData = raw as CanonicalOrderData;
         } else {
@@ -85,12 +84,11 @@ export async function POST(
         );
       }
     } else {
-      // mode === "order" — fetch from database
+      // mode === "order" — fetch from database (no tenant restriction, admin-only)
       const { data: order, error: orderError } = await adminClient
         .from("orders")
         .select("id, tenant_id, reviewed_data, extracted_data")
         .eq("id", orderId!)
-        .eq("tenant_id", tenantId)
         .single();
 
       if (orderError || !order) {
@@ -186,7 +184,7 @@ export async function POST(
 
     return NextResponse.json({ success: true, data: result });
   } catch (error) {
-    console.error("Error in POST /api/admin/erp-configs/[tenantId]/test:", error);
+    console.error("Error in POST /api/admin/erp-configs/[configId]/test:", error);
     return NextResponse.json(
       { success: false, error: "Interner Serverfehler." },
       { status: 500 }

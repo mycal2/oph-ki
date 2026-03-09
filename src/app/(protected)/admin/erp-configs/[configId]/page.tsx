@@ -11,11 +11,11 @@ import { useErpConfigDetail } from "@/hooks/use-erp-configs";
 import { ErpConfigEditor } from "@/components/admin/erp-config-editor";
 
 interface PageProps {
-  params: Promise<{ tenantId: string }>;
+  params: Promise<{ configId: string }>;
 }
 
 export default function AdminErpConfigDetailPage({ params }: PageProps) {
-  const { tenantId } = use(params);
+  const { configId } = use(params);
   const router = useRouter();
   const { isPlatformAdmin, isLoading: isLoadingRole } = useCurrentUserRole();
   const {
@@ -25,13 +25,12 @@ export default function AdminErpConfigDetailPage({ params }: PageProps) {
     refetch,
     saveConfig,
     rollbackToVersion,
-    copyFromTenant,
     testConfig,
     fetchApprovedOrders,
     isMutating,
     mutationError,
     clearMutationError,
-  } = useErpConfigDetail(tenantId);
+  } = useErpConfigDetail(configId);
 
   // Loading state
   if (isLoadingRole || isLoading) {
@@ -91,7 +90,7 @@ export default function AdminErpConfigDetailPage({ params }: PageProps) {
           Zurueck zur Uebersicht
         </Button>
         <div className="flex items-center justify-center py-20">
-          <p className="text-muted-foreground">Mandant nicht gefunden.</p>
+          <p className="text-muted-foreground">Konfiguration nicht gefunden.</p>
         </div>
       </div>
     );
@@ -111,11 +110,18 @@ export default function AdminErpConfigDetailPage({ params }: PageProps) {
         </Button>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            {detail.tenant.name}
+            {detail.config.name}
           </h1>
-          <p className="text-sm text-muted-foreground">
-            ERP-Mapping-Konfiguration -- {detail.tenant.erp_type}
-          </p>
+          {detail.config.description && (
+            <p className="text-sm text-muted-foreground">
+              {detail.config.description}
+            </p>
+          )}
+          {detail.assigned_tenants.length > 0 && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Zugewiesen an: {detail.assigned_tenants.map((t) => t.name).join(", ")}
+            </p>
+          )}
         </div>
       </div>
 
@@ -136,7 +142,6 @@ export default function AdminErpConfigDetailPage({ params }: PageProps) {
         detail={detail}
         onSave={saveConfig}
         onRollback={rollbackToVersion}
-        onCopyFrom={copyFromTenant}
         onTest={testConfig}
         onFetchOrders={fetchApprovedOrders}
         isMutating={isMutating}

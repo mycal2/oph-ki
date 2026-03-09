@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Search, FileSpreadsheet, Settings } from "lucide-react";
+import { Search, FileSpreadsheet, Settings, MoreHorizontal, Copy, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,8 +14,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { ErpConfigListItem, ExportFormat, ErpFallbackMode, TenantStatus } from "@/lib/types";
+import type { ErpConfigListItem, ExportFormat, ErpFallbackMode } from "@/lib/types";
 
 const FORMAT_LABELS: Record<ExportFormat, string> = {
   csv: "CSV",
@@ -28,32 +45,47 @@ const FALLBACK_LABELS: Record<ErpFallbackMode, { label: string; className: strin
   fallback_csv: { label: "Fallback CSV", className: "bg-yellow-100 text-yellow-800" },
 };
 
-const STATUS_BADGES: Record<TenantStatus, { label: string; className: string }> = {
-  active: { label: "Aktiv", className: "bg-green-100 text-green-800" },
-  inactive: { label: "Inaktiv", className: "text-muted-foreground" },
-  trial: { label: "Testphase", className: "bg-yellow-100 text-yellow-800" },
-};
-
 interface ErpConfigListTableProps {
   configs: ErpConfigListItem[];
   isLoading: boolean;
+  onDuplicate?: (configId: string) => Promise<string | null>;
+  onDelete?: (configId: string) => Promise<boolean>;
 }
 
-export function ErpConfigListTable({ configs, isLoading }: ErpConfigListTableProps) {
+export function ErpConfigListTable({
+  configs,
+  isLoading,
+  onDuplicate,
+  onDelete,
+}: ErpConfigListTableProps) {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<ErpConfigListItem | null>(null);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return configs;
     const q = search.toLowerCase();
     return configs.filter(
       (c) =>
-        c.tenant_name.toLowerCase().includes(q) ||
-        c.erp_type.toLowerCase().includes(q)
+        c.name.toLowerCase().includes(q) ||
+        (c.description?.toLowerCase().includes(q) ?? false) ||
+        c.format.toLowerCase().includes(q)
     );
   }, [configs, search]);
 
-  const configuredCount = configs.filter((c) => c.has_config).length;
+  async function handleDuplicate(configId: string) {
+    if (!onDuplicate) return;
+    const newId = await onDuplicate(configId);
+    if (newId) {
+      router.push(`/admin/erp-configs/${newId}`);
+    }
+  }
+
+  async function handleDeleteConfirm() {
+    if (!onDelete || !deleteTarget) return;
+    await onDelete(deleteTarget.id);
+    setDeleteTarget(null);
+  }
 
   if (isLoading) {
     return (
@@ -80,13 +112,13 @@ export function ErpConfigListTable({ configs, isLoading }: ErpConfigListTablePro
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Mandanten suchen..."
+              placeholder="Konfigurationen suchen..."
               className="w-64 pl-9"
             />
           </div>
         </div>
         <p className="text-xs text-muted-foreground">
-          {configuredCount} von {configs.length} Mandanten konfiguriert
+          {configs.length} Konfiguration{configs.length !== 1 ? "en" : ""}
         </p>
       </div>
 
@@ -95,7 +127,7 @@ export function ErpConfigListTable({ configs, isLoading }: ErpConfigListTablePro
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12 text-center">
           <FileSpreadsheet className="mb-3 h-10 w-10 text-muted-foreground/50" />
           <p className="text-sm text-muted-foreground">
-            {search ? "Keine Mandanten gefunden." : "Noch keine Mandanten vorhanden."}
+            {search ? "Keine Konfigurationen gefunden." : "Noch keine ERP-Konfigurationen vorhanden."}
           </p>
         </div>
       ) : (
@@ -103,97 +135,131 @@ export function ErpConfigListTable({ configs, isLoading }: ErpConfigListTablePro
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Mandant</TableHead>
-                <TableHead className="hidden sm:table-cell">Status</TableHead>
-                <TableHead className="hidden sm:table-cell">ERP-Typ</TableHead>
+                <TableHead>Name</TableHead>
                 <TableHead>Format</TableHead>
                 <TableHead className="hidden md:table-cell">Fallback</TableHead>
+                <TableHead className="text-right hidden sm:table-cell">Mandanten</TableHead>
                 <TableHead className="text-right hidden sm:table-cell">Versionen</TableHead>
                 <TableHead className="hidden lg:table-cell">Letzte Aenderung</TableHead>
                 <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((item) => {
-                const statusBadge = STATUS_BADGES[item.tenant_status];
-                return (
-                  <TableRow
-                    key={item.tenant_id}
-                    className="cursor-pointer"
-                    onClick={() => router.push(`/admin/erp-configs/${item.tenant_id}`)}
-                  >
-                    <TableCell>
-                      <span className="font-medium">{item.tenant_name}</span>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      <Badge
-                        variant={item.tenant_status === "inactive" ? "outline" : "secondary"}
-                        className={`text-xs ${statusBadge.className}`}
-                      >
-                        {statusBadge.label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      <Badge variant="secondary" className="text-xs">
-                        {item.erp_type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {item.has_config && item.format ? (
-                        <Badge variant="secondary" className="text-xs">
-                          {FORMAT_LABELS[item.format]}
-                        </Badge>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">--</span>
+              {filtered.map((item) => (
+                <TableRow
+                  key={item.id}
+                  className="cursor-pointer"
+                  onClick={() => router.push(`/admin/erp-configs/${item.id}`)}
+                >
+                  <TableCell>
+                    <div>
+                      <span className="font-medium">{item.name}</span>
+                      {item.description && (
+                        <p className="text-xs text-muted-foreground truncate max-w-xs">
+                          {item.description}
+                        </p>
                       )}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {item.has_config && item.fallback_mode ? (
-                        <Badge
-                          variant="outline"
-                          className={`text-xs ${FALLBACK_LABELS[item.fallback_mode].className}`}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary" className="text-xs">
+                      {FORMAT_LABELS[item.format]}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    <Badge
+                      variant="outline"
+                      className={`text-xs ${FALLBACK_LABELS[item.fallback_mode].className}`}
+                    >
+                      {FALLBACK_LABELS[item.fallback_mode].label}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums hidden sm:table-cell">
+                    {item.assigned_tenant_count}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums hidden sm:table-cell">
+                    {item.version_count}
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
+                    {item.last_updated
+                      ? new Date(item.last_updated).toLocaleDateString("de-DE", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : "--"}
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => e.stopPropagation()}
+                          aria-label="Aktionen"
                         >
-                          {FALLBACK_LABELS[item.fallback_mode].label}
-                        </Badge>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">--</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums hidden sm:table-cell">
-                      {item.version_count}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
-                      {item.last_updated
-                        ? new Date(item.last_updated).toLocaleDateString("de-DE", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
-                        : "--"}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          router.push(`/admin/erp-configs/${item.tenant_id}`);
-                        }}
-                        aria-label="Konfigurieren"
-                      >
-                        <Settings className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuItem
+                          onClick={() => router.push(`/admin/erp-configs/${item.id}`)}
+                        >
+                          <Settings className="mr-2 h-4 w-4" />
+                          Bearbeiten
+                        </DropdownMenuItem>
+                        {onDuplicate && (
+                          <DropdownMenuItem onClick={() => handleDuplicate(item.id)}>
+                            <Copy className="mr-2 h-4 w-4" />
+                            Duplizieren
+                          </DropdownMenuItem>
+                        )}
+                        {onDelete && item.assigned_tenant_count === 0 && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => setDeleteTarget(item)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Loeschen
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </div>
       )}
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfiguration loeschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sind Sie sicher, dass Sie die Konfiguration &quot;{deleteTarget?.name}&quot; loeschen moechten?
+              Diese Aktion kann nicht rueckgaengig gemacht werden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Loeschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

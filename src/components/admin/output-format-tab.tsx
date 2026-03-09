@@ -32,7 +32,7 @@ import { OutputFormatSchemaPreview } from "@/components/admin/output-format-sche
 import type { OutputFormatParseResponse } from "@/lib/types";
 
 interface OutputFormatTabProps {
-  tenantId: string;
+  configId: string;
 }
 
 const ALLOWED_EXTENSIONS = [".csv", ".xlsx", ".xml", ".json"];
@@ -42,7 +42,7 @@ const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
  * Admin tab for uploading and managing tenant output format samples.
  * Provides file upload, schema preview, and format management (replace/delete/download).
  */
-export function OutputFormatTab({ tenantId }: OutputFormatTabProps) {
+export function OutputFormatTab({ configId }: OutputFormatTabProps) {
   const {
     format,
     isLoading,
@@ -54,7 +54,7 @@ export function OutputFormatTab({ tenantId }: OutputFormatTabProps) {
     saveFormat,
     deleteFormat,
     clearMutationError,
-  } = useOutputFormat(tenantId);
+  } = useOutputFormat(configId);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -136,8 +136,8 @@ export function OutputFormatTab({ tenantId }: OutputFormatTabProps) {
   }, [deleteFormat]);
 
   const handleDownloadOriginal = useCallback(() => {
-    window.open(`/api/admin/output-formats/${tenantId}/download`, "_blank");
-  }, [tenantId]);
+    window.open(`/api/admin/erp-configs/${configId}/output-format/download`, "_blank");
+  }, [configId]);
 
   const handleReplace = useCallback(() => {
     fileInputRef.current?.click();

@@ -5,7 +5,6 @@ import {
   Save,
   Loader2,
   FlaskConical,
-  Copy,
   History,
   AlertTriangle,
   ChevronRight,
@@ -14,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -45,17 +45,15 @@ import { CsvColumnBuilder } from "@/components/admin/erp-csv-column-builder";
 import { XmlTemplateEditor } from "@/components/admin/erp-xml-template-editor";
 import { ErpConfigVersionHistory } from "@/components/admin/erp-config-version-history";
 import { ErpConfigTestDialog } from "@/components/admin/erp-config-test-dialog";
-import { ErpConfigCopyDialog } from "@/components/admin/erp-config-copy-dialog";
 import { OutputFormatTab } from "@/components/admin/output-format-tab";
 
 interface ErpConfigEditorProps {
   detail: ErpConfigDetail;
   onSave: (payload: ErpConfigSavePayload) => Promise<boolean>;
   onRollback: (versionId: string) => Promise<boolean>;
-  onCopyFrom: (sourceTenantId: string) => Promise<boolean>;
   onTest: (
     mode: "json" | "order",
-    config: Omit<ErpConfigSavePayload, "comment">,
+    config: Omit<ErpConfigSavePayload, "comment" | "name" | "description">,
     jsonInput?: string,
     orderId?: string
   ) => Promise<ErpConfigTestResult | null>;
@@ -64,7 +62,7 @@ interface ErpConfigEditorProps {
 }
 
 /** Default config values when no config exists yet. */
-function getDefaults(): Omit<ErpConfigAdmin, "id" | "tenant_id" | "is_default" | "created_at" | "updated_at"> {
+function getDefaults(): Omit<ErpConfigAdmin, "id" | "name" | "description" | "created_at" | "updated_at"> {
   return {
     format: "csv",
     column_mappings: [],
@@ -82,7 +80,6 @@ export function ErpConfigEditor({
   detail,
   onSave,
   onRollback,
-  onCopyFrom,
   onTest,
   onFetchOrders,
   isMutating,
@@ -90,7 +87,11 @@ export function ErpConfigEditor({
   const config = detail.config;
   const defaults = getDefaults();
 
-  // Editable state
+  // Editable state — name & description
+  const [configName, setConfigName] = useState(config.name);
+  const [configDescription, setConfigDescription] = useState(config.description ?? "");
+
+  // Editable state — export settings
   const [format, setFormat] = useState<ExportFormat>(config?.format ?? defaults.format);
   const [columnMappings, setColumnMappings] = useState<ErpColumnMappingExtended[]>(
     config?.column_mappings ?? defaults.column_mappings
@@ -113,7 +114,6 @@ export function ErpConfigEditor({
 
   // Test dialog
   const [testOpen, setTestOpen] = useState(false);
-  const [copyOpen, setCopyOpen] = useState(false);
 
   const markDirty = useCallback(() => {
     setIsDirty(true);
@@ -122,6 +122,8 @@ export function ErpConfigEditor({
 
   const buildPayload = useCallback((): ErpConfigSavePayload => {
     return {
+      name: configName,
+      description: configDescription.trim() || null,
       format,
       column_mappings: columnMappings,
       separator,
@@ -133,7 +135,7 @@ export function ErpConfigEditor({
       xml_template: format === "xml" ? xmlTemplate || null : null,
       comment: comment.trim() || undefined,
     };
-  }, [format, columnMappings, separator, quoteChar, encoding, lineEnding, decimalSeparator, fallbackMode, xmlTemplate, comment]);
+  }, [configName, configDescription, format, columnMappings, separator, quoteChar, encoding, lineEnding, decimalSeparator, fallbackMode, xmlTemplate, comment]);
 
   const handleSave = useCallback(async () => {
     setSuccessMessage(null);
@@ -157,23 +159,13 @@ export function ErpConfigEditor({
     [onRollback]
   );
 
-  const handleCopyFrom = useCallback(
-    async (sourceTenantId: string): Promise<boolean> => {
-      const success = await onCopyFrom(sourceTenantId);
-      if (success) {
-        setCopyOpen(false);
-        setSuccessMessage("Konfiguration kopiert.");
-      }
-      return success;
-    },
-    [onCopyFrom]
-  );
-
   // Sync state when detail changes (e.g. after rollback/copy)
   const configId = config?.id;
   const configUpdatedAt = config?.updated_at;
   useEffect(() => {
     if (config) {
+      setConfigName(config.name);
+      setConfigDescription(config.description ?? "");
       setFormat(config.format);
       setColumnMappings(config.column_mappings);
       setSeparator(config.separator);
@@ -205,6 +197,32 @@ export function ErpConfigEditor({
           <AlertDescription>{successMessage}</AlertDescription>
         </Alert>
       )}
+
+      {/* Name & Description */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="config-name">Name *</Label>
+          <Input
+            id="config-name"
+            value={configName}
+            onChange={(e) => { setConfigName(e.target.value); markDirty(); }}
+            placeholder="z.B. SAP Import CSV"
+            maxLength={200}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="config-desc">Beschreibung</Label>
+          <Textarea
+            id="config-desc"
+            value={configDescription}
+            onChange={(e) => { setConfigDescription(e.target.value); markDirty(); }}
+            placeholder="Optionale Beschreibung..."
+            rows={1}
+            className="min-h-[36px] resize-none"
+            maxLength={1000}
+          />
+        </div>
+      </div>
 
       {/* Format tabs */}
       <Tabs value={format} onValueChange={handleFormatChange}>
@@ -283,15 +301,6 @@ export function ErpConfigEditor({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setCopyOpen(true)}
-            disabled={isMutating}
-          >
-            <Copy className="mr-1.5 h-4 w-4" />
-            Kopieren von...
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
             onClick={() => setHistoryOpen(!historyOpen)}
           >
             <History className="mr-1.5 h-4 w-4" />
@@ -346,7 +355,7 @@ export function ErpConfigEditor({
           Laden Sie eine Beispieldatei im gewuenschten ERP-Ausgabeformat hoch. Das System
           erkennt die Spaltenstruktur und berechnet einen Confidence Score beim Export.
         </p>
-        <OutputFormatTab tenantId={detail.tenant.id} />
+        <OutputFormatTab configId={config.id} />
       </div>
 
       {/* Test dialog */}
@@ -359,14 +368,6 @@ export function ErpConfigEditor({
         isMutating={isMutating}
       />
 
-      {/* Copy dialog */}
-      <ErpConfigCopyDialog
-        open={copyOpen}
-        onOpenChange={setCopyOpen}
-        currentTenantId={detail.tenant.id}
-        onCopy={handleCopyFrom}
-        isMutating={isMutating}
-      />
     </div>
   );
 }

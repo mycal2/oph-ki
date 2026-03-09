@@ -180,12 +180,22 @@ export async function GET(
 
     const tenantSlug = (tenant?.slug as string) ?? "export";
 
-    // 7. Get ERP config (OPH-9: one config per tenant, format stored in config)
-    const { data: erpConfig } = await adminClient
-      .from("erp_configs")
-      .select("*")
-      .eq("tenant_id", effectiveTenantId)
-      .maybeSingle();
+    // 7. Get ERP config (OPH-29: resolve via tenant's erp_config_id)
+    const { data: tenantConfig } = await adminClient
+      .from("tenants")
+      .select("erp_config_id")
+      .eq("id", effectiveTenantId)
+      .single();
+
+    let erpConfig: Record<string, unknown> | null = null;
+    if (tenantConfig?.erp_config_id) {
+      const { data } = await adminClient
+        .from("erp_configs")
+        .select("*")
+        .eq("id", tenantConfig.erp_config_id as string)
+        .maybeSingle();
+      erpConfig = data;
+    }
 
     const usingDefaultConfig = !erpConfig;
     const fallbackMode = (erpConfig?.fallback_mode as string) ?? "block";
