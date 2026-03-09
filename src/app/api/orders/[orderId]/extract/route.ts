@@ -45,7 +45,7 @@ export async function POST(
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(orderId)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Bestellungs-ID." },
+        { success: false, error: "Ungültige Bestellungs-ID." },
         { status: 400 }
       );
     }
@@ -131,7 +131,7 @@ export async function POST(
     // Concurrency guard: reject if already processing
     if (order.extraction_status === "processing") {
       return NextResponse.json(
-        { success: false, error: "Extraktion laeuft bereits." },
+        { success: false, error: "Extraktion läuft bereits." },
         { status: 409 }
       );
     }
@@ -181,13 +181,13 @@ export async function POST(
         .from("orders")
         .update({
           extraction_status: "failed",
-          extraction_error: "Keine Dateien fuer Extraktion gefunden.",
+          extraction_error: "Keine Dateien für Extraktion gefunden.",
           status: "error",
         })
         .eq("id", orderId);
 
       return NextResponse.json(
-        { success: false, error: "Keine Dateien fuer Extraktion gefunden." },
+        { success: false, error: "Keine Dateien für Extraktion gefunden." },
         { status: 400 }
       );
     }

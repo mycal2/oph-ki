@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { ReviewPageContent } from "@/components/orders/review";
 
 export const metadata: Metadata = {
-  title: "Bestellung pruefen | IDS.online",
-  description: "Extrahierte Bestelldaten pruefen und korrigieren.",
+  title: "Bestellung prüfen | IDS.online",
+  description: "Extrahierte Bestelldaten prüfen und korrigieren.",
 };
 
 interface ReviewPageProps {

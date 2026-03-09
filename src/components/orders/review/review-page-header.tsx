@@ -24,7 +24,7 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
   uploaded: "Hochgeladen",
   processing: "Wird verarbeitet",
   extracted: "Extrahiert",
-  review: "In Pruefung",
+  review: "In Prüfung",
   approved: "Freigegeben",
   exported: "Exportiert",
   error: "Fehler",
@@ -70,13 +70,13 @@ export function ReviewPageHeader({
         className="gap-1"
       >
         <ArrowLeft className="h-4 w-4" />
-        Zurueck zur Bestellung
+        Zurück zur Bestellung
       </Button>
 
       {/* Title row with status + actions */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3 flex-wrap">
-          <h1 className="text-xl font-bold md:text-2xl">Bestellung pruefen</h1>
+          <h1 className="text-xl font-bold md:text-2xl">Bestellung prüfen</h1>
           <Badge variant={STATUS_VARIANTS[orderStatus]}>
             {STATUS_LABELS[orderStatus]}
           </Badge>

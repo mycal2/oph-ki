@@ -90,7 +90,7 @@ export default function AdminSettingsPage() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const invalid = filtered.find((e) => !emailRegex.test(e));
     if (invalid) {
-      toast.error(`Ungueltige E-Mail-Adresse: ${invalid}`);
+      toast.error(`Ungültige E-Mail-Adresse: ${invalid}`);
       return;
     }
 
@@ -140,7 +140,7 @@ export default function AdminSettingsPage() {
     return (
       <div className="flex items-center justify-center py-20">
         <p className="text-muted-foreground">
-          Zugriff verweigert. Nur fuer Platform-Administratoren.
+          Zugriff verweigert. Nur für Platform-Administratoren.
         </p>
       </div>
     );
@@ -151,7 +151,7 @@ export default function AdminSettingsPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Einstellungen</h1>
         <p className="text-sm text-muted-foreground">
-          Plattform-weite Konfiguration fuer Administratoren.
+          Plattform-weite Konfiguration für Administratoren.
         </p>
       </div>
 
@@ -217,7 +217,7 @@ export default function AdminSettingsPage() {
                   onClick={handleAddEmail}
                 >
                   <Plus className="mr-1 h-4 w-4" />
-                  E-Mail hinzufuegen
+                  E-Mail hinzufügen
                 </Button>
               )}
 

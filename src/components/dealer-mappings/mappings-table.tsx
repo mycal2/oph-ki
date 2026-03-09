@@ -44,17 +44,17 @@ interface MappingsTableProps {
 
 const TYPE_LABELS: Record<MappingType, { dealerCol: string; erpCol: string; placeholder: [string, string] }> = {
   article_number: {
-    dealerCol: "Haendler-Artikelnr.",
+    dealerCol: "Händler-Artikelnr.",
     erpCol: "ERP-Artikelnr.",
     placeholder: ["z.B. HS-12345", "z.B. MFG-6789"],
   },
   unit_conversion: {
-    dealerCol: "Haendler-Einheit",
+    dealerCol: "Händler-Einheit",
     erpCol: "ERP-Einheit",
-    placeholder: ["z.B. Karton", "z.B. Stueck"],
+    placeholder: ["z.B. Karton", "z.B. Stück"],
   },
   field_label: {
-    dealerCol: "Haendler-Feldname",
+    dealerCol: "Händler-Feldname",
     erpCol: "ERP-Feldname",
     placeholder: ["z.B. PO-Nr.", "z.B. Bestellreferenz"],
   },
@@ -209,7 +209,7 @@ export function MappingsTable({
                   colSpan={isUnitType ? 5 : 4}
                   className="text-center text-muted-foreground py-8"
                 >
-                  Keine Zuordnungen fuer {dealerName} vorhanden.
+                  Keine Zuordnungen für {dealerName} vorhanden.
                 </TableCell>
               </TableRow>
             )}
@@ -238,7 +238,7 @@ export function MappingsTable({
                       className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                       onClick={() => handleDelete(mapping.id)}
                       disabled={deletingId === mapping.id}
-                      aria-label="Zuordnung loeschen"
+                      aria-label="Zuordnung löschen"
                     >
                       {deletingId === mapping.id ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -252,8 +252,8 @@ export function MappingsTable({
                       size="sm"
                       className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
                       onClick={() => handleOverride(mapping)}
-                      aria-label="Globale Zuordnung ueberschreiben"
-                      title="Ueberschreiben"
+                      aria-label="Globale Zuordnung überschreiben"
+                      title="Überschreiben"
                     >
                       <Copy className="h-3.5 w-3.5" />
                     </Button>
@@ -306,7 +306,7 @@ export function MappingsTable({
                   className="h-7 w-7 p-0 text-primary"
                   onClick={handleAdd}
                   disabled={isCreating}
-                  aria-label="Zuordnung hinzufuegen"
+                  aria-label="Zuordnung hinzufügen"
                 >
                   {isCreating ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />

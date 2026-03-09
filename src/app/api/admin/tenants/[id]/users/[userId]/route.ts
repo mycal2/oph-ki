@@ -20,7 +20,7 @@ export async function PATCH(
 
     if (!UUID_REGEX.test(tenantId) || !UUID_REGEX.test(userId)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige ID." },
+        { success: false, error: "Ungültige ID." },
         { status: 400 }
       );
     }
@@ -37,7 +37,7 @@ export async function PATCH(
     const parsed = toggleUserStatusSchema.safeParse(body);
 
     if (!parsed.success) {
-      const firstError = parsed.error.issues[0]?.message ?? "Ungueltige Eingabe.";
+      const firstError = parsed.error.issues[0]?.message ?? "Ungültige Eingabe.";
       return NextResponse.json(
         { success: false, error: firstError },
         { status: 400 }
@@ -71,7 +71,7 @@ export async function PATCH(
     if (updateError) {
       console.error("Failed to update user status:", updateError.message);
       return NextResponse.json(
-        { success: false, error: "Benutzerstatus konnte nicht geaendert werden." },
+        { success: false, error: "Benutzerstatus konnte nicht geändert werden." },
         { status: 500 }
       );
     }

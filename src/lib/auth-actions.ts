@@ -73,13 +73,13 @@ export async function loginAction(
     if (error.message.includes("Invalid login credentials")) {
       return {
         success: false,
-        error: "Ungueltige Anmeldedaten. Bitte versuchen Sie es erneut.",
+        error: "Ungültige Anmeldedaten. Bitte versuchen Sie es erneut.",
       };
     }
     if (error.message.includes("Email not confirmed")) {
       return {
         success: false,
-        error: "E-Mail-Adresse nicht bestaetigt. Bitte pruefen Sie Ihr Postfach.",
+        error: "E-Mail-Adresse nicht bestätigt. Bitte prüfen Sie Ihr Postfach.",
       };
     }
     return {
@@ -157,7 +157,7 @@ export async function resetPasswordAction(
   }
 
   if (password !== confirmPassword) {
-    return { success: false, error: "Passwoerter stimmen nicht ueberein." };
+    return { success: false, error: "Passwörter stimmen nicht überein." };
   }
 
   if (password.length < 8) {
@@ -174,7 +174,7 @@ export async function resetPasswordAction(
     console.error("Password reset error:", error.message);
     return {
       success: false,
-      error: "Passwort konnte nicht geaendert werden. Bitte versuchen Sie es erneut.",
+      error: "Passwort konnte nicht geändert werden. Bitte versuchen Sie es erneut.",
     };
   }
 
@@ -194,7 +194,7 @@ export async function acceptInviteAction(
   }
 
   if (password !== confirmPassword) {
-    return { success: false, error: "Passwoerter stimmen nicht ueberein." };
+    return { success: false, error: "Passwörter stimmen nicht überein." };
   }
 
   if (password.length < 8) {

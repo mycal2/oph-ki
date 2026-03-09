@@ -189,7 +189,7 @@ export async function POST(
 
     if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: parsed.error.issues[0]?.message ?? "Ungueltige Eingabe." },
+        { success: false, error: parsed.error.issues[0]?.message ?? "Ungültige Eingabe." },
         { status: 400 }
       );
     }

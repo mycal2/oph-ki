@@ -41,10 +41,10 @@ const EXAMPLE_TEMPLATE = `<?xml version="1.0" encoding="UTF-8"?>
 const AVAILABLE_VARIABLES = [
   { path: "order.order_number", description: "Bestellnummer" },
   { path: "order.order_date", description: "Bestelldatum" },
-  { path: "order.currency", description: "Waehrung" },
+  { path: "order.currency", description: "Währung" },
   { path: "order.total_amount", description: "Gesamtbetrag" },
   { path: "order.notes", description: "Notizen" },
-  { path: "order.dealer.name", description: "Haendlername" },
+  { path: "order.dealer.name", description: "Händlername" },
   { path: "order.sender.company_name", description: "Absender-Firma" },
   { path: "order.sender.customer_number", description: "Kundennummer" },
   { path: "order.sender.email", description: "E-Mail" },
@@ -64,7 +64,7 @@ const AVAILABLE_VARIABLES = [
   { path: "this.description", description: "Beschreibung (in #each)" },
   { path: "this.quantity", description: "Menge (in #each)" },
   { path: "this.unit", description: "Einheit (in #each)" },
-  { path: "this.unit_price", description: "Stueckpreis (in #each)" },
+  { path: "this.unit_price", description: "Stückpreis (in #each)" },
   { path: "this.total_price", description: "Gesamtpreis (in #each)" },
 ];
 
@@ -110,15 +110,15 @@ export function XmlTemplateEditor({ template, onChange }: XmlTemplateEditorProps
       <CardHeader>
         <CardTitle className="text-base">XML-Template (Handlebars-Syntax)</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Verwenden Sie Handlebars-Syntax fuer dynamische Werte:{" "}
+          Verwenden Sie Handlebars-Syntax für dynamische Werte:{" "}
           <code className="rounded bg-muted px-1 py-0.5 text-xs font-mono">
             {"{{order.order_number}}"}
           </code>{" "}
-          fuer skalare Werte,{" "}
+          für skalare Werte,{" "}
           <code className="rounded bg-muted px-1 py-0.5 text-xs font-mono">
             {"{{#each order.line_items}}...{{/each}}"}
           </code>{" "}
-          fuer Listen.
+          für Listen.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -148,7 +148,7 @@ export function XmlTemplateEditor({ template, onChange }: XmlTemplateEditorProps
             ) : (
               <ChevronRight className="h-4 w-4" />
             )}
-            Verfuegbare Variablen
+            Verfügbare Variablen
           </CollapsibleTrigger>
           <CollapsibleContent className="mt-2">
             <div className="rounded-lg border bg-muted/30 p-3">
@@ -159,7 +159,7 @@ export function XmlTemplateEditor({ template, onChange }: XmlTemplateEditorProps
                     type="button"
                     className="group flex items-baseline gap-2 text-xs text-left rounded px-1 py-0.5 -mx-1 hover:bg-primary/10 transition-colors cursor-pointer"
                     onClick={() => handleVariableClick(v.path)}
-                    title="Klicken zum Einfuegen an Cursorposition"
+                    title="Klicken zum Einfügen an Cursorposition"
                   >
                     <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px] shrink-0 group-hover:bg-primary/20">
                       {`{{${v.path}}}`}
@@ -180,7 +180,7 @@ export function XmlTemplateEditor({ template, onChange }: XmlTemplateEditorProps
             size="sm"
             onClick={() => onChange(EXAMPLE_TEMPLATE)}
           >
-            Beispiel-Template einfuegen
+            Beispiel-Template einfügen
           </Button>
         )}
       </CardContent>

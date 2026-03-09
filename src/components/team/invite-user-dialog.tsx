@@ -94,7 +94,7 @@ export function InviteUserDialog({ onInvited }: InviteUserDialogProps) {
           <DialogTitle>Mitarbeiter einladen</DialogTitle>
           <DialogDescription>
             Senden Sie eine Einladung per E-Mail. Der eingeladene Mitarbeiter
-            erhaelt einen Link, um sein Konto einzurichten.
+            erhält einen Link, um sein Konto einzurichten.
           </DialogDescription>
         </DialogHeader>
 
@@ -132,8 +132,8 @@ export function InviteUserDialog({ onInvited }: InviteUserDialogProps) {
               <div className="space-y-2">
                 <Label htmlFor="invite-role">Rolle</Label>
                 <Select value={role} onValueChange={setRole} required>
-                  <SelectTrigger id="invite-role" aria-label="Rolle auswaehlen">
-                    <SelectValue placeholder="Rolle auswaehlen" />
+                  <SelectTrigger id="invite-role" aria-label="Rolle auswählen">
+                    <SelectValue placeholder="Rolle auswählen" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="tenant_user">
@@ -145,7 +145,7 @@ export function InviteUserDialog({ onInvited }: InviteUserDialogProps) {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  Administratoren koennen weitere Mitarbeiter einladen und
+                  Administratoren können weitere Mitarbeiter einladen und
                   verwalten.
                 </p>
               </div>

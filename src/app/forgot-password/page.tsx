@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Passwort vergessen | IDS.online",
-  description: "Setzen Sie Ihr Passwort bei IDS.online zurueck.",
+  description: "Setzen Sie Ihr Passwort bei IDS.online zurück.",
 };
 
 export default function ForgotPasswordPage() {

@@ -117,7 +117,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const parsed = createTenantSchema.safeParse(body);
 
     if (!parsed.success) {
-      const firstError = parsed.error.issues[0]?.message ?? "Ungueltige Eingabe.";
+      const firstError = parsed.error.issues[0]?.message ?? "Ungültige Eingabe.";
       return NextResponse.json(
         { success: false, error: firstError },
         { status: 400 }

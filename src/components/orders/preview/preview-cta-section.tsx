@@ -20,7 +20,7 @@ export function PreviewCtaSection() {
             Beeindruckt? Testen Sie die Vollversion.
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Automatische Bestellverarbeitung, ERP-Export und mehr &mdash; fuer Ihr
+            Automatische Bestellverarbeitung, ERP-Export und mehr &mdash; für Ihr
             gesamtes Team.
           </p>
         </div>

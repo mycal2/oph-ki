@@ -56,7 +56,7 @@ export async function GET(
     // 1. Validate inputs
     if (!UUID_REGEX.test(orderId)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Bestellungs-ID." },
+        { success: false, error: "Ungültige Bestellungs-ID." },
         { status: 400 }
       );
     }
@@ -64,7 +64,7 @@ export async function GET(
     const formatResult = exportFormatSchema.safeParse(rawFormat);
     if (!formatResult.success) {
       return NextResponse.json(
-        { success: false, error: "Ungueltiges Format. Erlaubt: csv, xml, json" },
+        { success: false, error: "Ungültiges Format. Erlaubt: csv, xml, json" },
         { status: 400 }
       );
     }
@@ -103,7 +103,7 @@ export async function GET(
     // OPH-16: Trial tenants cannot export to ERP
     if (appMetadata?.tenant_status === "trial") {
       return NextResponse.json(
-        { success: false, error: "ERP-Export ist waehrend der Testphase nicht verfuegbar." },
+        { success: false, error: "ERP-Export ist während der Testphase nicht verfügbar." },
         { status: 403 }
       );
     }
@@ -144,7 +144,7 @@ export async function GET(
       return NextResponse.json(
         {
           success: false,
-          error: "Export ist nur fuer freigegebene Bestellungen moeglich.",
+          error: "Export ist nur für freigegebene Bestellungen möglich.",
         },
         { status: 400 }
       );
@@ -205,7 +205,7 @@ export async function GET(
       return NextResponse.json(
         {
           success: false,
-          error: "Kein ERP-Mapping konfiguriert fuer diesen Mandanten.",
+          error: "Kein ERP-Mapping konfiguriert für diesen Mandanten.",
         },
         { status: 409 }
       );
@@ -235,7 +235,7 @@ export async function GET(
       return NextResponse.json(
         {
           success: false,
-          error: `Pflichtfelder fehlen: ${fieldList}${more}. Bitte in der Bestellpruefung korrigieren.`,
+          error: `Pflichtfelder fehlen: ${fieldList}${more}. Bitte in der Bestellprüfung korrigieren.`,
         },
         { status: 400 }
       );

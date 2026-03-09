@@ -34,7 +34,7 @@ export async function POST(
 
     if (fetchError || !entry) {
       return NextResponse.json(
-        { success: false, error: "Quarantaene-Eintrag nicht gefunden." },
+        { success: false, error: "Quarantäne-Eintrag nicht gefunden." },
         { status: 404 }
       );
     }
@@ -79,7 +79,7 @@ export async function POST(
       payload = JSON.parse(text) as PostmarkInboundPayload;
     } catch {
       return NextResponse.json(
-        { success: false, error: "Archivierte E-Mail-Daten sind ungueltig." },
+        { success: false, error: "Archivierte E-Mail-Daten sind ungültig." },
         { status: 500 }
       );
     }

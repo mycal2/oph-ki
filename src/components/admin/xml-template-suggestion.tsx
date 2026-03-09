@@ -64,7 +64,7 @@ export function XmlTemplateSuggestion({
       <Alert>
         <AlertTriangle className="h-4 w-4" />
         <AlertDescription>
-          {result.warnings[0] ?? "Template-Generierung nicht moeglich."}
+          {result.warnings[0] ?? "Template-Generierung nicht möglich."}
         </AlertDescription>
       </Alert>
     );
@@ -103,7 +103,7 @@ export function XmlTemplateSuggestion({
           <p className="text-sm text-muted-foreground">
             Basierend auf der Beispieldatei{" "}
             <span className="font-medium">{outputFormat.file_name}</span> wurde
-            ein XML-Template generiert. Pruefen Sie die Struktur und uebernehmen
+            ein XML-Template generiert. Prüfen Sie die Struktur und übernehmen
             Sie das Template in den Editor.
           </p>
         </CardHeader>
@@ -132,7 +132,7 @@ export function XmlTemplateSuggestion({
           {/* Hint */}
           <p className="text-xs text-muted-foreground">
             Die Platzhalter (z.B. <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">ArticleNumber</code>)
-            muessen noch durch Handlebars-Variablen ersetzt werden (z.B.{" "}
+            müssen noch durch Handlebars-Variablen ersetzt werden (z.B.{" "}
             <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">{"{{this.article_number}}"}</code>).
             Verwenden Sie die Variablen-Referenz im XML-Template-Editor.
           </p>
@@ -141,7 +141,7 @@ export function XmlTemplateSuggestion({
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <Button size="sm" onClick={handleAcceptClick}>
               <Check className="mr-1.5 h-4 w-4" />
-              Uebernehmen
+              Übernehmen
             </Button>
             <Button
               variant="outline"
@@ -163,9 +163,9 @@ export function XmlTemplateSuggestion({
       <Dialog open={overwriteConfirmOpen} onOpenChange={setOverwriteConfirmOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Bestehendes Template ueberschreiben?</DialogTitle>
+            <DialogTitle>Bestehendes Template überschreiben?</DialogTitle>
             <DialogDescription>
-              Das XML-Template-Feld enthaelt bereits Inhalt. Moechten Sie diesen
+              Das XML-Template-Feld enthält bereits Inhalt. Möchten Sie diesen
               durch den generierten Vorschlag ersetzen?
             </DialogDescription>
           </DialogHeader>
@@ -177,7 +177,7 @@ export function XmlTemplateSuggestion({
               Abbrechen
             </Button>
             <Button onClick={handleConfirmOverwrite}>
-              Ueberschreiben
+              Überschreiben
             </Button>
           </DialogFooter>
         </DialogContent>

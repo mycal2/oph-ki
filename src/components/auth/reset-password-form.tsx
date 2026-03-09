@@ -51,10 +51,10 @@ export function ResetPasswordForm() {
             <CheckCircle2 className="h-6 w-6 text-green-600" />
           </div>
           <CardTitle className="text-2xl font-bold">
-            Passwort geaendert
+            Passwort geändert
           </CardTitle>
           <CardDescription>
-            Ihr Passwort wurde erfolgreich zurueckgesetzt. Sie koennen sich jetzt
+            Ihr Passwort wurde erfolgreich zurückgesetzt. Sie können sich jetzt
             mit Ihrem neuen Passwort anmelden.
           </CardDescription>
         </CardHeader>
@@ -100,7 +100,7 @@ export function ResetPasswordForm() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Passwort bestaetigen</Label>
+            <Label htmlFor="confirmPassword">Passwort bestätigen</Label>
             <Input
               id="confirmPassword"
               type="password"
@@ -110,7 +110,7 @@ export function ResetPasswordForm() {
               required
               minLength={8}
               disabled={isLoading}
-              aria-label="Passwort bestaetigen"
+              aria-label="Passwort bestätigen"
             />
           </div>
         </CardContent>

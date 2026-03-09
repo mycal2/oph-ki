@@ -49,14 +49,14 @@ export function useAdminDealers(): UseAdminDealersReturn {
       const json = (await res.json()) as ApiResponse<DealerAdminListItem[]>;
 
       if (!res.ok || !json.success || !json.data) {
-        setError(json.error ?? "Haendler konnten nicht geladen werden.");
+        setError(json.error ?? "Händler konnten nicht geladen werden.");
         setDealers([]);
         return;
       }
 
       setDealers(json.data);
     } catch {
-      setError("Verbindungsfehler beim Laden der Haendler.");
+      setError("Verbindungsfehler beim Laden der Händler.");
       setDealers([]);
     } finally {
       setIsLoading(false);
@@ -84,14 +84,14 @@ export function useAdminDealers(): UseAdminDealersReturn {
         }>;
 
         if (!res.ok || !json.success || !json.data) {
-          setMutationError(json.error ?? "Haendler konnte nicht erstellt werden.");
+          setMutationError(json.error ?? "Händler konnte nicht erstellt werden.");
           return null;
         }
 
         await fetchDealers();
         return json.data;
       } catch {
-        setMutationError("Verbindungsfehler beim Erstellen des Haendlers.");
+        setMutationError("Verbindungsfehler beim Erstellen des Händlers.");
         return null;
       } finally {
         setIsMutating(false);
@@ -117,14 +117,14 @@ export function useAdminDealers(): UseAdminDealersReturn {
         }>;
 
         if (!res.ok || !json.success || !json.data) {
-          setMutationError(json.error ?? "Haendler konnte nicht aktualisiert werden.");
+          setMutationError(json.error ?? "Händler konnte nicht aktualisiert werden.");
           return null;
         }
 
         await fetchDealers();
         return json.data;
       } catch {
-        setMutationError("Verbindungsfehler beim Aktualisieren des Haendlers.");
+        setMutationError("Verbindungsfehler beim Aktualisieren des Händlers.");
         return null;
       } finally {
         setIsMutating(false);
@@ -145,14 +145,14 @@ export function useAdminDealers(): UseAdminDealersReturn {
         const json = (await res.json()) as ApiResponse;
 
         if (!res.ok || !json.success) {
-          setMutationError(json.error ?? "Haendler konnte nicht deaktiviert werden.");
+          setMutationError(json.error ?? "Händler konnte nicht deaktiviert werden.");
           return false;
         }
 
         await fetchDealers();
         return true;
       } catch {
-        setMutationError("Verbindungsfehler beim Deaktivieren des Haendlers.");
+        setMutationError("Verbindungsfehler beim Deaktivieren des Händlers.");
         return false;
       } finally {
         setIsMutating(false);

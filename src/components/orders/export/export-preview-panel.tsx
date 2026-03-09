@@ -60,7 +60,7 @@ export function ExportPreviewPanel({
   if (!preview) {
     return (
       <p className="text-sm text-muted-foreground text-center py-6">
-        Waehlen Sie ein Format, um die Vorschau zu laden.
+        Wählen Sie ein Format, um die Vorschau zu laden.
       </p>
     );
   }
@@ -154,7 +154,7 @@ export function ExportPreviewPanel({
 
   return (
     <p className="text-sm text-muted-foreground text-center py-6">
-      Keine Vorschau verfuegbar.
+      Keine Vorschau verfügbar.
     </p>
   );
 }

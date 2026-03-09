@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "IDS.online",
   description:
-    "Das digitale Portal fuer die dentale Community - Bestellungsverarbeitung und Automatisierung.",
+    "Das digitale Portal für die dentale Community - Bestellungsverarbeitung und Automatisierung.",
 };
 
 export default function RootLayout({

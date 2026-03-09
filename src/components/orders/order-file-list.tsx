@@ -196,8 +196,8 @@ export function OrderFileList({ files, orderId, onEmailBodyClick }: OrderFileLis
                     isEmailBody
                       ? `${file.original_filename} — E-Mail-Text anzeigen`
                       : isPdf
-                        ? `${file.original_filename} — Vorschau oeffnen`
-                        : `${file.original_filename} — In neuem Tab oeffnen`
+                        ? `${file.original_filename} — Vorschau öffnen`
+                        : `${file.original_filename} — In neuem Tab öffnen`
                   }
                   onClick={() => handleFileClick(file)}
                   onKeyDown={(e) => {
@@ -274,7 +274,7 @@ export function OrderFileList({ files, orderId, onEmailBodyClick }: OrderFileLis
               className="shrink-0 gap-1.5 mr-8"
             >
               <ExternalLink className="h-3.5 w-3.5" />
-              In neuem Tab oeffnen
+              In neuem Tab öffnen
             </Button>
           </DialogHeader>
           <div className="flex-1 min-h-0">

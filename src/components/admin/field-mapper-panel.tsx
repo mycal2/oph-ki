@@ -64,10 +64,10 @@ const VARIABLE_GROUPS: VariableGroup[] = [
     variables: [
       { path: "order.order_number", description: "Bestellnummer" },
       { path: "order.order_date", description: "Bestelldatum" },
-      { path: "order.currency", description: "Waehrung" },
+      { path: "order.currency", description: "Währung" },
       { path: "order.total_amount", description: "Gesamtbetrag" },
       { path: "order.notes", description: "Notizen" },
-      { path: "order.dealer.name", description: "Haendlername" },
+      { path: "order.dealer.name", description: "Händlername" },
     ],
   },
   {
@@ -101,7 +101,7 @@ const VARIABLE_GROUPS: VariableGroup[] = [
       { path: "this.description", description: "Beschreibung" },
       { path: "this.quantity", description: "Menge" },
       { path: "this.unit", description: "Einheit" },
-      { path: "this.unit_price", description: "Stueckpreis" },
+      { path: "this.unit_price", description: "Stückpreis" },
       { path: "this.total_price", description: "Gesamtpreis" },
     ],
   },
@@ -280,7 +280,7 @@ function TargetFieldDropZone({
               type="button"
               onClick={() => onRemoveMapping(fieldName)}
               className="rounded-full p-0.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-              aria-label={`Zuordnung fuer ${fieldName} entfernen`}
+              aria-label={`Zuordnung für ${fieldName} entfernen`}
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -530,7 +530,7 @@ export function FieldMapperPanel({
           </CardTitle>
           <p className="text-sm text-muted-foreground">
             Ziehen Sie eine Variable aus der rechten Spalte auf ein Zielfeld links, um die
-            Zuordnung herzustellen. Optional koennen Sie danach eine Transformation konfigurieren.
+            Zuordnung herzustellen. Optional können Sie danach eine Transformation konfigurieren.
           </p>
         </CardHeader>
         <CardContent>
@@ -544,7 +544,7 @@ export function FieldMapperPanel({
               {/* Right column: Available variables (shown first on mobile, sticky on desktop) */}
               <div className="lg:order-2 lg:sticky lg:top-4 lg:self-start space-y-3">
                 <h4 className="text-sm font-medium text-muted-foreground">
-                  Verfuegbare Variablen
+                  Verfügbare Variablen
                 </h4>
                 <div className="space-y-4">
                     {VARIABLE_GROUPS.map((group) => (
@@ -707,13 +707,13 @@ export function FieldMapperPanel({
           <DialogHeader>
             <DialogTitle>
               {pendingCsvColumns
-                ? "Bestehende Spalten-Konfiguration ueberschreiben?"
-                : "Bestehendes Template ueberschreiben?"}
+                ? "Bestehende Spalten-Konfiguration überschreiben?"
+                : "Bestehendes Template überschreiben?"}
             </DialogTitle>
             <DialogDescription>
               {pendingCsvColumns
-                ? "Die CSV Spalten-Konfiguration enthaelt bereits Eintraege. Moechten Sie diese durch die aus den Zuordnungen generierte Konfiguration ersetzen?"
-                : "Das XML-Template-Feld enthaelt bereits Inhalt. Moechten Sie diesen durch das aus den Zuordnungen generierte Template ersetzen?"}
+                ? "Die CSV Spalten-Konfiguration enthält bereits Einträge. Möchten Sie diese durch die aus den Zuordnungen generierte Konfiguration ersetzen?"
+                : "Das XML-Template-Feld enthält bereits Inhalt. Möchten Sie diesen durch das aus den Zuordnungen generierte Template ersetzen?"}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col sm:flex-row gap-2">
@@ -727,7 +727,7 @@ export function FieldMapperPanel({
             >
               Abbrechen
             </Button>
-            <Button onClick={handleConfirmOverwrite}>Ueberschreiben</Button>
+            <Button onClick={handleConfirmOverwrite}>Überschreiben</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

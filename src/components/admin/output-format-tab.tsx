@@ -75,7 +75,7 @@ export function OutputFormatTab({ configId, onFormatChange }: OutputFormatTabPro
   const validateFile = useCallback((file: File): string | null => {
     const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
     if (!ALLOWED_EXTENSIONS.includes(ext)) {
-      return `Nicht unterstuetztes Format. Erlaubt: ${ALLOWED_EXTENSIONS.join(", ")}`;
+      return `Nicht unterstütztes Format. Erlaubt: ${ALLOWED_EXTENSIONS.join(", ")}`;
     }
     if (file.size > MAX_FILE_SIZE_BYTES) {
       return `Datei zu gross (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum: 10 MB.`;
@@ -140,7 +140,7 @@ export function OutputFormatTab({ configId, onFormatChange }: OutputFormatTabPro
     const success = await deleteFormat();
     if (success) {
       setDeleteConfirmOpen(false);
-      setSuccessMessage("Output-Format wurde geloescht.");
+      setSuccessMessage("Output-Format wurde gelöscht.");
     }
   }, [deleteFormat]);
 
@@ -185,7 +185,7 @@ export function OutputFormatTab({ configId, onFormatChange }: OutputFormatTabPro
         accept=".csv,.xlsx,.xml,.json"
         className="hidden"
         onChange={handleFileSelect}
-        aria-label="Output-Format-Datei auswaehlen"
+        aria-label="Output-Format-Datei auswählen"
       />
 
       {/* Success message */}
@@ -201,7 +201,7 @@ export function OutputFormatTab({ configId, onFormatChange }: OutputFormatTabPro
           <AlertDescription>
             {mutationError}{" "}
             <Button variant="link" className="h-auto p-0" onClick={clearMutationError}>
-              Schliessen
+              Schließen
             </Button>
           </AlertDescription>
         </Alert>
@@ -287,7 +287,7 @@ export function OutputFormatTab({ configId, onFormatChange }: OutputFormatTabPro
                 className="text-destructive hover:text-destructive"
               >
                 <Trash2 className="mr-1.5 h-4 w-4" />
-                Loeschen
+                Löschen
               </Button>
             </div>
           </CardContent>
@@ -307,7 +307,7 @@ export function OutputFormatTab({ configId, onFormatChange }: OutputFormatTabPro
                   Kein Output-Format zugewiesen
                 </p>
                 <p className="text-xs text-muted-foreground max-w-md">
-                  Laden Sie eine Beispieldatei im gewuenschten ERP-Ausgabeformat hoch
+                  Laden Sie eine Beispieldatei im gewünschten ERP-Ausgabeformat hoch
                   (CSV, Excel, XML oder JSON). Das System erkennt automatisch die
                   Spaltenstruktur und Datentypen.
                 </p>
@@ -419,10 +419,10 @@ export function OutputFormatTab({ configId, onFormatChange }: OutputFormatTabPro
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Output-Format loeschen</DialogTitle>
+            <DialogTitle>Output-Format löschen</DialogTitle>
             <DialogDescription>
-              Sind Sie sicher, dass Sie das zugewiesene Output-Format loeschen moechten?
-              Der Confidence Score wird fuer zukuenftige Exporte nicht mehr berechnet.
+              Sind Sie sicher, dass Sie das zugewiesene Output-Format löschen möchten?
+              Der Confidence Score wird für zukünftige Exporte nicht mehr berechnet.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col sm:flex-row gap-2">
@@ -443,7 +443,7 @@ export function OutputFormatTab({ configId, onFormatChange }: OutputFormatTabPro
               ) : (
                 <Trash2 className="mr-1.5 h-4 w-4" />
               )}
-              Loeschen
+              Löschen
             </Button>
           </DialogFooter>
         </DialogContent>

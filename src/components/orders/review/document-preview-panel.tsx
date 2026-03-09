@@ -91,7 +91,7 @@ export function DocumentPreviewPanel({ orderId }: DocumentPreviewPanelProps) {
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <FileText className="h-10 w-10 text-muted-foreground/50 mb-3" />
             <p className="text-sm text-muted-foreground">
-              Keine Dateien fuer die Vorschau verfuegbar.
+              Keine Dateien für die Vorschau verfügbar.
             </p>
           </div>
         </CardContent>
@@ -118,7 +118,7 @@ export function DocumentPreviewPanel({ orderId }: DocumentPreviewPanelProps) {
                 href={activeFile.signedUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label={`${activeFile.filename} in neuem Tab oeffnen`}
+                aria-label={`${activeFile.filename} in neuem Tab öffnen`}
               >
                 <ExternalLink className="h-3 w-3" />
                 In neuem Tab
@@ -158,7 +158,7 @@ export function DocumentPreviewPanel({ orderId }: DocumentPreviewPanelProps) {
             <FileText className="h-10 w-10 text-muted-foreground/50 mb-3" />
             <p className="text-sm font-medium mb-1">{activeFile.filename}</p>
             <p className="text-xs text-muted-foreground mb-4">
-              Vorschau fuer diesen Dateityp nicht verfuegbar.
+              Vorschau für diesen Dateityp nicht verfügbar.
             </p>
             <Button variant="outline" size="sm" asChild className="gap-1.5">
               <a

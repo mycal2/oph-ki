@@ -132,7 +132,7 @@ export function AcceptInviteForm() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Passwort bestaetigen</Label>
+            <Label htmlFor="confirmPassword">Passwort bestätigen</Label>
             <Input
               id="confirmPassword"
               type="password"
@@ -142,7 +142,7 @@ export function AcceptInviteForm() {
               required
               minLength={8}
               disabled={isLoading}
-              aria-label="Passwort bestaetigen"
+              aria-label="Passwort bestätigen"
             />
           </div>
         </CardContent>

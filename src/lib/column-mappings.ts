@@ -68,7 +68,7 @@ export async function getColumnMappingProfile(
  *
  * Example output:
  * ## Column Mapping for This Dealer (PDF Format)
- * Spalten-Zuordnung fuer diesen Haendler:
+ * Spalten-Zuordnung für diesen Händler:
  * - Spalte 1 = ISO-Nummer (items[].iso_number)
  * - Spalte mit Header "Best.-Nr." = Artikelnummer (items[].product_code)
  * - Spalte 3 = Menge (items[].quantity)

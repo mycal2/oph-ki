@@ -172,13 +172,13 @@ export default function AdminUploadPage() {
             {selectedTenantName && (
               <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                 <Info className="h-4 w-4 shrink-0" />
-                <span>Hochgeladen fuer: {selectedTenantName}</span>
+                <span>Hochgeladen für: {selectedTenantName}</span>
               </div>
             )}
             {allSucceeded && (
               <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span>KI-Extraktion laeuft im Hintergrund...</span>
+                <span>KI-Extraktion läuft im Hintergrund...</span>
               </div>
             )}
             {/* Per-file results with dealer badges */}
@@ -226,7 +226,7 @@ export default function AdminUploadPage() {
                 Weitere Dateien hochladen
               </Button>
               <Button onClick={() => router.push("/orders")}>
-                Zur Bestelluebersicht
+                Zur Bestellübersicht
               </Button>
             </div>
           </CardContent>
@@ -247,9 +247,9 @@ export default function AdminUploadPage() {
       {/* Tenant selector */}
       <Card>
         <CardHeader>
-          <CardTitle>Mandant auswaehlen</CardTitle>
+          <CardTitle>Mandant auswählen</CardTitle>
           <CardDescription>
-            Waehlen Sie den Mandanten, fuer den die Bestellung hochgeladen werden soll.
+            Wählen Sie den Mandanten, für den die Bestellung hochgeladen werden soll.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -277,8 +277,8 @@ export default function AdminUploadPage() {
                 onValueChange={setSelectedTenantId}
                 disabled={isUploading}
               >
-                <SelectTrigger id="tenant-select" aria-label="Mandant auswaehlen">
-                  <SelectValue placeholder="Mandant auswaehlen..." />
+                <SelectTrigger id="tenant-select" aria-label="Mandant auswählen">
+                  <SelectValue placeholder="Mandant auswählen..." />
                 </SelectTrigger>
                 <SelectContent>
                   {tenants.map((tenant) => (
@@ -297,9 +297,9 @@ export default function AdminUploadPage() {
       {/* Upload form - disabled until tenant selected */}
       <Card>
         <CardHeader>
-          <CardTitle>Dateien auswaehlen</CardTitle>
+          <CardTitle>Dateien auswählen</CardTitle>
           <CardDescription>
-            Unterstuetzte Formate: .eml, .pdf, .xlsx, .xls, .csv -- Max. 25 MB
+            Unterstützte Formate: .eml, .pdf, .xlsx, .xls, .csv -- Max. 25 MB
             pro Datei -- Max. 10 Dateien
           </CardDescription>
         </CardHeader>
@@ -330,7 +330,7 @@ export default function AdminUploadPage() {
 
           {!tenantSelected && tenants.length > 0 && (
             <p className="text-sm text-muted-foreground text-center">
-              Bitte waehlen Sie zuerst einen Mandanten aus, um Dateien hochzuladen.
+              Bitte wählen Sie zuerst einen Mandanten aus, um Dateien hochzuladen.
             </p>
           )}
 
@@ -355,7 +355,7 @@ export default function AdminUploadPage() {
         {files.length > 0 && (
           <CardFooter className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <p className="text-sm text-muted-foreground">
-              {files.length} {files.length === 1 ? "Datei" : "Dateien"} ausgewaehlt
+              {files.length} {files.length === 1 ? "Datei" : "Dateien"} ausgewählt
               {pendingCount > 0 && ` -- ${pendingCount} bereit zum Upload`}
             </p>
             <div className="flex gap-2 w-full sm:w-auto">
@@ -365,7 +365,7 @@ export default function AdminUploadPage() {
                 disabled={isUploading}
                 className="flex-1 sm:flex-none"
               >
-                Zuruecksetzen
+                Zurücksetzen
               </Button>
               <Button
                 onClick={uploadFiles}
@@ -375,7 +375,7 @@ export default function AdminUploadPage() {
                 {isUploading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Laedt hoch...
+                    Lädt hoch...
                   </>
                 ) : (
                   <>

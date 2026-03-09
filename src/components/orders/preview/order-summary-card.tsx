@@ -129,7 +129,7 @@ export function OrderSummaryCard({ data }: OrderSummaryCardProps) {
             <div className="flex items-start gap-2">
               <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
               <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">Haendler</p>
+                <p className="text-xs text-muted-foreground">Händler</p>
                 <p className="text-sm font-medium">{data.dealerName}</p>
               </div>
             </div>

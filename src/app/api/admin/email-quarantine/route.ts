@@ -42,7 +42,7 @@ export async function GET(): Promise<
     if (error) {
       console.error("Failed to fetch quarantine entries:", error.message);
       return NextResponse.json(
-        { success: false, error: "Quarantaene-Eintraege konnten nicht geladen werden." },
+        { success: false, error: "Quarantäne-Einträge konnten nicht geladen werden." },
         { status: 500 }
       );
     }

@@ -191,13 +191,13 @@ export function useAdminTenants(): UseAdminTenantsReturn {
         const json = (await res.json()) as ApiResponse;
 
         if (!res.ok || !json.success) {
-          setMutationError(json.error ?? "Benutzerstatus konnte nicht geaendert werden.");
+          setMutationError(json.error ?? "Benutzerstatus konnte nicht geändert werden.");
           return false;
         }
 
         return true;
       } catch {
-        setMutationError("Verbindungsfehler beim Aendern des Benutzerstatus.");
+        setMutationError("Verbindungsfehler beim Ändern des Benutzerstatus.");
         return false;
       } finally {
         setIsMutating(false);

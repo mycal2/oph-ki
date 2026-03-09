@@ -42,7 +42,7 @@ const STATUS_CONFIG: Record<
     variant: "default",
     className:
       "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-500/30",
-    tooltip: "KI-Extraktion laeuft. Bitte warten...",
+    tooltip: "KI-Extraktion läuft. Bitte warten...",
   },
   extracted: {
     label: "Extrahiert",

@@ -66,7 +66,7 @@ export function ExportButton({
             <p>
               {wasExported
                 ? "Bestellung erneut als Datei exportieren"
-                : "Bestellung als Datei fuer den ERP-Import exportieren"}
+                : "Bestellung als Datei für den ERP-Import exportieren"}
             </p>
           </TooltipContent>
         </Tooltip>

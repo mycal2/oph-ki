@@ -19,7 +19,7 @@ export async function GET(
     const { id } = await params;
     if (!UUID_REGEX.test(id)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Mandanten-ID." },
+        { success: false, error: "Ungültige Mandanten-ID." },
         { status: 400 }
       );
     }
@@ -65,7 +65,7 @@ export async function PATCH(
     const { id } = await params;
     if (!UUID_REGEX.test(id)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Mandanten-ID." },
+        { success: false, error: "Ungültige Mandanten-ID." },
         { status: 400 }
       );
     }
@@ -81,7 +81,7 @@ export async function PATCH(
     const parsed = updateTenantSchema.safeParse(body);
 
     if (!parsed.success) {
-      const firstError = parsed.error.issues[0]?.message ?? "Ungueltige Eingabe.";
+      const firstError = parsed.error.issues[0]?.message ?? "Ungültige Eingabe.";
       return NextResponse.json(
         { success: false, error: firstError },
         { status: 400 }
@@ -125,7 +125,7 @@ export async function PATCH(
 
     if (Object.keys(updatePayload).length === 0) {
       return NextResponse.json(
-        { success: false, error: "Keine Aenderungen angegeben." },
+        { success: false, error: "Keine Änderungen angegeben." },
         { status: 400 }
       );
     }

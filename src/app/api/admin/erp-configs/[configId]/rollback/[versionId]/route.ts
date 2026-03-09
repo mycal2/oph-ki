@@ -26,7 +26,7 @@ export async function POST(
 
     if (!UUID_REGEX.test(configId) || !UUID_REGEX.test(versionId)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige ID." },
+        { success: false, error: "Ungültige ID." },
         { status: 400 }
       );
     }

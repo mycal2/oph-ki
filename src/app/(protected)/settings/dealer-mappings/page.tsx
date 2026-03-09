@@ -61,9 +61,9 @@ function DealerMappingsContent() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Haendler-Zuordnungen</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Händler-Zuordnungen</h1>
         <p className="text-muted-foreground">
-          Verwalten Sie Artikelnummern-, Einheiten- und Feld-Zuordnungen fuer Ihre Haendler.
+          Verwalten Sie Artikelnummern-, Einheiten- und Feld-Zuordnungen für Ihre Händler.
         </p>
       </div>
 
@@ -74,7 +74,7 @@ function DealerMappingsContent() {
           <Label htmlFor="global-mode" className="flex-1 text-sm cursor-pointer">
             Globale Zuordnungen verwalten
             <span className="text-muted-foreground block text-xs">
-              Neue Eintraege gelten fuer alle Mandanten als Basis-Zuordnungen.
+              Neue Einträge gelten für alle Mandanten als Basis-Zuordnungen.
             </span>
           </Label>
           <Switch
@@ -96,7 +96,7 @@ function DealerMappingsContent() {
               <div>
                 <CardTitle className="text-lg">Zuordnungen</CardTitle>
                 <CardDescription>
-                  Haendler-Werte werden automatisch in ERP-Werte uebersetzt.
+                  Händler-Werte werden automatisch in ERP-Werte übersetzt.
                 </CardDescription>
               </div>
             </div>
@@ -113,7 +113,7 @@ function DealerMappingsContent() {
                   onValueChange={(val) => setSelectedDealerId(val || null)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Haendler auswaehlen..." />
+                    <SelectValue placeholder="Händler auswählen..." />
                   </SelectTrigger>
                   <SelectContent>
                     {dealers.map((dealer) => (
@@ -134,7 +134,7 @@ function DealerMappingsContent() {
           {!selectedDealerId ? (
             <div className="text-center py-12 text-muted-foreground">
               <ArrowLeftRight className="h-10 w-10 mx-auto mb-3 opacity-30" />
-              <p>Waehlen Sie einen Haendler aus, um dessen Zuordnungen zu verwalten.</p>
+              <p>Wählen Sie einen Händler aus, um dessen Zuordnungen zu verwalten.</p>
             </div>
           ) : (
             <Tabs

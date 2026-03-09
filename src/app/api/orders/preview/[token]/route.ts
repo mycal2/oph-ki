@@ -21,7 +21,7 @@ export async function GET(
 
     if (!token || token.length < 32) {
       return NextResponse.json(
-        { status: "not_found", message: "Ungueltiger Vorschau-Link." },
+        { status: "not_found", message: "Ungültiger Vorschau-Link." },
         { status: 200 }
       );
     }
@@ -57,7 +57,7 @@ export async function GET(
 
     if (!order) {
       return NextResponse.json(
-        { status: "not_found", message: "Vorschau-Link ist ungueltig." },
+        { status: "not_found", message: "Vorschau-Link ist ungültig." },
         { status: 200 }
       );
     }
@@ -67,7 +67,7 @@ export async function GET(
       const expiresAt = new Date(order.preview_token_expires_at);
       if (expiresAt.getTime() < Date.now()) {
         return NextResponse.json(
-          { status: "expired", message: "Diese Vorschau ist nicht mehr verfuegbar." },
+          { status: "expired", message: "Diese Vorschau ist nicht mehr verfügbar." },
           { status: 200 }
         );
       }
@@ -80,7 +80,7 @@ export async function GET(
       return NextResponse.json(
         {
           status: "not_found",
-          message: "Fuer diese Bestellung liegen noch keine extrahierten Daten vor.",
+          message: "Für diese Bestellung liegen noch keine extrahierten Daten vor.",
         },
         { status: 200 }
       );

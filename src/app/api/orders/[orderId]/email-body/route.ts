@@ -67,7 +67,7 @@ export async function GET(
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(orderId)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Bestellungs-ID." },
+        { success: false, error: "Ungültige Bestellungs-ID." },
         { status: 400 }
       );
     }
@@ -104,7 +104,7 @@ export async function GET(
 
     if (!emailBodyFile) {
       return NextResponse.json(
-        { success: false, error: "Kein E-Mail-Text fuer diese Bestellung vorhanden." },
+        { success: false, error: "Kein E-Mail-Text für diese Bestellung vorhanden." },
         { status: 404 }
       );
     }

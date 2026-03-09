@@ -46,9 +46,9 @@ const FORMAT_LABELS: Record<ExportFormat, string> = {
 };
 
 const FORMAT_DESCRIPTIONS: Record<ExportFormat, string> = {
-  csv: "Komma-/Semikolon-getrennte Werte - fuer die meisten ERP-Systeme",
+  csv: "Komma-/Semikolon-getrennte Werte - für die meisten ERP-Systeme",
   xml: "Strukturiertes XML-Dokument",
-  json: "Canonical JSON - fuer Entwickler und API-Integration",
+  json: "Canonical JSON - für Entwickler und API-Integration",
 };
 
 /**
@@ -123,7 +123,7 @@ export function ExportDialog({
         <DialogHeader>
           <DialogTitle>ERP-Export</DialogTitle>
           <DialogDescription>
-            Waehlen Sie ein Exportformat und pruefen Sie die Vorschau vor dem Download.
+            Wählen Sie ein Exportformat und prüfen Sie die Vorschau vor dem Download.
           </DialogDescription>
         </DialogHeader>
 
@@ -132,7 +132,7 @@ export function ExportDialog({
           <Alert>
             <RefreshCw className="h-4 w-4" />
             <AlertDescription>
-              Diese Bestellung wurde bereits exportiert. Sie koennen sie jederzeit erneut exportieren.
+              Diese Bestellung wurde bereits exportiert. Sie können sie jederzeit erneut exportieren.
             </AlertDescription>
           </Alert>
         )}
@@ -152,9 +152,9 @@ export function ExportDialog({
             <SelectTrigger
               id="export-format"
               className="w-full"
-              aria-label="Exportformat waehlen"
+              aria-label="Exportformat wählen"
             >
-              <SelectValue placeholder="Format waehlen" />
+              <SelectValue placeholder="Format wählen" />
             </SelectTrigger>
             <SelectContent>
               {(Object.keys(FORMAT_LABELS) as ExportFormat[]).map((fmt) => (
@@ -181,7 +181,7 @@ export function ExportDialog({
           <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription>
-              Keine ERP-Konfiguration fuer dieses Format gefunden. Es werden Standard-Zuordnungen verwendet.
+              Keine ERP-Konfiguration für dieses Format gefunden. Es werden Standard-Zuordnungen verwendet.
             </AlertDescription>
           </Alert>
         )}

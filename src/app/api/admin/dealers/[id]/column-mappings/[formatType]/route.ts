@@ -24,7 +24,7 @@ export async function PUT(
     // Validate dealer ID
     if (!UUID_REGEX.test(id)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Haendler-ID." },
+        { success: false, error: "Ungültige Händler-ID." },
         { status: 400 }
       );
     }
@@ -34,7 +34,7 @@ export async function PUT(
       return NextResponse.json(
         {
           success: false,
-          error: `Ungueltiger Format-Typ. Erlaubt: ${VALID_FORMAT_TYPES.join(", ")}`,
+          error: `Ungültiger Format-Typ. Erlaubt: ${VALID_FORMAT_TYPES.join(", ")}`,
         },
         { status: 400 }
       );
@@ -52,7 +52,7 @@ export async function PUT(
     const parsed = columnMappingProfileSchema.safeParse(body);
 
     if (!parsed.success) {
-      const firstError = parsed.error.issues[0]?.message ?? "Ungueltige Eingabe.";
+      const firstError = parsed.error.issues[0]?.message ?? "Ungültige Eingabe.";
       return NextResponse.json(
         { success: false, error: firstError },
         { status: 400 }
@@ -93,7 +93,7 @@ export async function PUT(
 
     if (dealerError || !dealer) {
       return NextResponse.json(
-        { success: false, error: "Haendler nicht gefunden." },
+        { success: false, error: "Händler nicht gefunden." },
         { status: 404 }
       );
     }
@@ -149,7 +149,7 @@ export async function DELETE(
     // Validate dealer ID
     if (!UUID_REGEX.test(id)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Haendler-ID." },
+        { success: false, error: "Ungültige Händler-ID." },
         { status: 400 }
       );
     }
@@ -159,7 +159,7 @@ export async function DELETE(
       return NextResponse.json(
         {
           success: false,
-          error: `Ungueltiger Format-Typ. Erlaubt: ${VALID_FORMAT_TYPES.join(", ")}`,
+          error: `Ungültiger Format-Typ. Erlaubt: ${VALID_FORMAT_TYPES.join(", ")}`,
         },
         { status: 400 }
       );
@@ -182,7 +182,7 @@ export async function DELETE(
     if (deleteError) {
       console.error("Error deleting column mapping profile:", deleteError.message);
       return NextResponse.json(
-        { success: false, error: "Spalten-Mapping konnte nicht geloescht werden." },
+        { success: false, error: "Spalten-Mapping konnte nicht gelöscht werden." },
         { status: 500 }
       );
     }

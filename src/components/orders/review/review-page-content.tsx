@@ -61,7 +61,7 @@ export function ReviewPageContent({ orderId }: ReviewPageContentProps) {
     updatedAt,
     onUpdatedAt: setUpdatedAt,
     onConflict: () => {
-      setError("Diese Bestellung wurde von einem anderen Benutzer geaendert. Bitte laden Sie die Seite neu.");
+      setError("Diese Bestellung wurde von einem anderen Benutzer geändert. Bitte laden Sie die Seite neu.");
     },
     enabled: !!order && order.status !== "exported",
   });
@@ -158,7 +158,7 @@ export function ReviewPageContent({ orderId }: ReviewPageContentProps) {
       const json = (await res.json()) as ApiResponse<ReviewApproveResponse>;
 
       if (res.status === 409) {
-        setError("Konflikt: Die Bestellung wurde von einem anderen Benutzer geaendert.");
+        setError("Konflikt: Die Bestellung wurde von einem anderen Benutzer geändert.");
         return;
       }
 
@@ -234,7 +234,7 @@ export function ReviewPageContent({ orderId }: ReviewPageContentProps) {
           className="gap-1"
         >
           <ArrowLeft className="h-4 w-4" />
-          Zurueck
+          Zurück
         </Button>
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -259,7 +259,7 @@ export function ReviewPageContent({ orderId }: ReviewPageContentProps) {
           className="gap-1"
         >
           <ArrowLeft className="h-4 w-4" />
-          Zurueck
+          Zurück
         </Button>
         <Card>
           <CardContent className="py-12 text-center">
@@ -283,18 +283,18 @@ export function ReviewPageContent({ orderId }: ReviewPageContentProps) {
           className="gap-1"
         >
           <ArrowLeft className="h-4 w-4" />
-          Zurueck zur Bestellung
+          Zurück zur Bestellung
         </Button>
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Keine Extraktionsdaten</AlertTitle>
           <AlertDescription>
-            Fuer diese Bestellung liegen noch keine extrahierten Daten vor.
+            Für diese Bestellung liegen noch keine extrahierten Daten vor.
             Bitte warten Sie, bis die KI-Extraktion abgeschlossen ist.
           </AlertDescription>
         </Alert>
         <Button variant="outline" onClick={() => router.push(`/orders/${orderId}`)}>
-          Zurueck zur Bestellung
+          Zurück zur Bestellung
         </Button>
       </div>
     );
@@ -349,8 +349,8 @@ export function ReviewPageContent({ orderId }: ReviewPageContentProps) {
           <DialogHeader>
             <DialogTitle>Erneut extrahieren?</DialogTitle>
             <DialogDescription>
-              Alle manuellen Aenderungen werden verworfen und die KI-Extraktion
-              wird neu gestartet. Diese Aktion kann nicht rueckgaengig gemacht werden.
+              Alle manuellen Änderungen werden verworfen und die KI-Extraktion
+              wird neu gestartet. Diese Aktion kann nicht rückgängig gemacht werden.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col sm:flex-row gap-2">

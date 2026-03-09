@@ -48,7 +48,7 @@ export async function GET(): Promise<NextResponse<ApiResponse<TeamMember[]>>> {
       return NextResponse.json(
         {
           success: false,
-          error: "Keine Berechtigung. Nur Administratoren koennen Teammitglieder sehen.",
+          error: "Keine Berechtigung. Nur Administratoren können Teammitglieder sehen.",
         },
         { status: 403 }
       );

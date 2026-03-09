@@ -41,7 +41,7 @@ export function TagInput({
         try {
           new RegExp(trimmed);
         } catch {
-          setValidationError(`Ungueltiges Regex-Pattern: "${trimmed}"`);
+          setValidationError(`Ungültiges Regex-Pattern: "${trimmed}"`);
           return;
         }
       }

@@ -47,7 +47,7 @@ interface ExtractionResultPreviewProps {
   onRetryExtraction?: () => void;
   /** Whether a retry is currently in progress. */
   isRetrying?: boolean;
-  /** Order ID for the "Zur Pruefung" link. */
+  /** Order ID for the "Zur Prüfung" link. */
   orderId?: string;
   /** Current order status — used to show waiting state for freshly uploaded orders. */
   orderStatus?: string | null;
@@ -163,7 +163,7 @@ export function ExtractionResultPreview({
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-            Extraktion laeuft...
+            Extraktion läuft...
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -255,7 +255,7 @@ export function ExtractionResultPreview({
               <TooltipContent>
                 <p>
                   Wie sicher die KI bei der Extraktion ist. Hohe Konfidenz bedeutet
-                  zuverlaessigere Daten.
+                  zuverlässigere Daten.
                 </p>
               </TooltipContent>
             </Tooltip>
@@ -402,7 +402,7 @@ export function ExtractionResultPreview({
           </span>
           {meta.dealer_hints_applied && (
             <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-              Haendler-Hinweise angewandt
+              Händler-Hinweise angewandt
             </Badge>
           )}
           {meta.column_mapping_applied && (
@@ -524,7 +524,7 @@ export function ExtractionResultPreview({
             <AlertTitle>Keine Bestellpositionen erkannt</AlertTitle>
             <AlertDescription>
               Die KI konnte keine Bestellpositionen im Dokument identifizieren.
-              Bitte pruefen Sie das Originaldokument.
+              Bitte prüfen Sie das Originaldokument.
             </AlertDescription>
           </Alert>
         )}
@@ -537,7 +537,7 @@ export function ExtractionResultPreview({
               <Button asChild className="gap-1.5">
                 <Link href={`/orders/${orderId}/review`}>
                   <ClipboardCheck className="h-4 w-4" />
-                  Zur Pruefung
+                  Zur Prüfung
                 </Link>
               </Button>
             </div>

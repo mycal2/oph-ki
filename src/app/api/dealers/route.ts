@@ -54,7 +54,7 @@ export async function GET(): Promise<NextResponse<ApiResponse<DealerListItem[]>>
     if (dealersError) {
       console.error("Error fetching dealers:", dealersError.message);
       return NextResponse.json(
-        { success: false, error: "Haendler konnten nicht geladen werden." },
+        { success: false, error: "Händler konnten nicht geladen werden." },
         { status: 500 }
       );
     }

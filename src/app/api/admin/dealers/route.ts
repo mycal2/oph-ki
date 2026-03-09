@@ -26,7 +26,7 @@ export async function GET(): Promise<NextResponse> {
 
     if (dealersError) {
       return NextResponse.json(
-        { success: false, error: "Haendler konnten nicht geladen werden." },
+        { success: false, error: "Händler konnten nicht geladen werden." },
         { status: 500 }
       );
     }
@@ -111,7 +111,7 @@ export async function POST(
     const parsed = createDealerSchema.safeParse(body);
 
     if (!parsed.success) {
-      const firstError = parsed.error.issues[0]?.message ?? "Ungueltige Eingabe.";
+      const firstError = parsed.error.issues[0]?.message ?? "Ungültige Eingabe.";
       return NextResponse.json(
         { success: false, error: firstError },
         { status: 400 }
@@ -147,7 +147,7 @@ export async function POST(
     if (insertError || !dealer) {
       console.error("Failed to create dealer:", insertError?.message);
       return NextResponse.json(
-        { success: false, error: "Haendler konnte nicht erstellt werden." },
+        { success: false, error: "Händler konnte nicht erstellt werden." },
         { status: 500 }
       );
     }

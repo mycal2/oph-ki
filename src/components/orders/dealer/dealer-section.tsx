@@ -60,7 +60,7 @@ export function DealerSection({
     const result = await override(
       orderId,
       currentDealerId,
-      "KI-Vorschlag bestaetigt",
+      "KI-Vorschlag bestätigt",
       orderUpdatedAt
     );
     if (result) {
@@ -86,14 +86,14 @@ export function DealerSection({
             className="h-7 gap-1 text-xs text-green-700 hover:text-green-800 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-950/30"
             onClick={handleConfirmProposal}
             disabled={isConfirming}
-            aria-label="KI-Vorschlag bestaetigen"
+            aria-label="KI-Vorschlag bestätigen"
           >
             {isConfirming ? (
               <Loader2 className="h-3 w-3 animate-spin" />
             ) : (
               <Check className="h-3 w-3" />
             )}
-            Bestaetigen
+            Bestätigen
           </Button>
         </>
       )}
@@ -102,7 +102,7 @@ export function DealerSection({
         size="sm"
         className="h-7 gap-1 text-xs text-muted-foreground hover:text-foreground"
         onClick={() => setDialogOpen(true)}
-        aria-label="Haendler korrigieren"
+        aria-label="Händler korrigieren"
       >
         <Pencil className="h-3 w-3" />
         Korrigieren

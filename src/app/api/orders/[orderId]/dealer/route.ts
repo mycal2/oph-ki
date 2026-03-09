@@ -64,7 +64,7 @@ export async function PATCH(
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(orderId)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Bestellungs-ID." },
+        { success: false, error: "Ungültige Bestellungs-ID." },
         { status: 400 }
       );
     }
@@ -75,14 +75,14 @@ export async function PATCH(
       body = await request.json();
     } catch {
       return NextResponse.json(
-        { success: false, error: "Ungueltiges JSON im Anfrage-Body." },
+        { success: false, error: "Ungültiges JSON im Anfrage-Body." },
         { status: 400 }
       );
     }
 
     const parsed = dealerOverrideSchema.safeParse(body);
     if (!parsed.success) {
-      const firstError = parsed.error.issues[0]?.message ?? "Ungueltige Eingabe.";
+      const firstError = parsed.error.issues[0]?.message ?? "Ungültige Eingabe.";
       return NextResponse.json(
         { success: false, error: firstError },
         { status: 400 }
@@ -117,7 +117,7 @@ export async function PATCH(
       return NextResponse.json(
         {
           success: false,
-          error: "Diese Bestellung wurde zwischenzeitlich geaendert. Bitte laden Sie die Seite neu und versuchen Sie es erneut.",
+          error: "Diese Bestellung wurde zwischenzeitlich geändert. Bitte laden Sie die Seite neu und versuchen Sie es erneut.",
         },
         { status: 409 }
       );
@@ -133,7 +133,7 @@ export async function PATCH(
 
     if (dealerError || !dealer) {
       return NextResponse.json(
-        { success: false, error: "Haendler nicht gefunden oder nicht aktiv." },
+        { success: false, error: "Händler nicht gefunden oder nicht aktiv." },
         { status: 404 }
       );
     }
@@ -157,7 +157,7 @@ export async function PATCH(
     if (updateError || !updatedOrder) {
       console.error("Error updating order dealer:", updateError?.message);
       return NextResponse.json(
-        { success: false, error: "Haendler-Zuweisung fehlgeschlagen." },
+        { success: false, error: "Händler-Zuweisung fehlgeschlagen." },
         { status: 500 }
       );
     }

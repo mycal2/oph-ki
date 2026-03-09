@@ -401,7 +401,7 @@ export function ErpConfigEditor({
               <p className="text-sm text-muted-foreground">
                 Der JSON-Export verwendet das Canonical-JSON-Format direkt. Die technischen
                 Einstellungen oben (Zeichensatz, Dezimaltrennzeichen) werden auf die
-                Ausgabedatei angewendet. Spalten-Mappings sind fuer JSON nicht erforderlich.
+                Ausgabedatei angewendet. Spalten-Mappings sind für JSON nicht erforderlich.
               </p>
             </CardContent>
           </Card>
@@ -452,7 +452,7 @@ export function ErpConfigEditor({
           <Input
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            placeholder="Aenderungskommentar (optional)"
+            placeholder="Änderungskommentar (optional)"
             className="w-64"
           />
           <Button
@@ -487,7 +487,7 @@ export function ErpConfigEditor({
           Output-Format (Beispieldatei)
         </h3>
         <p className="text-sm text-muted-foreground">
-          Laden Sie eine Beispieldatei im gewuenschten ERP-Ausgabeformat hoch. Das System
+          Laden Sie eine Beispieldatei im gewünschten ERP-Ausgabeformat hoch. Das System
           erkennt die Spaltenstruktur und berechnet einen Confidence Score beim Export.
         </p>
         <OutputFormatTab configId={config.id} onFormatChange={handleOutputFormatChange} />
@@ -503,8 +503,8 @@ export function ErpConfigEditor({
                 Feld-Zuordnung (Visual Field Mapper)
               </h3>
               <p className="text-sm text-muted-foreground">
-                Ordnen Sie die erkannten Felder aus der Beispieldatei den verfuegbaren Variablen
-                zu. Klicken Sie danach auf "Generieren", um die Konfiguration automatisch zu befuellen.
+                Ordnen Sie die erkannten Felder aus der Beispieldatei den verfügbaren Variablen
+                zu. Klicken Sie danach auf "Generieren", um die Konfiguration automatisch zu befüllen.
               </p>
               <FieldMapperPanel
                 outputFormat={savedOutputFormat}
@@ -681,8 +681,8 @@ function TechnicalSettingsPanel({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value={'"'}>Doppeltes Anfuehrungszeichen (&quot;)</SelectItem>
-                        <SelectItem value="'">Einfaches Anfuehrungszeichen (&apos;)</SelectItem>
+                        <SelectItem value={'"'}>Doppeltes Anführungszeichen (&quot;)</SelectItem>
+                        <SelectItem value="'">Einfaches Anführungszeichen (&apos;)</SelectItem>
                         <SelectItem value="none">Keins</SelectItem>
                       </SelectContent>
                     </Select>

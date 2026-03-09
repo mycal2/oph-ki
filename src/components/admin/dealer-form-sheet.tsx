@@ -225,7 +225,7 @@ export function DealerFormSheet({
       <SheetContent className="w-full sm:max-w-xl p-0 flex flex-col">
         <SheetHeader className="px-6 pt-6 pb-0">
           <SheetTitle>
-            {isNew ? "Neuen Haendler anlegen" : "Haendler bearbeiten"}
+            {isNew ? "Neuen Händler anlegen" : "Händler bearbeiten"}
           </SheetTitle>
         </SheetHeader>
 
@@ -255,7 +255,7 @@ export function DealerFormSheet({
                       ))}
                     </ul>
                     <p className="mt-2 text-xs">
-                      Der Haendler wurde gespeichert. Sie koennen die Konflikte spaeter beheben.
+                      Der Händler wurde gespeichert. Sie können die Konflikte später beheben.
                     </p>
                     <Button
                       type="button"
@@ -402,7 +402,7 @@ export function DealerFormSheet({
                     <div>
                       <Label htmlFor="dealer-active">Aktiv</Label>
                       <p className="text-xs text-muted-foreground">
-                        Inaktive Haendler werden nicht fuer die Erkennung verwendet.
+                        Inaktive Händler werden nicht für die Erkennung verwendet.
                       </p>
                     </div>
                     <Switch
@@ -418,7 +418,7 @@ export function DealerFormSheet({
                   <div className="space-y-2">
                     <Label>Bekannte Domains</Label>
                     <p className="text-xs text-muted-foreground">
-                      E-Mail-Domains, die diesem Haendler zugeordnet werden (z.B. henryschein.de)
+                      E-Mail-Domains, die diesem Händler zugeordnet werden (z.B. henryschein.de)
                     </p>
                     <TagInput
                       value={knownDomains}
@@ -442,7 +442,7 @@ export function DealerFormSheet({
                   <div className="space-y-2">
                     <Label>Betreff-Muster</Label>
                     <p className="text-xs text-muted-foreground">
-                      Regex-Pattern fuer E-Mail-Betreffs (z.B. Bestellung.*Henry Schein)
+                      Regex-Pattern für E-Mail-Betreffs (z.B. Bestellung.*Henry Schein)
                     </p>
                     <TagInput
                       value={subjectPatterns}
@@ -455,7 +455,7 @@ export function DealerFormSheet({
                   <div className="space-y-2">
                     <Label>Dateinamen-Muster</Label>
                     <p className="text-xs text-muted-foreground">
-                      Regex-Pattern fuer Dateinamen (z.B. HS_Bestellung_.*)
+                      Regex-Pattern für Dateinamen (z.B. HS_Bestellung_.*)
                     </p>
                     <TagInput
                       value={filenamePatterns}
@@ -471,15 +471,15 @@ export function DealerFormSheet({
                   <div className="space-y-2">
                     <Label htmlFor="dealer-hints">Extraktions-Hints</Label>
                     <p className="text-xs text-muted-foreground">
-                      Zusaetzliche Anweisungen fuer die KI-Extraktion bei diesem Haendler. Wird dem
-                      Claude-Prompt als Kontext beigefuegt.
+                      Zusätzliche Anweisungen für die KI-Extraktion bei diesem Händler. Wird dem
+                      Claude-Prompt als Kontext beigefügt.
                     </p>
                     <Textarea
                       id="dealer-hints"
                       value={extractionHints}
                       onChange={(e) => setExtractionHints(e.target.value)}
                       placeholder={
-                        "z.B.:\n- Artikelnummern stehen in Spalte B\n- Mengen sind immer in Stueck angegeben\n- Kundennummer steht im Betreff"
+                        "z.B.:\n- Artikelnummern stehen in Spalte B\n- Mengen sind immer in Stück angegeben\n- Kundennummer steht im Betreff"
                       }
                       rows={12}
                       maxLength={5000}
@@ -509,7 +509,7 @@ export function DealerFormSheet({
                       </div>
                     ) : tenantUsage.length === 0 ? (
                       <p className="text-sm text-muted-foreground py-8 text-center">
-                        Noch keine Bestellungen fuer diesen Haendler.
+                        Noch keine Bestellungen für diesen Händler.
                       </p>
                     ) : (
                       <div className="space-y-2">
@@ -551,7 +551,7 @@ export function DealerFormSheet({
                       </div>
                     ) : auditLog.length === 0 ? (
                       <p className="text-sm text-muted-foreground py-8 text-center">
-                        Noch keine Aenderungen protokolliert.
+                        Noch keine Änderungen protokolliert.
                       </p>
                     ) : (
                       <div className="space-y-3">

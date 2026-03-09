@@ -133,35 +133,35 @@ export default function InboundEmailSettingsPage() {
                 Bestellungs-E-Mail weiterleiten
               </span>{" "}
               — Leiten Sie die E-Mail mit einem Klick an die obige Adresse
-              weiter. Alle Anhaenge (PDF, Excel, CSV) werden automatisch
+              weiter. Alle Anhänge (PDF, Excel, CSV) werden automatisch
               erkannt.
             </li>
             <li>
               <span className="text-foreground font-medium">
                 Automatische Verarbeitung
               </span>{" "}
-              — Das System erkennt den Haendler, extrahiert die Bestelldaten per
+              — Das System erkennt den Händler, extrahiert die Bestelldaten per
               KI und erstellt eine Bestellung.
             </li>
             <li>
               <span className="text-foreground font-medium">
-                Bestaetigungs-E-Mail
+                Bestätigungs-E-Mail
               </span>{" "}
-              — Sie erhalten eine Bestaetigung mit einem Link zur Bestellung in
+              — Sie erhalten eine Bestätigung mit einem Link zur Bestellung in
               der Plattform.
             </li>
             <li>
               <span className="text-foreground font-medium">
-                Pruefen und exportieren
+                Prüfen und exportieren
               </span>{" "}
-              — Pruefen Sie die extrahierten Daten und exportieren Sie die
+              — Prüfen Sie die extrahierten Daten und exportieren Sie die
               Bestellung in Ihr ERP-System.
             </li>
           </ol>
 
           <div className="mt-6 rounded-md border bg-muted/30 p-4">
             <p className="text-sm font-medium mb-2">
-              Unterstuetzte Dateiformate
+              Unterstützte Dateiformate
             </p>
             <div className="flex flex-wrap gap-2">
               {[".pdf", ".xlsx", ".xls", ".csv", ".eml"].map((ext) => (
@@ -174,7 +174,7 @@ export default function InboundEmailSettingsPage() {
               ))}
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              Maximale Anhangsgroesse: 25 MB pro Datei
+              Maximale Anhangsgröße: 25 MB pro Datei
             </p>
           </div>
         </CardContent>

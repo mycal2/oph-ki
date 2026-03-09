@@ -101,16 +101,16 @@ export function DealerOverrideDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Haendler korrigieren</DialogTitle>
+          <DialogTitle>Händler korrigieren</DialogTitle>
           <DialogDescription>
-            Waehlen Sie den korrekten Haendler fuer diese Bestellung aus.
+            Wählen Sie den korrekten Händler für diese Bestellung aus.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
           {/* Dealer combobox */}
           <div className="space-y-2">
-            <Label htmlFor="dealer-select">Haendler</Label>
+            <Label htmlFor="dealer-select">Händler</Label>
             {isDealersLoading ? (
               <Skeleton className="h-10 w-full" />
             ) : dealersError ? (
@@ -125,7 +125,7 @@ export function DealerOverrideDialog({
                     variant="outline"
                     role="combobox"
                     aria-expanded={comboboxOpen}
-                    aria-label="Haendler auswaehlen"
+                    aria-label="Händler auswählen"
                     className="w-full justify-between font-normal"
                   >
                     {selectedDealer ? (
@@ -135,7 +135,7 @@ export function DealerOverrideDialog({
                       </span>
                     ) : (
                       <span className="text-muted-foreground">
-                        Haendler suchen...
+                        Händler suchen...
                       </span>
                     )}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -143,9 +143,9 @@ export function DealerOverrideDialog({
                 </PopoverTrigger>
                 <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
                   <Command>
-                    <CommandInput placeholder="Haendler suchen..." />
+                    <CommandInput placeholder="Händler suchen..." />
                     <CommandList>
-                      <CommandEmpty>Kein Haendler gefunden.</CommandEmpty>
+                      <CommandEmpty>Kein Händler gefunden.</CommandEmpty>
                       <CommandGroup>
                         {dealers.map((dealer) => (
                           <CommandItem
@@ -189,14 +189,14 @@ export function DealerOverrideDialog({
           {/* Reason field */}
           <div className="space-y-2">
             <Label htmlFor="override-reason">
-              Begruendung{" "}
+              Begründung{" "}
               <span className="text-muted-foreground font-normal">
                 (optional)
               </span>
             </Label>
             <Textarea
               id="override-reason"
-              placeholder="Warum wird der Haendler geaendert?"
+              placeholder="Warum wird der Händler geändert?"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               maxLength={500}
@@ -233,7 +233,7 @@ export function DealerOverrideDialog({
                 Speichern...
               </>
             ) : (
-              "Haendler zuweisen"
+              "Händler zuweisen"
             )}
           </Button>
         </DialogFooter>

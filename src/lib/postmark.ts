@@ -163,14 +163,14 @@ export function filterAttachments(
   for (const att of attachments) {
     if (att.ContentLength > MAX_ATTACHMENT_SIZE) {
       warnings.push(
-        `Anhang "${att.Name}" uebersprungen: zu gross (${Math.round(att.ContentLength / 1024 / 1024)} MB, max 25 MB).`
+        `Anhang "${att.Name}" übersprungen: zu groß (${Math.round(att.ContentLength / 1024 / 1024)} MB, max 25 MB).`
       );
       continue;
     }
 
     if (!SUPPORTED_MIME_TYPES.has(att.ContentType)) {
       warnings.push(
-        `Anhang "${att.Name}" uebersprungen: nicht unterstuetztes Format (${att.ContentType}).`
+        `Anhang "${att.Name}" übersprungen: nicht unterstütztes Format (${att.ContentType}).`
       );
       continue;
     }
@@ -242,34 +242,34 @@ export async function sendQuarantineNotification(params: {
 
   const quarantineUrl = `${siteUrl}/admin/email-quarantine`;
   const textBody = [
-    `Eine E-Mail wurde in die Quarantaene verschoben.`,
+    `Eine E-Mail wurde in die Quarantäne verschoben.`,
     "",
     `Absender: ${senderEmail}`,
     `Betreff: ${subject || "(kein Betreff)"}`,
     `Mandant: ${tenantName}`,
     "",
-    `Bitte pruefen Sie die E-Mail in der Quarantaene:`,
+    `Bitte prüfen Sie die E-Mail in der Quarantäne:`,
     quarantineUrl,
     "",
-    "Mit freundlichen Gruessen,",
+    "Mit freundlichen Grüßen,",
     "Ihr Order Intelligence Team",
   ].join("\n");
 
   const htmlBody = wrapHtmlEmail(siteUrl, `
-    <h2 style="margin:0 0 8px;font-size:18px;color:#111827">E-Mail in Quarantaene</h2>
-    <p style="margin:0 0 20px;color:#6b7280;font-size:14px">Eine E-Mail wurde in die Quarantaene verschoben.</p>
+    <h2 style="margin:0 0 8px;font-size:18px;color:#111827">E-Mail in Quarantäne</h2>
+    <p style="margin:0 0 20px;color:#6b7280;font-size:14px">Eine E-Mail wurde in die Quarantäne verschoben.</p>
     <table style="font-size:14px;margin-bottom:20px">
       <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Absender:</td><td style="padding:4px 0;font-weight:500">${esc(senderEmail)}</td></tr>
       <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Betreff:</td><td style="padding:4px 0;font-weight:500">${esc(subject || "(kein Betreff)")}</td></tr>
       <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Mandant:</td><td style="padding:4px 0;font-weight:500">${esc(tenantName)}</td></tr>
     </table>
-    <a href="${esc(quarantineUrl)}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500">Quarantaene pruefen</a>
+    <a href="${esc(quarantineUrl)}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500">Quarantäne prüfen</a>
   `);
 
   await postmarkFetchWithRetry(serverApiToken, {
     From: fromAddress,
     To: adminEmails.join(","),
-    Subject: `Quarantaene: E-Mail von ${senderEmail}`,
+    Subject: `Quarantäne: E-Mail von ${senderEmail}`,
     HtmlBody: htmlBody,
     TextBody: textBody,
   }, "Quarantine notification");
@@ -359,12 +359,12 @@ export async function sendTrialResultEmail(params: {
     <table style="font-size:14px;margin-bottom:20px">
       <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Bestellnummer:</td><td style="padding:4px 0;font-weight:500">${esc(orderSummary.orderNumber ?? "–")}</td></tr>
       <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Bestelldatum:</td><td style="padding:4px 0;font-weight:500">${esc(orderSummary.orderDate ?? "–")}</td></tr>
-      <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Haendler:</td><td style="padding:4px 0;font-weight:500">${esc(orderSummary.dealerName ?? "–")}</td></tr>
+      <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Händler:</td><td style="padding:4px 0;font-weight:500">${esc(orderSummary.dealerName ?? "–")}</td></tr>
       <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Positionen:</td><td style="padding:4px 0;font-weight:500">${orderSummary.itemCount}</td></tr>
       <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Gesamtbetrag:</td><td style="padding:4px 0;font-weight:700;color:#111827">${esc(total)}</td></tr>
     </table>
     ${itemsHtml}
-    <p style="margin:24px 0 12px;font-size:14px;color:#374151">Die vollstaendigen Daten finden Sie als CSV-Datei im Anhang.</p>
+    <p style="margin:24px 0 12px;font-size:14px;color:#374151">Die vollständigen Daten finden Sie als CSV-Datei im Anhang.</p>
     <a href="${esc(previewUrl)}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500">Bestellung online ansehen</a>
     <p style="margin:16px 0 0;font-size:12px;color:#9ca3af">Interesse an der Vollversion? <a href="https://www.ids.online" style="color:#2563eb;text-decoration:none">Kontaktieren Sie uns</a></p>
   `);
@@ -377,15 +377,15 @@ export async function sendTrialResultEmail(params: {
     "",
     `  Bestellnummer: ${orderSummary.orderNumber ?? "–"}`,
     `  Bestelldatum:  ${orderSummary.orderDate ?? "–"}`,
-    `  Haendler:      ${orderSummary.dealerName ?? "–"}`,
+    `  Händler:      ${orderSummary.dealerName ?? "–"}`,
     `  Positionen:    ${orderSummary.itemCount}`,
     `  Gesamtbetrag:  ${total}`,
     "",
-    `Die vollstaendigen Daten finden Sie als CSV-Datei im Anhang.`,
+    `Die vollständigen Daten finden Sie als CSV-Datei im Anhang.`,
     "",
     `Bestellung online ansehen: ${previewUrl}`,
     "",
-    "Mit freundlichen Gruessen,",
+    "Mit freundlichen Grüßen,",
     "Ihr Order Intelligence Team",
   ].join("\n");
 
@@ -425,29 +425,29 @@ export async function sendTrialFailureEmail(params: {
     "",
     `Leider konnten die Bestelldaten aus Ihrer E-Mail "${subject}" nicht automatisch erkannt werden.`,
     "",
-    `Moegliche Gruende:`,
-    `  - Das Dokument-Format wird nicht unterstuetzt`,
+    `Mögliche Gründe:`,
+    `  - Das Dokument-Format wird nicht unterstützt`,
     `  - Die Bestelldaten sind nicht klar strukturiert`,
-    `  - Das Dokument enthaelt keine erkennbare Bestellung`,
+    `  - Das Dokument enthält keine erkennbare Bestellung`,
     "",
-    `Bitte pruefen Sie das Dokument-Format und versuchen Sie es erneut.`,
+    `Bitte prüfen Sie das Dokument-Format und versuchen Sie es erneut.`,
     "",
     `Bei Fragen kontaktieren Sie uns gerne: https://www.ids.online`,
     "",
-    "Mit freundlichen Gruessen,",
+    "Mit freundlichen Grüßen,",
     "Ihr Order Intelligence Team",
   ].join("\n");
 
   const htmlBody = wrapHtmlEmail(siteUrl, `
     <h2 style="margin:0 0 8px;font-size:18px;color:#111827">Extraktion fehlgeschlagen</h2>
     <p style="margin:0 0 20px;color:#6b7280;font-size:14px">Leider konnten die Bestelldaten aus Ihrer E-Mail &ldquo;${esc(subject)}&rdquo; nicht automatisch erkannt werden.</p>
-    <p style="margin:0 0 8px;font-size:14px;font-weight:500;color:#374151">Moegliche Gruende:</p>
+    <p style="margin:0 0 8px;font-size:14px;font-weight:500;color:#374151">Mögliche Gründe:</p>
     <ul style="margin:0 0 20px;padding-left:20px;font-size:14px;color:#374151">
-      <li style="margin-bottom:4px">Das Dokument-Format wird nicht unterstuetzt</li>
+      <li style="margin-bottom:4px">Das Dokument-Format wird nicht unterstützt</li>
       <li style="margin-bottom:4px">Die Bestelldaten sind nicht klar strukturiert</li>
-      <li>Das Dokument enthaelt keine erkennbare Bestellung</li>
+      <li>Das Dokument enthält keine erkennbare Bestellung</li>
     </ul>
-    <p style="margin:0 0 20px;font-size:14px;color:#374151">Bitte pruefen Sie das Dokument-Format und versuchen Sie es erneut.</p>
+    <p style="margin:0 0 20px;font-size:14px;color:#374151">Bitte prüfen Sie das Dokument-Format und versuchen Sie es erneut.</p>
     <p style="margin:0;font-size:13px;color:#6b7280">Bei Fragen kontaktieren Sie uns gerne: <a href="https://www.ids.online" style="color:#2563eb;text-decoration:none">ids.online</a></p>
   `);
 
@@ -761,10 +761,10 @@ export async function sendConfirmationEmail(params: {
     "",
     `Ihre weitergeleitete E-Mail "${subject}" wurde empfangen und wird verarbeitet.`,
     "",
-    `Sie koennen den Status Ihrer Bestellung hier verfolgen:`,
+    `Sie können den Status Ihrer Bestellung hier verfolgen:`,
     orderUrl,
     "",
-    "Mit freundlichen Gruessen,",
+    "Mit freundlichen Grüßen,",
     "Ihr Order Intelligence Team",
   ].join("\n");
 

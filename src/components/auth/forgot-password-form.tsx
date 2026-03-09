@@ -54,15 +54,15 @@ export function ForgotPasswordForm() {
           </CardTitle>
           <CardDescription>
             Falls ein Konto mit der E-Mail-Adresse <strong>{email}</strong>{" "}
-            existiert, erhalten Sie in Kuerze eine E-Mail mit einem Link zum
-            Zuruecksetzen Ihres Passworts.
+            existiert, erhalten Sie in Kürze eine E-Mail mit einem Link zum
+            Zurücksetzen Ihres Passworts.
           </CardDescription>
         </CardHeader>
         <CardFooter className="justify-center">
           <Link href="/login">
             <Button variant="ghost">
               <ArrowLeft className="h-4 w-4" />
-              Zurueck zur Anmeldung
+              Zurück zur Anmeldung
             </Button>
           </Link>
         </CardFooter>
@@ -78,7 +78,7 @@ export function ForgotPasswordForm() {
         </CardTitle>
         <CardDescription>
           Geben Sie Ihre E-Mail-Adresse ein und wir senden Ihnen einen Link zum
-          Zuruecksetzen Ihres Passworts.
+          Zurücksetzen Ihres Passworts.
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
@@ -123,7 +123,7 @@ export function ForgotPasswordForm() {
             className="text-sm text-muted-foreground hover:text-primary transition-colors inline-flex items-center gap-1"
           >
             <ArrowLeft className="h-3 w-3" />
-            Zurueck zur Anmeldung
+            Zurück zur Anmeldung
           </Link>
         </CardFooter>
       </form>

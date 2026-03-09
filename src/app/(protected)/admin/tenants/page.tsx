@@ -103,7 +103,7 @@ export default function AdminTenantsPage() {
 
   const handleInviteUser = useCallback(
     async (email: string, role: "tenant_user" | "tenant_admin") => {
-      if (!editingTenantId) return { ok: false, error: "Kein Mandant ausgewaehlt." };
+      if (!editingTenantId) return { ok: false, error: "Kein Mandant ausgewählt." };
       return inviteUser(editingTenantId, { email, role });
     },
     [editingTenantId, inviteUser]
@@ -132,7 +132,7 @@ export default function AdminTenantsPage() {
     return (
       <div className="flex items-center justify-center py-20">
         <p className="text-muted-foreground">
-          Zugriff verweigert. Nur fuer Platform-Administratoren.
+          Zugriff verweigert. Nur für Platform-Administratoren.
         </p>
       </div>
     );
@@ -209,16 +209,16 @@ export default function AdminTenantsPage() {
                 <>
                   Sind Sie sicher, dass Sie{" "}
                   <span className="font-semibold">{confirmDeactivate?.tenantName}</span>{" "}
-                  deaktivieren moechten? Alle Benutzer dieses Mandanten werden
-                  gesperrt und koennen sich nicht mehr einloggen.
+                  deaktivieren möchten? Alle Benutzer dieses Mandanten werden
+                  gesperrt und können sich nicht mehr einloggen.
                   {/* BUG-8: Warn about trial state loss */}
                   {confirmDeactivate?.currentStatus === "trial" && (
                     <>
                       {" "}
                       <span className="font-semibold">
                         Hinweis: Dieser Mandant befindet sich in der Testphase.
-                        Bei einer spaeteren Reaktivierung wird der Status auf
-                        &quot;Aktiv&quot; gesetzt, nicht zurueck auf
+                        Bei einer späteren Reaktivierung wird der Status auf
+                        &quot;Aktiv&quot; gesetzt, nicht zurück auf
                         &quot;Testphase&quot;.
                       </span>
                     </>
@@ -226,9 +226,9 @@ export default function AdminTenantsPage() {
                 </>
               ) : (
                 <>
-                  Moechten Sie{" "}
+                  Möchten Sie{" "}
                   <span className="font-semibold">{confirmDeactivate?.tenantName}</span>{" "}
-                  reaktivieren? Alle Benutzer des Mandanten koennen sich danach
+                  reaktivieren? Alle Benutzer des Mandanten können sich danach
                   wieder einloggen. Der Status wird auf &quot;Aktiv&quot; gesetzt.
                 </>
               )}

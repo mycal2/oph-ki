@@ -149,14 +149,14 @@ export function useOutputFormat(configId: string): UseOutputFormatReturn {
       const json = (await res.json()) as ApiResponse;
 
       if (!res.ok || !json.success) {
-        setMutationError(json.error ?? "Output-Format konnte nicht geloescht werden.");
+        setMutationError(json.error ?? "Output-Format konnte nicht gelöscht werden.");
         return false;
       }
 
       setFormat(null);
       return true;
     } catch {
-      setMutationError("Verbindungsfehler beim Loeschen.");
+      setMutationError("Verbindungsfehler beim Löschen.");
       return false;
     } finally {
       setIsMutating(false);

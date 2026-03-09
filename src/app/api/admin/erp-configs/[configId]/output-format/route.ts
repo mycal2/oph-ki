@@ -42,7 +42,7 @@ export async function GET(
 
     if (!UUID_REGEX.test(configId)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Konfigurations-ID." },
+        { success: false, error: "Ungültige Konfigurations-ID." },
         { status: 400 }
       );
     }
@@ -99,7 +99,7 @@ export async function POST(
 
     if (!UUID_REGEX.test(configId)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Konfigurations-ID." },
+        { success: false, error: "Ungültige Konfigurations-ID." },
         { status: 400 }
       );
     }
@@ -124,7 +124,7 @@ export async function POST(
       formData = await request.formData();
     } catch {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Anfrage. Bitte senden Sie eine Datei." },
+        { success: false, error: "Ungültige Anfrage. Bitte senden Sie eine Datei." },
         { status: 400 }
       );
     }
@@ -154,7 +154,7 @@ export async function POST(
     const fileType = detectFileType(file.type, file.name);
     if (!fileType) {
       return NextResponse.json(
-        { success: false, error: "Nicht unterstuetzter Dateityp. Erlaubt: CSV, Excel (.xlsx), XML, JSON." },
+        { success: false, error: "Nicht unterstützter Dateityp. Erlaubt: CSV, Excel (.xlsx), XML, JSON." },
         { status: 400 }
       );
     }
@@ -216,7 +216,7 @@ export async function POST(
       if (updateError || !updated) {
         await adminClient.storage.from("tenant-output-formats").remove([storagePath]);
         return NextResponse.json(
-          { success: false, error: "Das Format wurde gleichzeitig von einem anderen Admin geaendert. Bitte laden Sie die Seite neu." },
+          { success: false, error: "Das Format wurde gleichzeitig von einem anderen Admin geändert. Bitte laden Sie die Seite neu." },
           { status: 409 }
         );
       }
@@ -295,7 +295,7 @@ export async function DELETE(
 
     if (!UUID_REGEX.test(configId)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Konfigurations-ID." },
+        { success: false, error: "Ungültige Konfigurations-ID." },
         { status: 400 }
       );
     }
@@ -316,7 +316,7 @@ export async function DELETE(
 
     if (!existing) {
       return NextResponse.json(
-        { success: false, error: "Kein Output-Format zum Loeschen vorhanden." },
+        { success: false, error: "Kein Output-Format zum Löschen vorhanden." },
         { status: 404 }
       );
     }
@@ -329,7 +329,7 @@ export async function DELETE(
     if (deleteError) {
       console.error("Error deleting format:", deleteError);
       return NextResponse.json(
-        { success: false, error: "Fehler beim Loeschen des Output-Formats." },
+        { success: false, error: "Fehler beim Löschen des Output-Formats." },
         { status: 500 }
       );
     }
@@ -406,7 +406,7 @@ export async function PUT(
 
     if (!UUID_REGEX.test(configId)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Konfigurations-ID." },
+        { success: false, error: "Ungültige Konfigurations-ID." },
         { status: 400 }
       );
     }
@@ -417,7 +417,7 @@ export async function PUT(
       body = await request.json();
     } catch {
       return NextResponse.json(
-        { success: false, error: "Ungueltiger JSON-Body." },
+        { success: false, error: "Ungültiger JSON-Body." },
         { status: 400 }
       );
     }
@@ -453,7 +453,7 @@ export async function PUT(
 
     if (!existing) {
       return NextResponse.json(
-        { success: false, error: "Kein Output-Format fuer diese Konfiguration vorhanden. Bitte zuerst eine Datei hochladen." },
+        { success: false, error: "Kein Output-Format für diese Konfiguration vorhanden. Bitte zuerst eine Datei hochladen." },
         { status: 404 }
       );
     }

@@ -87,7 +87,7 @@ export function generateXmlTemplate(
   if (!columns || columns.length === 0) {
     return {
       template: "",
-      warnings: ["Keine Spalten erkannt -- Template-Generierung nicht moeglich."],
+      warnings: ["Keine Spalten erkannt -- Template-Generierung nicht möglich."],
     };
   }
 

@@ -75,7 +75,7 @@ export default function UploadPage() {
             {allSucceeded && (
               <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span>KI-Extraktion laeuft im Hintergrund...</span>
+                <span>KI-Extraktion läuft im Hintergrund...</span>
               </div>
             )}
             {/* Per-file results with dealer badges */}

@@ -109,14 +109,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       body = await request.json();
     } catch {
       return NextResponse.json(
-        { success: false, error: "Ungueltiges JSON im Anfrage-Body." },
+        { success: false, error: "Ungültiges JSON im Anfrage-Body." },
         { status: 400 }
       );
     }
 
     const parsed = erpConfigSaveSchema.safeParse(body);
     if (!parsed.success) {
-      const firstError = parsed.error.issues[0]?.message ?? "Ungueltige Eingabe.";
+      const firstError = parsed.error.issues[0]?.message ?? "Ungültige Eingabe.";
       return NextResponse.json(
         { success: false, error: firstError },
         { status: 400 }

@@ -96,7 +96,7 @@ export function CsvImportDialog({
         <DialogHeader>
           <DialogTitle>CSV Import: {TYPE_LABELS[mappingType]}</DialogTitle>
           <DialogDescription>
-            Importieren Sie {TYPE_LABELS[mappingType]}-Zuordnungen fuer {dealerName} aus einer CSV-Datei.
+            Importieren Sie {TYPE_LABELS[mappingType]}-Zuordnungen für {dealerName} aus einer CSV-Datei.
             Trennzeichen: Semikolon (;).
           </DialogDescription>
         </DialogHeader>
@@ -114,7 +114,7 @@ export function CsvImportDialog({
             <Button variant="outline" size="sm" className="gap-1" asChild>
               <label>
                 <Upload className="h-3.5 w-3.5" />
-                Datei waehlen
+                Datei wählen
                 <input
                   type="file"
                   accept=".csv,.txt"
@@ -123,11 +123,11 @@ export function CsvImportDialog({
                 />
               </label>
             </Button>
-            <span className="text-xs text-muted-foreground">oder direkt einfuegen:</span>
+            <span className="text-xs text-muted-foreground">oder direkt einfügen:</span>
           </div>
 
           <Textarea
-            placeholder="CSV-Inhalt hier einfuegen..."
+            placeholder="CSV-Inhalt hier einfügen..."
             value={csvContent}
             onChange={(e) => setCsvContent(e.target.value)}
             rows={8}
@@ -164,7 +164,7 @@ export function CsvImportDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={handleClose} disabled={isImporting}>
-            {result ? "Schliessen" : "Abbrechen"}
+            {result ? "Schließen" : "Abbrechen"}
           </Button>
           {!result && (
             <Button onClick={handleImport} disabled={!csvContent.trim() || isImporting}>

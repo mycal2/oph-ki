@@ -60,7 +60,7 @@ export async function PATCH(
 
     if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: parsed.error.issues[0]?.message ?? "Ungueltige Eingabe." },
+        { success: false, error: parsed.error.issues[0]?.message ?? "Ungültige Eingabe." },
         { status: 400 }
       );
     }
@@ -84,7 +84,7 @@ export async function PATCH(
     // Authorization: platform_admin can edit any, tenant_admin only their own
     if (role === "tenant_admin" && existing.tenant_id !== tenantId) {
       return NextResponse.json(
-        { success: false, error: "Keine Berechtigung fuer diese Zuordnung." },
+        { success: false, error: "Keine Berechtigung für diese Zuordnung." },
         { status: 403 }
       );
     }
@@ -194,7 +194,7 @@ export async function DELETE(
 
     if (role === "tenant_admin" && existing.tenant_id !== tenantId) {
       return NextResponse.json(
-        { success: false, error: "Keine Berechtigung fuer diese Zuordnung." },
+        { success: false, error: "Keine Berechtigung für diese Zuordnung." },
         { status: 403 }
       );
     }
@@ -207,7 +207,7 @@ export async function DELETE(
     if (deleteError) {
       console.error("Error deleting mapping:", deleteError.message);
       return NextResponse.json(
-        { success: false, error: "Zuordnung konnte nicht geloescht werden." },
+        { success: false, error: "Zuordnung konnte nicht gelöscht werden." },
         { status: 500 }
       );
     }

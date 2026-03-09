@@ -65,7 +65,7 @@ export async function POST(
     // 3. Validate orderId
     if (!UUID_REGEX.test(orderId)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Bestellungs-ID." },
+        { success: false, error: "Ungültige Bestellungs-ID." },
         { status: 400 }
       );
     }
@@ -76,7 +76,7 @@ export async function POST(
       body = await request.json();
     } catch {
       return NextResponse.json(
-        { success: false, error: "Ungueltiger JSON-Body." },
+        { success: false, error: "Ungültiger JSON-Body." },
         { status: 400 }
       );
     }
@@ -117,7 +117,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
-          error: "Diese Bestellung wurde in der Zwischenzeit geaendert. Bitte laden Sie die Seite neu.",
+          error: "Diese Bestellung wurde in der Zwischenzeit geändert. Bitte laden Sie die Seite neu.",
         },
         { status: 409 }
       );
@@ -140,7 +140,7 @@ export async function POST(
 
     if (!reviewedData) {
       return NextResponse.json(
-        { success: false, error: "Keine Extraktionsdaten vorhanden. Freigabe nicht moeglich." },
+        { success: false, error: "Keine Extraktionsdaten vorhanden. Freigabe nicht möglich." },
         { status: 400 }
       );
     }

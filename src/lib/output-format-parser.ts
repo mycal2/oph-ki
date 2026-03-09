@@ -123,13 +123,13 @@ function parseCSV(content: string): OutputFormatParseResponse {
   const lines = content.split(/\r?\n/).filter((l) => l.trim() !== "");
 
   if (lines.length === 0) {
-    throw new Error("Die Datei enthaelt keine Daten. Bitte laden Sie eine Datei mit Spaltenkoepfen hoch.");
+    throw new Error("Die Datei enthält keine Daten. Bitte laden Sie eine Datei mit Spaltenköpfen hoch.");
   }
 
   const headers = lines[0].split(delimiter).map((h) => h.trim().replace(/^["']|["']$/g, ""));
 
   if (headers.length === 0 || headers.every((h) => h === "")) {
-    throw new Error("Keine Spaltenkoepfe erkannt. Bitte laden Sie eine Datei mit einer Kopfzeile hoch.");
+    throw new Error("Keine Spaltenköpfe erkannt. Bitte laden Sie eine Datei mit einer Kopfzeile hoch.");
   }
 
   const dataRows = lines.slice(1);
@@ -174,24 +174,24 @@ function parseXLSX(buffer: ArrayBuffer): OutputFormatParseResponse {
   const workbook = XLSX.read(buffer, { type: "array" });
 
   if (workbook.SheetNames.length === 0) {
-    throw new Error("Die Excel-Datei enthaelt keine Arbeitsblaetter.");
+    throw new Error("Die Excel-Datei enthält keine Arbeitsblätter.");
   }
 
   if (workbook.SheetNames.length > 1) {
-    warnings.push(`Die Datei enthaelt ${workbook.SheetNames.length} Arbeitsblaetter. Nur das erste wird analysiert.`);
+    warnings.push(`Die Datei enthält ${workbook.SheetNames.length} Arbeitsblätter. Nur das erste wird analysiert.`);
   }
 
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const rows: string[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
 
   if (rows.length === 0) {
-    throw new Error("Das Arbeitsblatt enthaelt keine Daten. Bitte laden Sie eine Datei mit Spaltenkoepfen hoch.");
+    throw new Error("Das Arbeitsblatt enthält keine Daten. Bitte laden Sie eine Datei mit Spaltenköpfen hoch.");
   }
 
   const headers = rows[0].map((h) => String(h).trim());
 
   if (headers.length === 0 || headers.every((h) => h === "")) {
-    throw new Error("Keine Spaltenkoepfe erkannt. Bitte laden Sie eine Datei mit einer Kopfzeile hoch.");
+    throw new Error("Keine Spaltenköpfe erkannt. Bitte laden Sie eine Datei mit einer Kopfzeile hoch.");
   }
 
   const dataRows = rows.slice(1);
@@ -240,19 +240,19 @@ function parseXML(content: string): OutputFormatParseResponse {
   try {
     parsed = parser.parse(content);
   } catch {
-    throw new Error("Die XML-Datei konnte nicht geparst werden. Bitte pruefen Sie das Format.");
+    throw new Error("Die XML-Datei konnte nicht geparst werden. Bitte prüfen Sie das Format.");
   }
 
   // Find the first array of records in the parsed XML
   const records = findRecordArray(parsed);
 
   if (!records || records.length === 0) {
-    throw new Error("Keine Datensaetze in der XML-Datei gefunden. Die Datei muss wiederholende Elemente enthalten.");
+    throw new Error("Keine Datensätze in der XML-Datei gefunden. Die Datei muss wiederholende Elemente enthalten.");
   }
 
   const limited = records.slice(0, MAX_RECORDS);
   if (records.length > MAX_RECORDS) {
-    warnings.push(`${records.length} Datensaetze gefunden. Nur die ersten ${MAX_RECORDS} werden fuer die Schema-Erkennung verwendet.`);
+    warnings.push(`${records.length} Datensätze gefunden. Nur die ersten ${MAX_RECORDS} werden für die Schema-Erkennung verwendet.`);
   }
 
   // Collect all field names across records (union)
@@ -267,7 +267,7 @@ function parseXML(content: string): OutputFormatParseResponse {
   }
 
   if (fieldMap.size === 0) {
-    throw new Error("Keine Felder in den XML-Datensaetzen erkannt.");
+    throw new Error("Keine Felder in den XML-Datensätzen erkannt.");
   }
 
   const detected_schema: OutputFormatSchemaColumn[] = [];
@@ -437,7 +437,7 @@ function parseJSON(content: string): OutputFormatParseResponse {
   try {
     parsed = JSON.parse(content);
   } catch {
-    throw new Error("Die JSON-Datei konnte nicht geparst werden. Bitte pruefen Sie das Format.");
+    throw new Error("Die JSON-Datei konnte nicht geparst werden. Bitte prüfen Sie das Format.");
   }
 
   // Find array of records
@@ -457,16 +457,16 @@ function parseJSON(content: string): OutputFormatParseResponse {
       records = [parsed as Record<string, unknown>];
     }
   } else {
-    throw new Error("Die JSON-Datei muss ein Array oder ein Objekt mit Datensaetzen enthalten.");
+    throw new Error("Die JSON-Datei muss ein Array oder ein Objekt mit Datensätzen enthalten.");
   }
 
   if (records.length === 0) {
-    throw new Error("Keine Datensaetze in der JSON-Datei gefunden.");
+    throw new Error("Keine Datensätze in der JSON-Datei gefunden.");
   }
 
   const limited = records.slice(0, MAX_RECORDS);
   if (records.length > MAX_RECORDS) {
-    warnings.push(`${records.length} Datensaetze gefunden. Nur die ersten ${MAX_RECORDS} werden fuer die Schema-Erkennung verwendet.`);
+    warnings.push(`${records.length} Datensätze gefunden. Nur die ersten ${MAX_RECORDS} werden für die Schema-Erkennung verwendet.`);
   }
 
   // Collect all field names across records (union)
@@ -480,7 +480,7 @@ function parseJSON(content: string): OutputFormatParseResponse {
   }
 
   if (fieldMap.size === 0) {
-    throw new Error("Keine Felder in den JSON-Datensaetzen erkannt.");
+    throw new Error("Keine Felder in den JSON-Datensätzen erkannt.");
   }
 
   const detected_schema: OutputFormatSchemaColumn[] = [];
@@ -549,7 +549,7 @@ export async function parseOutputFormatSample(
       break;
     }
     default:
-      throw new Error(`Nicht unterstuetzter Dateityp: ${fileType}`);
+      throw new Error(`Nicht unterstützter Dateityp: ${fileType}`);
   }
 
   result.file_name = fileName;

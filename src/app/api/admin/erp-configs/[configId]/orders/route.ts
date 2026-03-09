@@ -26,7 +26,7 @@ export async function GET(
 
     if (!UUID_REGEX.test(configId)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Konfigurations-ID." },
+        { success: false, error: "Ungültige Konfigurations-ID." },
         { status: 400 }
       );
     }

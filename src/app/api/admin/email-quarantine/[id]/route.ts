@@ -27,14 +27,14 @@ export async function PATCH(
       body = await request.json();
     } catch {
       return NextResponse.json(
-        { success: false, error: "Ungueltiges JSON." },
+        { success: false, error: "Ungültiges JSON." },
         { status: 400 }
       );
     }
 
     const parsed = quarantineActionSchema.safeParse(body);
     if (!parsed.success) {
-      const firstError = parsed.error.issues[0]?.message ?? "Ungueltige Eingabe.";
+      const firstError = parsed.error.issues[0]?.message ?? "Ungültige Eingabe.";
       return NextResponse.json(
         { success: false, error: firstError },
         { status: 400 }
@@ -52,7 +52,7 @@ export async function PATCH(
 
     if (fetchError || !entry) {
       return NextResponse.json(
-        { success: false, error: "Quarantaene-Eintrag nicht gefunden." },
+        { success: false, error: "Quarantäne-Eintrag nicht gefunden." },
         { status: 404 }
       );
     }

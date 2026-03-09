@@ -110,7 +110,7 @@ export function UsersTable({ refreshKey }: UsersTableProps) {
         setError(result.error);
       }
     } catch {
-      setError("Status konnte nicht geaendert werden.");
+      setError("Status konnte nicht geändert werden.");
     } finally {
       setTogglingUserId(null);
     }

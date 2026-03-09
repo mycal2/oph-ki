@@ -28,14 +28,14 @@ export function useDealers(): UseDealersReturn {
       const json = (await res.json()) as ApiResponse<DealerListItem[]>;
 
       if (!res.ok || !json.success || !json.data) {
-        setError(json.error ?? "Haendler konnten nicht geladen werden.");
+        setError(json.error ?? "Händler konnten nicht geladen werden.");
         setDealers([]);
         return;
       }
 
       setDealers(json.data);
     } catch {
-      setError("Verbindungsfehler beim Laden der Haendler.");
+      setError("Verbindungsfehler beim Laden der Händler.");
       setDealers([]);
     } finally {
       setIsLoading(false);

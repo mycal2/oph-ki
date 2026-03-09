@@ -8,7 +8,7 @@ export const loginSchema = z.object({
   email: z
     .string()
     .min(1, "E-Mail-Adresse ist erforderlich.")
-    .email("Bitte geben Sie eine gueltige E-Mail-Adresse ein."),
+    .email("Bitte geben Sie eine gültige E-Mail-Adresse ein."),
   password: z
     .string()
     .min(1, "Passwort ist erforderlich."),
@@ -18,7 +18,7 @@ export const forgotPasswordSchema = z.object({
   email: z
     .string()
     .min(1, "E-Mail-Adresse ist erforderlich.")
-    .email("Bitte geben Sie eine gueltige E-Mail-Adresse ein."),
+    .email("Bitte geben Sie eine gültige E-Mail-Adresse ein."),
 });
 
 export const resetPasswordSchema = z.object({
@@ -27,9 +27,9 @@ export const resetPasswordSchema = z.object({
     .min(8, "Passwort muss mindestens 8 Zeichen lang sein."),
   confirmPassword: z
     .string()
-    .min(1, "Passwortbestaetigung ist erforderlich."),
+    .min(1, "Passwortbestätigung ist erforderlich."),
 }).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwoerter stimmen nicht ueberein.",
+  message: "Passwörter stimmen nicht überein.",
   path: ["confirmPassword"],
 });
 
@@ -37,15 +37,15 @@ export const inviteUserSchema = z.object({
   email: z
     .string()
     .min(1, "E-Mail-Adresse ist erforderlich.")
-    .email("Bitte geben Sie eine gueltige E-Mail-Adresse ein."),
+    .email("Bitte geben Sie eine gültige E-Mail-Adresse ein."),
   role: z.enum(["tenant_user", "tenant_admin"], {
-    message: "Bitte waehlen Sie eine gueltige Rolle.",
+    message: "Bitte wählen Sie eine gültige Rolle.",
   }),
 });
 
 export const toggleUserStatusSchema = z.object({
   status: z.enum(["active", "inactive"], {
-    message: "Ungueltiger Status.",
+    message: "Ungültiger Status.",
   }),
 });
 
@@ -108,10 +108,10 @@ export type UploadConfirmInput = z.infer<typeof uploadConfirmSchema>;
  * OPH-3: Dealer override validation schema.
  */
 export const dealerOverrideSchema = z.object({
-  dealerId: z.string().uuid("Ungueltige Haendler-ID."),
+  dealerId: z.string().uuid("Ungültige Händler-ID."),
   reason: z
     .string()
-    .max(500, "Begruendung darf maximal 500 Zeichen lang sein.")
+    .max(500, "Begründung darf maximal 500 Zeichen lang sein.")
     .optional(),
   /** ISO timestamp for optimistic locking — prevents concurrent edit conflicts. */
   updatedAt: z.string().optional(),
@@ -209,7 +209,7 @@ export type ReviewApproveInput = z.infer<typeof reviewApproveSchema>;
  */
 
 export const exportFormatSchema = z.enum(["csv", "xml", "json"], {
-  message: "Ungueltiges Format. Erlaubt: csv, xml, json",
+  message: "Ungültiges Format. Erlaubt: csv, xml, json",
 });
 
 export type ExportFormatInput = z.infer<typeof exportFormatSchema>;
@@ -219,14 +219,14 @@ export type ExportFormatInput = z.infer<typeof exportFormatSchema>;
  */
 
 export const createMappingSchema = z.object({
-  dealerId: z.string().uuid("Ungueltige Haendler-ID."),
+  dealerId: z.string().uuid("Ungültige Händler-ID."),
   mappingType: z.enum(["article_number", "unit_conversion", "field_label"], {
-    message: "Ungueltiger Mapping-Typ.",
+    message: "Ungültiger Mapping-Typ.",
   }),
   dealerValue: z
     .string()
-    .min(1, "Haendler-Wert ist erforderlich.")
-    .max(200, "Haendler-Wert darf maximal 200 Zeichen lang sein.")
+    .min(1, "Händler-Wert ist erforderlich.")
+    .max(200, "Händler-Wert darf maximal 200 Zeichen lang sein.")
     .trim(),
   erpValue: z
     .string()
@@ -246,8 +246,8 @@ export const createMappingSchema = z.object({
 export const updateMappingSchema = z.object({
   dealerValue: z
     .string()
-    .min(1, "Haendler-Wert ist erforderlich.")
-    .max(200, "Haendler-Wert darf maximal 200 Zeichen lang sein.")
+    .min(1, "Händler-Wert ist erforderlich.")
+    .max(200, "Händler-Wert darf maximal 200 Zeichen lang sein.")
     .trim()
     .optional(),
   erpValue: z
@@ -295,7 +295,7 @@ export const sanitizeHints = (text: string): string =>
 /** Extraction hints field with sanitization against prompt injection. */
 const extractionHintsField = z
   .string()
-  .max(5000, "Extraktions-Hints duerfen maximal 5000 Zeichen lang sein.")
+  .max(5000, "Extraktions-Hints dürfen maximal 5000 Zeichen lang sein.")
   .transform(sanitizeHints)
   .nullable()
   .optional();
@@ -303,13 +303,13 @@ const extractionHintsField = z
 /** Validates regex patterns are syntactically correct. */
 const regexPatternArray = z
   .array(z.string().max(500))
-  .max(50, "Maximal 50 Eintraege erlaubt.")
+  .max(50, "Maximal 50 Einträge erlaubt.")
   .refine(
     (patterns) =>
       patterns.every((p) => {
         try { new RegExp(p); return true; } catch { return false; }
       }),
-    { message: "Enthaelt ungueltige Regex-Pattern." }
+    { message: "Enthält ungültige Regex-Pattern." }
   );
 
 export const createDealerSchema = z.object({
@@ -324,7 +324,7 @@ export const createDealerSchema = z.object({
     .nullable()
     .optional(),
   format_type: z.enum(["email_text", "pdf_table", "excel", "mixed"], {
-    message: "Ungueltiger Format-Typ.",
+    message: "Ungültiger Format-Typ.",
   }),
   street: z.string().max(200).nullable().optional(),
   postal_code: z.string().max(20).nullable().optional(),
@@ -351,7 +351,7 @@ export const updateDealerSchema = z.object({
     .nullable()
     .optional(),
   format_type: z.enum(["email_text", "pdf_table", "excel", "mixed"], {
-    message: "Ungueltiger Format-Typ.",
+    message: "Ungültiger Format-Typ.",
   }).optional(),
   street: z.string().max(200).nullable().optional(),
   postal_code: z.string().max(20).nullable().optional(),
@@ -393,7 +393,7 @@ const emailDomainField = z
       .string()
       .regex(
         /^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/,
-        "Ungueltige Domain. Bitte nur die Domain eingeben, z.B. example.de — ohne @."
+        "Ungültige Domain. Bitte nur die Domain eingeben, z.B. example.de — ohne @."
       )
       .refine((d) => d.includes("."), {
         message: "Domain muss mindestens einen Punkt enthalten (z.B. example.de).",
@@ -430,16 +430,16 @@ export const createTenantSchema = z.object({
   contact_email: z
     .string()
     .min(1, "Kontakt-E-Mail ist erforderlich.")
-    .email("Bitte geben Sie eine gueltige E-Mail-Adresse ein."),
+    .email("Bitte geben Sie eine gültige E-Mail-Adresse ein."),
   erp_type: z.enum(["SAP", "Dynamics365", "Sage", "Custom"], {
-    message: "Bitte waehlen Sie einen gueltigen ERP-Typ.",
+    message: "Bitte wählen Sie einen gültigen ERP-Typ.",
   }),
   status: z.enum(["active", "inactive", "trial"], {
-    message: "Ungueltiger Status.",
+    message: "Ungültiger Status.",
   }).default("active"),
   allowed_email_domains: allowedEmailDomainsField,
   /** OPH-28: Assign an ERP config to this tenant on creation. */
-  erp_config_id: z.string().uuid("Ungueltige ERP-Konfigurations-ID.").nullable().optional(),
+  erp_config_id: z.string().uuid("Ungültige ERP-Konfigurations-ID.").nullable().optional(),
 });
 
 export const updateTenantSchema = z.object({
@@ -452,18 +452,18 @@ export const updateTenantSchema = z.object({
   contact_email: z
     .string()
     .min(1, "Kontakt-E-Mail ist erforderlich.")
-    .email("Bitte geben Sie eine gueltige E-Mail-Adresse ein.")
+    .email("Bitte geben Sie eine gültige E-Mail-Adresse ein.")
     .optional(),
   erp_type: z.enum(["SAP", "Dynamics365", "Sage", "Custom"], {
-    message: "Bitte waehlen Sie einen gueltigen ERP-Typ.",
+    message: "Bitte wählen Sie einen gültigen ERP-Typ.",
   }).optional(),
   status: z.enum(["active", "inactive", "trial"], {
-    message: "Ungueltiger Status.",
+    message: "Ungültiger Status.",
   }).optional(),
   allowed_email_domains: allowedEmailDomainsField.optional(),
   email_notifications_enabled: z.boolean().optional(),
   /** OPH-29: Assign an ERP config to this tenant. */
-  erp_config_id: z.string().uuid("Ungueltige ERP-Konfigurations-ID.").nullable().optional(),
+  erp_config_id: z.string().uuid("Ungültige ERP-Konfigurations-ID.").nullable().optional(),
 });
 
 /** Invite user on behalf of a specific tenant (platform admin). */
@@ -471,9 +471,9 @@ export const adminInviteUserSchema = z.object({
   email: z
     .string()
     .min(1, "E-Mail-Adresse ist erforderlich.")
-    .email("Bitte geben Sie eine gueltige E-Mail-Adresse ein."),
+    .email("Bitte geben Sie eine gültige E-Mail-Adresse ein."),
   role: z.enum(["tenant_user", "tenant_admin"], {
-    message: "Bitte waehlen Sie eine gueltige Rolle.",
+    message: "Bitte wählen Sie eine gültige Rolle.",
   }),
 });
 
@@ -487,7 +487,7 @@ export type AdminInviteUserInput = z.infer<typeof adminInviteUserSchema>;
 
 const columnMappingEntrySchema = z.object({
   match_type: z.enum(["position", "header", "both"], {
-    message: "Ungueltiger Match-Typ.",
+    message: "Ungültiger Match-Typ.",
   }),
   position: z
     .number()
@@ -511,7 +511,7 @@ const columnMappingEntrySchema = z.object({
     }
     return true;
   },
-  { message: "Position ist erforderlich fuer diesen Match-Typ.", path: ["position"] }
+  { message: "Position ist erforderlich für diesen Match-Typ.", path: ["position"] }
 ).refine(
   (entry) => {
     if (entry.match_type === "header" || entry.match_type === "both") {
@@ -519,7 +519,7 @@ const columnMappingEntrySchema = z.object({
     }
     return true;
   },
-  { message: "Header-Text ist erforderlich fuer diesen Match-Typ.", path: ["header_text"] }
+  { message: "Header-Text ist erforderlich für diesen Match-Typ.", path: ["header_text"] }
 );
 
 export const columnMappingProfileSchema = z.object({
@@ -546,7 +546,7 @@ export type ColumnMappingProfileInput = z.infer<typeof columnMappingProfileSchem
 const erpTransformationStepSchema = z.object({
   type: z.enum(
     ["to_uppercase", "to_lowercase", "trim", "round", "multiply", "date_format", "default"],
-    { message: "Ungueltiger Transformationstyp." }
+    { message: "Ungültiger Transformationstyp." }
   ),
   param: z.string().max(200, "Parameter darf maximal 200 Zeichen lang sein.").optional(),
 }).refine(
@@ -557,7 +557,7 @@ const erpTransformationStepSchema = z.object({
     }
     return true;
   },
-  { message: "Dieser Transformationstyp benoetigt einen Parameter.", path: ["param"] }
+  { message: "Dieser Transformationstyp benötigt einen Parameter.", path: ["param"] }
 );
 
 const erpColumnMappingExtendedSchema = z.object({
@@ -589,7 +589,7 @@ export const erpConfigSaveSchema = z.object({
     .nullable()
     .default(null),
   format: z.enum(["csv", "xml", "json"], {
-    message: "Ungueltiges Format. Erlaubt: csv, xml, json",
+    message: "Ungültiges Format. Erlaubt: csv, xml, json",
   }),
   column_mappings: z
     .array(erpColumnMappingExtendedSchema)
@@ -598,16 +598,16 @@ export const erpConfigSaveSchema = z.object({
   separator: z.string().max(5).default(";"),
   quote_char: z.string().max(5).default('"'),
   encoding: z.enum(["utf-8", "latin-1", "windows-1252"], {
-    message: "Ungueltiger Zeichensatz.",
+    message: "Ungültiger Zeichensatz.",
   }).default("utf-8"),
   line_ending: z.enum(["LF", "CRLF"], {
-    message: "Ungueltiges Zeilenende.",
+    message: "Ungültiges Zeilenende.",
   }).default("LF"),
   decimal_separator: z.enum([".", ","], {
-    message: "Ungueltiges Dezimaltrennzeichen.",
+    message: "Ungültiges Dezimaltrennzeichen.",
   }).default("."),
   fallback_mode: z.enum(["block", "fallback_csv"], {
-    message: "Ungueltiger Fallback-Modus.",
+    message: "Ungültiger Fallback-Modus.",
   }).default("block"),
   xml_template: z
     .string()
@@ -623,12 +623,12 @@ export const erpConfigSaveSchema = z.object({
 export const erpConfigTestSchema = z.object({
   /** Either a raw JSON string or an order ID to test against. */
   mode: z.enum(["json", "order"], {
-    message: "Ungueltiger Testmodus.",
+    message: "Ungültiger Testmodus.",
   }),
   /** Raw canonical JSON for mode=json. */
   jsonInput: z.string().max(100000).optional(),
   /** Order ID for mode=order. */
-  orderId: z.string().uuid("Ungueltige Bestell-ID.").optional(),
+  orderId: z.string().uuid("Ungültige Bestell-ID.").optional(),
   /** The config to test (same shape as save payload, minus comment/name/description). */
   config: erpConfigSaveSchema.omit({ comment: true, name: true, description: true }),
 }).refine(
@@ -651,7 +651,7 @@ export type ErpColumnMappingExtendedInput = z.infer<typeof erpColumnMappingExten
 
 export const quarantineActionSchema = z.object({
   action: z.enum(["approved", "rejected"], {
-    message: "Ungueltige Aktion. Erlaubt: approved, rejected",
+    message: "Ungültige Aktion. Erlaubt: approved, rejected",
   }),
 });
 
@@ -682,7 +682,7 @@ export const updateNotificationEmailsSchema = z.object({
       z
         .string()
         .trim()
-        .email("Bitte geben Sie eine gueltige E-Mail-Adresse ein.")
+        .email("Bitte geben Sie eine gültige E-Mail-Adresse ein.")
     )
     .max(3, "Maximal 3 Benachrichtigungs-E-Mails erlaubt."),
 });

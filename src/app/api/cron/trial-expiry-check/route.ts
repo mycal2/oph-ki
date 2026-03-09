@@ -9,7 +9,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * the platform admin via email.
  *
  * Notifications:
- *   - 7 days before expiry: "Testphase laeuft in 7 Tagen ab"
+ *   - 7 days before expiry: "Testphase läuft in 7 Tagen ab"
  *   - On expiry day: "Testphase ist heute abgelaufen"
  *   - After expiry: daily reminder until admin changes tenant status
  *
@@ -110,16 +110,16 @@ export async function GET(
     }
 
     if (warnings.length > 0) {
-      lines.push("LAEUFT BALD AB (7 Tage):");
+      lines.push("LÄUFT BALD AB (7 Tage):");
       for (const n of warnings) {
-        lines.push(`  - ${n.tenantName} (laeuft ab am ${n.expiresAt})`);
+        lines.push(`  - ${n.tenantName} (läuft ab am ${n.expiresAt})`);
       }
       lines.push("");
     }
 
     lines.push(`Mandanten verwalten: ${siteUrl}/admin/tenants`);
     lines.push("");
-    lines.push("Mit freundlichen Gruessen,");
+    lines.push("Mit freundlichen Grüßen,");
     lines.push("Ihr Order Intelligence System");
 
     const response = await fetch("https://api.postmarkapp.com/email", {

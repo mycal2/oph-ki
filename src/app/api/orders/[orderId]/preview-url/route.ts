@@ -66,7 +66,7 @@ export async function GET(
     // 3. Validate orderId
     if (!UUID_REGEX.test(orderId)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Bestellungs-ID." },
+        { success: false, error: "Ungültige Bestellungs-ID." },
         { status: 400 }
       );
     }

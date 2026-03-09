@@ -172,7 +172,7 @@ export default function EmailQuarantinePage() {
     return (
       <Alert variant="destructive">
         <AlertDescription>
-          Nur fuer Platform-Administratoren.
+          Nur für Platform-Administratoren.
         </AlertDescription>
       </Alert>
     );
@@ -184,10 +184,10 @@ export default function EmailQuarantinePage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold md:text-3xl">
-          E-Mail-Quarantaene
+          E-Mail-Quarantäne
         </h1>
         <p className="text-muted-foreground mt-1">
-          E-Mails von nicht-autorisierten Absendern pruefen und freigeben.
+          E-Mails von nicht-autorisierten Absendern prüfen und freigeben.
           {pendingCount > 0 && (
             <Badge variant="secondary" className="ml-2">
               {pendingCount} ausstehend
@@ -200,7 +200,7 @@ export default function EmailQuarantinePage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ShieldAlert className="h-5 w-5" />
-            Quarantaene-Eintraege
+            Quarantäne-Einträge
           </CardTitle>
           <CardDescription>
             E-Mails, die von Absendern stammen, die keinem Mandanten-Team
@@ -221,7 +221,7 @@ export default function EmailQuarantinePage() {
           ) : entries.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
               <Inbox className="h-12 w-12 mb-3" />
-              <p className="text-sm">Keine E-Mails in der Quarantaene.</p>
+              <p className="text-sm">Keine E-Mails in der Quarantäne.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -359,7 +359,7 @@ export default function EmailQuarantinePage() {
                 <>
                   Die E-Mail von{" "}
                   <strong>{confirmDialog.senderEmail}</strong> wird
-                  freigegeben. Sie koennen sie anschliessend verarbeiten,
+                  freigegeben. Sie können sie anschließend verarbeiten,
                   um eine Bestellung zu erstellen.
                 </>
               ) : confirmDialog?.action === "rejected" ? (

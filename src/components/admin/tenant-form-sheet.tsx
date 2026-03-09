@@ -318,7 +318,7 @@ export function TenantFormSheet({
     if (d.includes("@")) return "Bitte nur die Domain eingeben, ohne @.";
     if (!d.includes(".")) return "Domain muss einen Punkt enthalten (z.B. example.de).";
     if (d.includes("..")) return "Domain darf keine aufeinanderfolgenden Punkte enthalten.";
-    if (!/^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/.test(d)) return "Ungueltige Domain (z.B. example.de).";
+    if (!/^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/.test(d)) return "Ungültige Domain (z.B. example.de).";
     return null;
   }, []);
 
@@ -327,7 +327,7 @@ export function TenantFormSheet({
     if (allowedEmailDomains.length > 0) return null; // explicit domains configured
     const domain = contactEmail.split("@")[1]?.toLowerCase();
     if (!domain || domain.length < 3 || !domain.includes(".")) {
-      return "Ohne konfigurierte Domains und ohne gueltige Kontakt-E-Mail-Domain koennen keine eingehenden E-Mails autorisiert werden.";
+      return "Ohne konfigurierte Domains und ohne gültige Kontakt-E-Mail-Domain können keine eingehenden E-Mails autorisiert werden.";
     }
     return null;
   }, [contactEmail, allowedEmailDomains]);
@@ -398,8 +398,8 @@ export function TenantFormSheet({
                       />
                       <p className="text-xs text-muted-foreground">
                         {isNew
-                          ? "URL-sicherer Bezeichner (Kleinbuchstaben, Zahlen, Bindestriche). Kann nach Erstellung nicht geaendert werden."
-                          : "Slug ist nach Erstellung unveraenderlich."}
+                          ? "URL-sicherer Bezeichner (Kleinbuchstaben, Zahlen, Bindestriche). Kann nach Erstellung nicht geändert werden."
+                          : "Slug ist nach Erstellung unveränderlich."}
                       </p>
                     </div>
 
@@ -761,12 +761,12 @@ export function TenantFormSheet({
                 <>
                   Sind Sie sicher, dass Sie{" "}
                   <span className="font-semibold">{confirmUserToggle?.userName}</span>{" "}
-                  deaktivieren moechten? Der Benutzer kann sich danach nicht mehr
+                  deaktivieren möchten? Der Benutzer kann sich danach nicht mehr
                   einloggen.
                 </>
               ) : (
                 <>
-                  Moechten Sie{" "}
+                  Möchten Sie{" "}
                   <span className="font-semibold">{confirmUserToggle?.userName}</span>{" "}
                   reaktivieren? Der Benutzer kann sich danach wieder einloggen.
                 </>

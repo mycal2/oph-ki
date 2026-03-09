@@ -111,7 +111,7 @@ export function LoginForm() {
               <AlertDescription className="text-sm">
                 <span className="font-semibold">Ihr Konto ist ein Trial-Konto.</span>{" "}
                 Bitte nutzen Sie die E-Mail-Weiterleitung, um Bestellungen zu verarbeiten.
-                Ein Web-Login ist waehrend der Testphase nicht verfuegbar.
+                Ein Web-Login ist während der Testphase nicht verfügbar.
                 <span className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
                   <Mail className="h-3.5 w-3.5" />
                   Leiten Sie Bestellungs-E-Mails an Ihre zugewiesene Adresse weiter.

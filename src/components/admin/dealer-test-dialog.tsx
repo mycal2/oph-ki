@@ -68,11 +68,11 @@ export function DealerTestDialog({
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Haendler-Erkennung testen</DialogTitle>
+          <DialogTitle>Händler-Erkennung testen</DialogTitle>
         </DialogHeader>
 
         <p className="text-sm text-muted-foreground">
-          Laden Sie eine Datei (.eml, .pdf, .xlsx) hoch, um zu pruefen, welcher Haendler
+          Laden Sie eine Datei (.eml, .pdf, .xlsx) hoch, um zu prüfen, welcher Händler
           erkannt wird. Die Datei wird nicht gespeichert.
         </p>
 
@@ -84,7 +84,7 @@ export function DealerTestDialog({
               ) : (
                 <Upload className="mr-2 h-4 w-4" />
               )}
-              Datei auswaehlen
+              Datei auswählen
               <input
                 type="file"
                 accept=".eml,.pdf,.xlsx,.xls,.csv"
@@ -108,7 +108,7 @@ export function DealerTestDialog({
               <>
                 <div className="flex items-center gap-2">
                   <CheckCircle className="h-5 w-5 text-green-600" />
-                  <span className="font-medium">Haendler erkannt</span>
+                  <span className="font-medium">Händler erkannt</span>
                 </div>
                 <div className="space-y-1.5 text-sm">
                   <div className="flex justify-between">
@@ -131,7 +131,7 @@ export function DealerTestDialog({
               <div className="flex items-center gap-2">
                 <XCircle className="h-5 w-5 text-muted-foreground" />
                 <span className="text-muted-foreground">
-                  Kein Haendler erkannt. Pruefen Sie die Erkennungsregeln.
+                  Kein Händler erkannt. Prüfen Sie die Erkennungsregeln.
                 </span>
               </div>
             )}

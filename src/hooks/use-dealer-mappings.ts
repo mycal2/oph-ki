@@ -99,7 +99,7 @@ export function useDealerMappings({ dealerId, mappingType }: UseDealerMappingsOp
       const json = await res.json();
 
       if (!res.ok || !json.success) {
-        throw new Error(json.error ?? "Fehler beim Loeschen.");
+        throw new Error(json.error ?? "Fehler beim Löschen.");
       }
 
       await fetchMappings();

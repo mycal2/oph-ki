@@ -17,8 +17,8 @@ interface ExpiredTokenMessageProps {
  * has expired or is invalid.
  */
 export function ExpiredTokenMessage({
-  title = "Diese Vorschau ist nicht mehr verfuegbar",
-  description = "Der Vorschau-Link ist abgelaufen. Vorschau-Links sind 30 Tage lang gueltig.",
+  title = "Diese Vorschau ist nicht mehr verfügbar",
+  description = "Der Vorschau-Link ist abgelaufen. Vorschau-Links sind 30 Tage lang gültig.",
 }: ExpiredTokenMessageProps) {
   return (
     <Card>
@@ -33,7 +33,7 @@ export function ExpiredTokenMessage({
         <div className="mt-6">
           <Button asChild variant="outline" className="gap-2">
             <a href={CONTACT_URL} target="_blank" rel="noopener noreferrer">
-              Mehr ueber IDS.online erfahren
+              Mehr über IDS.online erfahren
               <ArrowRight className="h-4 w-4" />
             </a>
           </Button>

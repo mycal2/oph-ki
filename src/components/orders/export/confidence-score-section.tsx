@@ -84,7 +84,7 @@ export function ConfidenceScoreSection({ data }: ConfidenceScoreSectionProps) {
               <TooltipContent side="top" className="max-w-xs">
                 <p className="text-xs">
                   Anteil der Pflichtfelder im Ziel-Ausgabeformat, die aus den
-                  extrahierten Bestelldaten befuellt werden koennen.
+                  extrahierten Bestelldaten befüllt werden können.
                 </p>
               </TooltipContent>
             </Tooltip>
@@ -109,7 +109,7 @@ export function ConfidenceScoreSection({ data }: ConfidenceScoreSectionProps) {
 
       {/* Stats line */}
       <p className="text-xs text-muted-foreground">
-        {data.filled_required} von {data.total_required} Pflichtfeldern befuellt
+        {data.filled_required} von {data.total_required} Pflichtfeldern befüllt
       </p>
 
       {/* Missing columns list (top 5) */}
@@ -142,7 +142,7 @@ export function ConfidenceScoreSection({ data }: ConfidenceScoreSectionProps) {
         <div className="flex items-center gap-1.5">
           <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
           <span className="text-xs text-green-600 dark:text-green-400">
-            Alle Pflichtfelder sind befuellt.
+            Alle Pflichtfelder sind befüllt.
           </span>
         </div>
       )}

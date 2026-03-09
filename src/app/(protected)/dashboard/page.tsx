@@ -38,7 +38,7 @@ export default async function DashboardPage() {
       <div>
         <h1 className="text-2xl font-bold md:text-3xl">Dashboard</h1>
         <p className="text-muted-foreground mt-1">
-          Willkommen zurueck{firstName ? `, ${firstName}` : ""}. Hier ist eine Uebersicht Ihres Arbeitsbereichs.
+          Willkommen zurück{firstName ? `, ${firstName}` : ""}. Hier ist eine Übersicht Ihres Arbeitsbereichs.
         </p>
       </div>
 
@@ -63,7 +63,7 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Ausstehende Pruefungen
+              Ausstehende Prüfungen
             </CardTitle>
             <Upload className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -97,7 +97,7 @@ export default async function DashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Letzte Aktivitaet</CardTitle>
+          <CardTitle>Letzte Aktivität</CardTitle>
           <CardDescription>
             Ihre neuesten Bestellungen und Aktionen.
           </CardDescription>

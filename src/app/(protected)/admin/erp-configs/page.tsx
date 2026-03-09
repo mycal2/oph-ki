@@ -57,7 +57,7 @@ export default function AdminErpConfigsPage() {
     return (
       <div className="flex items-center justify-center py-20">
         <p className="text-muted-foreground">
-          Zugriff verweigert. Nur fuer Platform-Administratoren.
+          Zugriff verweigert. Nur für Platform-Administratoren.
         </p>
       </div>
     );
@@ -114,7 +114,7 @@ export default function AdminErpConfigsPage() {
             <DialogHeader>
               <DialogTitle>Neue ERP-Konfiguration</DialogTitle>
               <DialogDescription>
-                Erstellen Sie eine neue ERP-Konfiguration mit Standardwerten. Sie koennen die Details anschliessend bearbeiten.
+                Erstellen Sie eine neue ERP-Konfiguration mit Standardwerten. Sie können die Details anschließend bearbeiten.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-2">

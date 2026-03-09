@@ -72,7 +72,7 @@ export async function POST(
 
     if (!["article_number", "unit_conversion", "field_label"].includes(mappingType)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltiger Mapping-Typ." },
+        { success: false, error: "Ungültiger Mapping-Typ." },
         { status: 400 }
       );
     }
@@ -202,7 +202,7 @@ export async function POST(
 
         if (insertError) {
           if (insertError.code === "23505") {
-            errors.push(`Zeile ${i + 1}: Duplikat fuer "${dealerValue}".`);
+            errors.push(`Zeile ${i + 1}: Duplikat für "${dealerValue}".`);
           } else {
             errors.push(`Zeile ${i + 1}: ${insertError.message}`);
           }

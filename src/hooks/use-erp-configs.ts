@@ -136,14 +136,14 @@ export function useErpConfigs(): UseErpConfigsReturn {
         const json = (await res.json()) as ApiResponse;
 
         if (!res.ok || !json.success) {
-          setMutationError(json.error ?? "Loeschen fehlgeschlagen.");
+          setMutationError(json.error ?? "Löschen fehlgeschlagen.");
           return false;
         }
 
         await fetchConfigs();
         return true;
       } catch {
-        setMutationError("Verbindungsfehler beim Loeschen.");
+        setMutationError("Verbindungsfehler beim Löschen.");
         return false;
       } finally {
         setIsMutating(false);

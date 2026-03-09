@@ -48,7 +48,7 @@ export default function AdminErpConfigDetailPage({ params }: PageProps) {
     return (
       <div className="flex items-center justify-center py-20">
         <p className="text-muted-foreground">
-          Zugriff verweigert. Nur fuer Platform-Administratoren.
+          Zugriff verweigert. Nur für Platform-Administratoren.
         </p>
       </div>
     );
@@ -64,7 +64,7 @@ export default function AdminErpConfigDetailPage({ params }: PageProps) {
           onClick={() => router.push("/admin/erp-configs")}
         >
           <ArrowLeft className="mr-1.5 h-4 w-4" />
-          Zurueck zur Uebersicht
+          Zurück zur Übersicht
         </Button>
         <Alert variant="destructive">
           <AlertDescription>
@@ -87,7 +87,7 @@ export default function AdminErpConfigDetailPage({ params }: PageProps) {
           onClick={() => router.push("/admin/erp-configs")}
         >
           <ArrowLeft className="mr-1.5 h-4 w-4" />
-          Zurueck zur Uebersicht
+          Zurück zur Übersicht
         </Button>
         <div className="flex items-center justify-center py-20">
           <p className="text-muted-foreground">Konfiguration nicht gefunden.</p>
@@ -104,7 +104,7 @@ export default function AdminErpConfigDetailPage({ params }: PageProps) {
           variant="ghost"
           size="icon"
           onClick={() => router.push("/admin/erp-configs")}
-          aria-label="Zurueck zur Uebersicht"
+          aria-label="Zurück zur Übersicht"
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
@@ -131,7 +131,7 @@ export default function AdminErpConfigDetailPage({ params }: PageProps) {
           <AlertDescription>
             {mutationError}{" "}
             <Button variant="link" className="h-auto p-0" onClick={clearMutationError}>
-              Schliessen
+              Schließen
             </Button>
           </AlertDescription>
         </Alert>

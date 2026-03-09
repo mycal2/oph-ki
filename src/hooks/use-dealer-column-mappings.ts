@@ -122,14 +122,14 @@ export function useDealerColumnMappings(): UseDealerColumnMappingsReturn {
         const json = (await res.json()) as ApiResponse;
 
         if (!res.ok || !json.success) {
-          setSaveError(json.error ?? "Profil konnte nicht geloescht werden.");
+          setSaveError(json.error ?? "Profil konnte nicht gelöscht werden.");
           return false;
         }
 
         setProfiles((prev) => prev.filter((p) => p.format_type !== formatType));
         return true;
       } catch {
-        setSaveError("Verbindungsfehler beim Loeschen des Profils.");
+        setSaveError("Verbindungsfehler beim Löschen des Profils.");
         return false;
       } finally {
         setIsSaving(false);

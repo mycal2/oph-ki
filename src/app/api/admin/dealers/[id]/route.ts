@@ -20,7 +20,7 @@ export async function GET(
     const { id } = await params;
     if (!UUID_REGEX.test(id)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Haendler-ID." },
+        { success: false, error: "Ungültige Händler-ID." },
         { status: 400 }
       );
     }
@@ -37,7 +37,7 @@ export async function GET(
 
     if (error || !dealer) {
       return NextResponse.json(
-        { success: false, error: "Haendler nicht gefunden." },
+        { success: false, error: "Händler nicht gefunden." },
         { status: 404 }
       );
     }
@@ -66,7 +66,7 @@ export async function PATCH(
     const { id } = await params;
     if (!UUID_REGEX.test(id)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Haendler-ID." },
+        { success: false, error: "Ungültige Händler-ID." },
         { status: 400 }
       );
     }
@@ -82,7 +82,7 @@ export async function PATCH(
     const parsed = updateDealerSchema.safeParse(body);
 
     if (!parsed.success) {
-      const firstError = parsed.error.issues[0]?.message ?? "Ungueltige Eingabe.";
+      const firstError = parsed.error.issues[0]?.message ?? "Ungültige Eingabe.";
       return NextResponse.json(
         { success: false, error: firstError },
         { status: 400 }
@@ -100,7 +100,7 @@ export async function PATCH(
 
     if (fetchError || !current) {
       return NextResponse.json(
-        { success: false, error: "Haendler nicht gefunden." },
+        { success: false, error: "Händler nicht gefunden." },
         { status: 404 }
       );
     }
@@ -118,7 +118,7 @@ export async function PATCH(
 
     if (Object.keys(updatePayload).length === 0) {
       return NextResponse.json(
-        { success: false, error: "Keine Aenderungen angegeben." },
+        { success: false, error: "Keine Änderungen angegeben." },
         { status: 400 }
       );
     }
@@ -153,7 +153,7 @@ export async function PATCH(
     if (updateError || !updated) {
       console.error("Failed to update dealer:", updateError?.message);
       return NextResponse.json(
-        { success: false, error: "Haendler konnte nicht aktualisiert werden." },
+        { success: false, error: "Händler konnte nicht aktualisiert werden." },
         { status: 500 }
       );
     }
@@ -199,7 +199,7 @@ export async function DELETE(
     const { id } = await params;
     if (!UUID_REGEX.test(id)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Haendler-ID." },
+        { success: false, error: "Ungültige Händler-ID." },
         { status: 400 }
       );
     }
@@ -220,7 +220,7 @@ export async function DELETE(
 
     if (fetchError || !current) {
       return NextResponse.json(
-        { success: false, error: "Haendler nicht gefunden." },
+        { success: false, error: "Händler nicht gefunden." },
         { status: 404 }
       );
     }
@@ -234,7 +234,7 @@ export async function DELETE(
     if (updateError) {
       console.error("Failed to deactivate dealer:", updateError.message);
       return NextResponse.json(
-        { success: false, error: "Haendler konnte nicht deaktiviert werden." },
+        { success: false, error: "Händler konnte nicht deaktiviert werden." },
         { status: 500 }
       );
     }

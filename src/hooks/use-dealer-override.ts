@@ -41,13 +41,13 @@ export function useDealerOverride(): UseDealerOverrideReturn {
         const json = (await res.json()) as ApiResponse<DealerOverrideResponse>;
 
         if (!res.ok || !json.success || !json.data) {
-          setError(json.error ?? "Haendler-Zuweisung fehlgeschlagen.");
+          setError(json.error ?? "Händler-Zuweisung fehlgeschlagen.");
           return null;
         }
 
         return json.data;
       } catch {
-        setError("Verbindungsfehler bei der Haendler-Zuweisung.");
+        setError("Verbindungsfehler bei der Händler-Zuweisung.");
         return null;
       } finally {
         setIsSubmitting(false);

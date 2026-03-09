@@ -59,7 +59,7 @@ export async function PUT(request: Request): Promise<NextResponse> {
     body = await request.json();
   } catch {
     return NextResponse.json(
-      { success: false, error: "Ungueltiger Request-Body." },
+      { success: false, error: "Ungültiger Request-Body." },
       { status: 400 }
     );
   }

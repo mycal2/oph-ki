@@ -143,7 +143,7 @@ export function DealerColumnMappingTab({ dealerId }: DealerColumnMappingTabProps
     (newType: string) => {
       if (isDirty) {
         const confirmed = window.confirm(
-          "Es gibt ungespeicherte Aenderungen. Moechten Sie den Tab wirklich wechseln?"
+          "Es gibt ungespeicherte Änderungen. Möchten Sie den Tab wirklich wechseln?"
         );
         if (!confirmed) return;
       }
@@ -235,7 +235,7 @@ export function DealerColumnMappingTab({ dealerId }: DealerColumnMappingTabProps
 
   const handleDelete = useCallback(async () => {
     const confirmed = window.confirm(
-      "Moechten Sie dieses Profil wirklich loeschen? Diese Aktion kann nicht rueckgaengig gemacht werden."
+      "Möchten Sie dieses Profil wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
     );
     if (!confirmed) return;
 
@@ -243,7 +243,7 @@ export function DealerColumnMappingTab({ dealerId }: DealerColumnMappingTabProps
     if (success) {
       setEditingMappings([]);
       setIsDirty(false);
-      setSuccessMessage("Profil geloescht.");
+      setSuccessMessage("Profil gelöscht.");
     }
   }, [deleteProfile, dealerId, activeFormatType]);
 
@@ -270,7 +270,7 @@ export function DealerColumnMappingTab({ dealerId }: DealerColumnMappingTabProps
     <div className="px-6 pb-6 space-y-4">
       <div>
         <p className="text-sm text-muted-foreground">
-          Definieren Sie, welche Spalte in den Bestellungen dieses Haendlers welchem
+          Definieren Sie, welche Spalte in den Bestellungen dieses Händlers welchem
           Canonical-JSON-Feld entspricht. Pro Format-Typ ein Profil.
         </p>
       </div>
@@ -327,7 +327,7 @@ export function DealerColumnMappingTab({ dealerId }: DealerColumnMappingTabProps
             {!hasProfile && editingMappings.length === 0 ? (
               <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-10 text-center">
                 <p className="text-sm text-muted-foreground mb-3">
-                  Kein Spalten-Mapping fuer {opt.label} konfiguriert.
+                  Kein Spalten-Mapping für {opt.label} konfiguriert.
                 </p>
                 <Button size="sm" onClick={handleCreateProfile}>
                   <Plus className="mr-1.5 h-4 w-4" />
@@ -359,7 +359,7 @@ export function DealerColumnMappingTab({ dealerId }: DealerColumnMappingTabProps
                   onClick={handleAddRow}
                 >
                   <Plus className="mr-1.5 h-4 w-4" />
-                  Zeile hinzufuegen
+                  Zeile hinzufügen
                 </Button>
 
                 <Separator />
@@ -377,7 +377,7 @@ export function DealerColumnMappingTab({ dealerId }: DealerColumnMappingTabProps
                         disabled={isSaving}
                       >
                         <Trash2 className="mr-1.5 h-4 w-4" />
-                        Profil loeschen
+                        Profil löschen
                       </Button>
                     )}
                   </div>

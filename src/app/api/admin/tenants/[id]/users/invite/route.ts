@@ -20,7 +20,7 @@ export async function POST(
     const { id: tenantId } = await params;
     if (!UUID_REGEX.test(tenantId)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Mandanten-ID." },
+        { success: false, error: "Ungültige Mandanten-ID." },
         { status: 400 }
       );
     }
@@ -37,7 +37,7 @@ export async function POST(
     const parsed = adminInviteUserSchema.safeParse(body);
 
     if (!parsed.success) {
-      const firstError = parsed.error.issues[0]?.message ?? "Ungueltige Eingabe.";
+      const firstError = parsed.error.issues[0]?.message ?? "Ungültige Eingabe.";
       return NextResponse.json(
         { success: false, error: firstError },
         { status: 400 }
@@ -62,7 +62,7 @@ export async function POST(
 
     if (tenant.status === "inactive") {
       return NextResponse.json(
-        { success: false, error: "Mandant ist deaktiviert. Einladungen sind nicht moeglich." },
+        { success: false, error: "Mandant ist deaktiviert. Einladungen sind nicht möglich." },
         { status: 403 }
       );
     }
@@ -70,7 +70,7 @@ export async function POST(
     // OPH-16: Trial tenants cannot have team members
     if (tenant.status === "trial") {
       return NextResponse.json(
-        { success: false, error: "Team-Einladungen sind waehrend der Testphase nicht verfuegbar." },
+        { success: false, error: "Team-Einladungen sind während der Testphase nicht verfügbar." },
         { status: 403 }
       );
     }

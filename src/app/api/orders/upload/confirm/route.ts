@@ -75,7 +75,7 @@ export async function POST(
     if (adminTenantOverride) {
       if (appMetadata?.role !== "platform_admin") {
         return NextResponse.json(
-          { success: false, error: "Nur Plattform-Admins duerfen einen Mandanten ueberschreiben." },
+          { success: false, error: "Nur Plattform-Admins dürfen einen Mandanten überschreiben." },
           { status: 403 }
         );
       }

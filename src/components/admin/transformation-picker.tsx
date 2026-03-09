@@ -33,7 +33,7 @@ const TYPE_LABELS: Record<TransformationType, string> = {
   none: "Kein (Wert direkt)",
   date: "Datumsformat",
   number: "Zahlenformat",
-  prefix_suffix: "Text-Praefix / -Suffix",
+  prefix_suffix: "Text-Präfix / -Suffix",
 };
 
 /**
@@ -160,7 +160,7 @@ export function TransformationPicker({
                 max={10}
               />
               <p className="text-xs text-muted-foreground">
-                Anzahl der Nachkommastellen (z.B. 2 fuer 1.00).
+                Anzahl der Nachkommastellen (z.B. 2 für 1.00).
               </p>
             </div>
           )}
@@ -168,7 +168,7 @@ export function TransformationPicker({
           {type === "prefix_suffix" && (
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-sm">Praefix</Label>
+                <Label className="text-sm">Präfix</Label>
                 <Input
                   value={prefix}
                   onChange={(e) => setPrefix(e.target.value)}
@@ -201,7 +201,7 @@ export function TransformationPicker({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Abbrechen
           </Button>
-          <Button onClick={handleSave}>Uebernehmen</Button>
+          <Button onClick={handleSave}>Übernehmen</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

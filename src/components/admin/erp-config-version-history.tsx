@@ -93,7 +93,7 @@ export function ErpConfigVersionHistory({
                     size="sm"
                     onClick={() => {
                       const confirmed = window.confirm(
-                        `Moechten Sie Version v${version.version_number} wiederherstellen? Die aktuelle Konfiguration wird als neue Version gespeichert.`
+                        `Möchten Sie Version v${version.version_number} wiederherstellen? Die aktuelle Konfiguration wird als neue Version gespeichert.`
                       );
                       if (confirmed) {
                         onRollback(version.id);

@@ -19,7 +19,7 @@ export async function GET(
     const { id } = await params;
     if (!UUID_REGEX.test(id)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Haendler-ID." },
+        { success: false, error: "Ungültige Händler-ID." },
         { status: 400 }
       );
     }
@@ -37,7 +37,7 @@ export async function GET(
 
     if (dealerError || !dealer) {
       return NextResponse.json(
-        { success: false, error: "Haendler nicht gefunden." },
+        { success: false, error: "Händler nicht gefunden." },
         { status: 404 }
       );
     }

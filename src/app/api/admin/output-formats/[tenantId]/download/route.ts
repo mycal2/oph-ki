@@ -26,7 +26,7 @@ export async function GET(
 
     if (!UUID_REGEX.test(tenantId)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Mandanten-ID." },
+        { success: false, error: "Ungültige Mandanten-ID." },
         { status: 400 }
       );
     }

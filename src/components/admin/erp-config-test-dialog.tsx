@@ -34,7 +34,7 @@ const SAMPLE_JSON = JSON.stringify(
       currency: "EUR",
       total_amount: 1234.56,
       notes: "Testbestellung",
-      dealer: { id: null, name: "Test-Haendler" },
+      dealer: { id: null, name: "Test-Händler" },
       sender: {
         company_name: "Musterfirma GmbH",
         customer_number: "KD-001",
@@ -150,7 +150,7 @@ export function ErpConfigTestDialog({
     if (testResult) {
       setResult(testResult);
     } else {
-      setTestError(mutationError ?? "Test fehlgeschlagen. Bitte pruefen Sie die Konfiguration.");
+      setTestError(mutationError ?? "Test fehlgeschlagen. Bitte prüfen Sie die Konfiguration.");
     }
   }, [config, mode, jsonInput, selectedOrderId, onTest]);
 
@@ -180,7 +180,7 @@ export function ErpConfigTestDialog({
               </TabsTrigger>
               <TabsTrigger value="order" className="gap-1.5">
                 <FileText className="h-3.5 w-3.5" />
-                Bestellung waehlen
+                Bestellung wählen
               </TabsTrigger>
             </TabsList>
 
@@ -190,7 +190,7 @@ export function ErpConfigTestDialog({
                 <Textarea
                   value={jsonInput}
                   onChange={(e) => setJsonInput(e.target.value)}
-                  placeholder="Canonical JSON hier einfuegen..."
+                  placeholder="Canonical JSON hier einfügen..."
                   className="min-h-[200px] font-mono text-xs leading-relaxed"
                   spellCheck={false}
                 />
@@ -218,12 +218,12 @@ export function ErpConfigTestDialog({
                   </div>
                 ) : orders.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    Keine genehmigten Bestellungen fuer diesen Mandanten gefunden.
+                    Keine genehmigten Bestellungen für diesen Mandanten gefunden.
                   </p>
                 ) : (
                   <Select value={selectedOrderId} onValueChange={setSelectedOrderId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Bestellung auswaehlen..." />
+                      <SelectValue placeholder="Bestellung auswählen..." />
                     </SelectTrigger>
                     <SelectContent>
                       {orders.map((order) => (
@@ -253,7 +253,7 @@ export function ErpConfigTestDialog({
             ) : (
               <Play className="mr-1.5 h-4 w-4" />
             )}
-            Test ausfuehren
+            Test ausführen
           </Button>
 
           {/* Error */}

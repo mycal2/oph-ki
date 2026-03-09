@@ -31,7 +31,7 @@ export async function POST(
 
     if (!UUID_REGEX.test(configId)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Konfigurations-ID." },
+        { success: false, error: "Ungültige Konfigurations-ID." },
         { status: 400 }
       );
     }
@@ -41,7 +41,7 @@ export async function POST(
       formData = await request.formData();
     } catch {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Anfrage. Bitte senden Sie eine Datei." },
+        { success: false, error: "Ungültige Anfrage. Bitte senden Sie eine Datei." },
         { status: 400 }
       );
     }
@@ -71,7 +71,7 @@ export async function POST(
     const fileType = detectFileType(file.type, file.name);
     if (!fileType) {
       return NextResponse.json(
-        { success: false, error: "Nicht unterstuetzter Dateityp. Erlaubt: CSV, Excel (.xlsx), XML, JSON." },
+        { success: false, error: "Nicht unterstützter Dateityp. Erlaubt: CSV, Excel (.xlsx), XML, JSON." },
         { status: 400 }
       );
     }

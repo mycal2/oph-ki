@@ -43,7 +43,7 @@ export async function requirePlatformAdmin(): Promise<
 
   if (appMetadata?.role !== "platform_admin") {
     return NextResponse.json(
-      { success: false, error: "Nur fuer Platform-Administratoren." },
+      { success: false, error: "Nur für Platform-Administratoren." },
       { status: 403 }
     );
   }

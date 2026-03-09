@@ -32,7 +32,7 @@ export async function GET(
 
     if (!UUID_REGEX.test(configId)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Konfigurations-ID." },
+        { success: false, error: "Ungültige Konfigurations-ID." },
         { status: 400 }
       );
     }
@@ -163,7 +163,7 @@ export async function PUT(
 
     if (!UUID_REGEX.test(configId)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Konfigurations-ID." },
+        { success: false, error: "Ungültige Konfigurations-ID." },
         { status: 400 }
       );
     }
@@ -188,14 +188,14 @@ export async function PUT(
       body = await request.json();
     } catch {
       return NextResponse.json(
-        { success: false, error: "Ungueltiges JSON im Anfrage-Body." },
+        { success: false, error: "Ungültiges JSON im Anfrage-Body." },
         { status: 400 }
       );
     }
 
     const parsed = erpConfigSaveSchema.safeParse(body);
     if (!parsed.success) {
-      const firstError = parsed.error.issues[0]?.message ?? "Ungueltige Eingabe.";
+      const firstError = parsed.error.issues[0]?.message ?? "Ungültige Eingabe.";
       return NextResponse.json(
         { success: false, error: firstError },
         { status: 400 }
@@ -226,7 +226,7 @@ export async function PUT(
       const templateError = validateHandlebarsTemplate(data.xml_template);
       if (templateError) {
         return NextResponse.json(
-          { success: false, error: `Ungueltige XML-Template-Syntax: ${templateError}` },
+          { success: false, error: `Ungültige XML-Template-Syntax: ${templateError}` },
           { status: 400 }
         );
       }
@@ -324,7 +324,7 @@ export async function DELETE(
 
     if (!UUID_REGEX.test(configId)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Konfigurations-ID." },
+        { success: false, error: "Ungültige Konfigurations-ID." },
         { status: 400 }
       );
     }
@@ -351,7 +351,7 @@ export async function DELETE(
 
     if (count && count > 0) {
       return NextResponse.json(
-        { success: false, error: `Kann nicht geloescht werden – ${count} Mandant(en) zugewiesen.` },
+        { success: false, error: `Kann nicht gelöscht werden – ${count} Mandant(en) zugewiesen.` },
         { status: 409 }
       );
     }
@@ -365,7 +365,7 @@ export async function DELETE(
     if (deleteError) {
       console.error("Error deleting erp_config:", deleteError.message);
       return NextResponse.json(
-        { success: false, error: "Konfiguration konnte nicht geloescht werden." },
+        { success: false, error: "Konfiguration konnte nicht gelöscht werden." },
         { status: 500 }
       );
     }

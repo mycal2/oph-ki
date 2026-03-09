@@ -52,7 +52,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
-          error: "Keine Berechtigung. Nur Administratoren koennen Benutzer einladen.",
+          error: "Keine Berechtigung. Nur Administratoren können Benutzer einladen.",
         },
         { status: 403 }
       );
@@ -63,7 +63,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
-          error: "Mandant ist deaktiviert. Einladungen sind nicht moeglich.",
+          error: "Mandant ist deaktiviert. Einladungen sind nicht möglich.",
         },
         { status: 403 }
       );
@@ -74,7 +74,7 @@ export async function POST(
     const parsed = inviteUserSchema.safeParse(body);
 
     if (!parsed.success) {
-      const firstError = parsed.error.issues[0]?.message ?? "Ungueltige Eingabe.";
+      const firstError = parsed.error.issues[0]?.message ?? "Ungültige Eingabe.";
       return NextResponse.json(
         { success: false, error: firstError },
         { status: 400 }

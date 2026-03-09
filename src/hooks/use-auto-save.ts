@@ -70,7 +70,7 @@ export function useAutoSave({
 
         if (res.status === 409) {
           setStatus("error");
-          setError("Konflikt: Die Bestellung wurde von einem anderen Benutzer geaendert.");
+          setError("Konflikt: Die Bestellung wurde von einem anderen Benutzer geändert.");
           onConflict?.();
           return null;
         }

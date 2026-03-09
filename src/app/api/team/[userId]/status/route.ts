@@ -65,7 +65,7 @@ export async function PATCH(
     const parsed = toggleUserStatusSchema.safeParse(body);
 
     if (!parsed.success) {
-      const firstError = parsed.error.issues[0]?.message ?? "Ungueltige Eingabe.";
+      const firstError = parsed.error.issues[0]?.message ?? "Ungültige Eingabe.";
       return NextResponse.json(
         { success: false, error: firstError },
         { status: 400 }
@@ -97,7 +97,7 @@ export async function PATCH(
       targetProfile.tenant_id !== tenantId
     ) {
       return NextResponse.json(
-        { success: false, error: "Keine Berechtigung fuer diesen Benutzer." },
+        { success: false, error: "Keine Berechtigung für diesen Benutzer." },
         { status: 403 }
       );
     }
@@ -131,7 +131,7 @@ export async function PATCH(
       return NextResponse.json(
         {
           success: false,
-          error: "Sie koennen sich nicht selbst deaktivieren.",
+          error: "Sie können sich nicht selbst deaktivieren.",
         },
         { status: 400 }
       );
@@ -146,7 +146,7 @@ export async function PATCH(
     if (updateError) {
       console.error("Error updating user status:", updateError.message);
       return NextResponse.json(
-        { success: false, error: "Status konnte nicht geaendert werden." },
+        { success: false, error: "Status konnte nicht geändert werden." },
         { status: 500 }
       );
     }

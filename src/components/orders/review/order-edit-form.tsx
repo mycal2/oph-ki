@@ -164,7 +164,7 @@ export function OrderEditForm({ data, onChange }: OrderEditFormProps) {
             <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
             <AlertTitle>Niedrige Extraktionskonfidenz ({Math.round(confidence * 100)}%)</AlertTitle>
             <AlertDescription>
-              Die KI war sich bei der Extraktion unsicher. Bitte pruefen Sie alle Felder sorgfaeltig.
+              Die KI war sich bei der Extraktion unsicher. Bitte prüfen Sie alle Felder sorgfältig.
             </AlertDescription>
           </Alert>
         )}
@@ -219,7 +219,7 @@ export function OrderEditForm({ data, onChange }: OrderEditFormProps) {
                 }}
                 placeholder="z.B. 12345 oder KD-12345-DE"
                 maxLength={100}
-                aria-label="Kundennummer des Herstellers fuer den Haendler"
+                aria-label="Kundennummer des Herstellers für den Händler"
               />
               <p className="text-xs text-muted-foreground">
                 Vom Hersteller vergebene Kundennummer des Bestellers (optional).
@@ -243,7 +243,7 @@ export function OrderEditForm({ data, onChange }: OrderEditFormProps) {
               className="gap-1 text-xs"
             >
               <Plus className="h-3 w-3" />
-              Position hinzufuegen
+              Position hinzufügen
             </Button>
           </div>
 
@@ -259,7 +259,7 @@ export function OrderEditForm({ data, onChange }: OrderEditFormProps) {
                 className="gap-1"
               >
                 <Plus className="h-3.5 w-3.5" />
-                Erste Position hinzufuegen
+                Erste Position hinzufügen
               </Button>
             </div>
           ) : (
@@ -317,7 +317,7 @@ export function OrderEditForm({ data, onChange }: OrderEditFormProps) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="review-currency">Waehrung</Label>
+            <Label htmlFor="review-currency">Währung</Label>
             <Input
               id="review-currency"
               value={order.currency ?? ""}
@@ -340,7 +340,7 @@ export function OrderEditForm({ data, onChange }: OrderEditFormProps) {
             onChange={(e) =>
               updateOrder({ notes: e.target.value || null })
             }
-            placeholder="Zusaetzliche Anmerkungen zur Bestellung..."
+            placeholder="Zusätzliche Anmerkungen zur Bestellung..."
             rows={3}
           />
         </div>
@@ -471,7 +471,7 @@ function LineItemRow({ item, index, onChange, onRemove, parseNum }: LineItemRowP
         </div>
         <div className="space-y-1">
           <Label htmlFor={`line-${index}-curr`} className="text-xs">
-            Waehrung
+            Währung
           </Label>
           <Input
             id={`line-${index}-curr`}
@@ -520,7 +520,7 @@ function AddressCollapsible({
             {title}
             {hasData && (
               <span className="ml-2 text-xs text-muted-foreground font-normal">
-                (ausgefuellt)
+                (ausgefüllt)
               </span>
             )}
           </span>
@@ -549,7 +549,7 @@ function AddressCollapsible({
           </div>
           <div className="space-y-1 sm:col-span-2">
             <Label htmlFor={`${idPrefix}-street`} className="text-xs">
-              Strasse
+              Straße
             </Label>
             <Input
               id={`${idPrefix}-street`}
@@ -557,7 +557,7 @@ function AddressCollapsible({
               onChange={(e) =>
                 onChange({ street: e.target.value || null })
               }
-              placeholder="Strassenname und Hausnummer"
+              placeholder="Straße und Hausnummer"
               className="h-8 text-sm"
             />
           </div>

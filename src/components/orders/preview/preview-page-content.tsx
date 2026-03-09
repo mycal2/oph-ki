@@ -80,7 +80,7 @@ export function PreviewPageContent({ token }: PreviewPageContentProps) {
         <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
           <ExpiredTokenMessage
             title="Vorschau nicht gefunden"
-            description="Der angegebene Vorschau-Link ist ungueltig. Bitte pruefen Sie den Link und versuchen Sie es erneut."
+            description="Der angegebene Vorschau-Link ist ungültig. Bitte prüfen Sie den Link und versuchen Sie es erneut."
           />
         </main>
       </div>

@@ -20,7 +20,7 @@ export async function GET(
     const { id } = await params;
     if (!UUID_REGEX.test(id)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Haendler-ID." },
+        { success: false, error: "Ungültige Händler-ID." },
         { status: 400 }
       );
     }

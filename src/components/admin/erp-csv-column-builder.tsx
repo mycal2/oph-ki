@@ -113,11 +113,11 @@ export function CsvColumnBuilder({ columns, onChange }: CsvColumnBuilderProps) {
           <CardTitle className="text-base">CSV-Spalten-Konfiguration</CardTitle>
           <Button type="button" variant="outline" size="sm" onClick={handleAddColumn}>
             <Plus className="mr-1.5 h-4 w-4" />
-            Spalte hinzufuegen
+            Spalte hinzufügen
           </Button>
         </div>
         <p className="text-sm text-muted-foreground">
-          Definieren Sie die Spaltenreihenfolge, Quellfelder und Transformationen fuer den CSV-Export.
+          Definieren Sie die Spaltenreihenfolge, Quellfelder und Transformationen für den CSV-Export.
         </p>
       </CardHeader>
       <CardContent>
@@ -128,7 +128,7 @@ export function CsvColumnBuilder({ columns, onChange }: CsvColumnBuilderProps) {
             </p>
             <Button size="sm" onClick={handleAddColumn}>
               <Plus className="mr-1.5 h-4 w-4" />
-              Erste Spalte hinzufuegen
+              Erste Spalte hinzufügen
             </Button>
           </div>
         ) : (
@@ -154,7 +154,7 @@ export function CsvColumnBuilder({ columns, onChange }: CsvColumnBuilderProps) {
               className="mt-2"
             >
               <Plus className="mr-1.5 h-4 w-4" />
-              Spalte hinzufuegen
+              Spalte hinzufügen
             </Button>
           </div>
         )}

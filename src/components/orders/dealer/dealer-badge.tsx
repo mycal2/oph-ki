@@ -59,7 +59,7 @@ export function DealerBadge({
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Kein Haendler erkannt. Sie koennen manuell zuweisen.</p>
+            <p>Kein Händler erkannt. Sie können manuell zuweisen.</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>

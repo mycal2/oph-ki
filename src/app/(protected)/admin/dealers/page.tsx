@@ -84,7 +84,7 @@ export default function AdminDealersPage() {
     return (
       <div className="flex items-center justify-center py-20">
         <p className="text-muted-foreground">
-          Zugriff verweigert. Nur fuer Platform-Administratoren.
+          Zugriff verweigert. Nur für Platform-Administratoren.
         </p>
       </div>
     );
@@ -95,9 +95,9 @@ export default function AdminDealersPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Haendler-Verwaltung</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Händler-Verwaltung</h1>
           <p className="text-sm text-muted-foreground">
-            Globale Haendlerprofile und Erkennungsregeln verwalten.
+            Globale Händlerprofile und Erkennungsregeln verwalten.
           </p>
         </div>
         <DealerTestDialog onTest={testRecognition} isMutating={isMutating}>

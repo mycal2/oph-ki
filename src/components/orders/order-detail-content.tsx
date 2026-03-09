@@ -182,7 +182,7 @@ export function OrderDetailContent({ orderId }: OrderDetailContentProps) {
           className="gap-1"
         >
           <ArrowLeft className="h-4 w-4" />
-          Zurueck
+          Zurück
         </Button>
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -207,7 +207,7 @@ export function OrderDetailContent({ orderId }: OrderDetailContentProps) {
           className="gap-1"
         >
           <ArrowLeft className="h-4 w-4" />
-          Zurueck
+          Zurück
         </Button>
         <Card>
           <CardContent className="py-12 text-center">
@@ -230,7 +230,7 @@ export function OrderDetailContent({ orderId }: OrderDetailContentProps) {
         className="gap-1"
       >
         <ArrowLeft className="h-4 w-4" />
-        Zurueck zur Uebersicht
+        Zurück zur Übersicht
       </Button>
 
       {/* Order header with dealer info + export button */}
@@ -250,7 +250,7 @@ export function OrderDetailContent({ orderId }: OrderDetailContentProps) {
           <AlertTitle>Artikelnummern ohne ERP-Zuordnung</AlertTitle>
           <AlertDescription className="flex flex-col sm:flex-row sm:items-center gap-2">
             <span>
-              Diese Bestellung enthaelt Haendler-Artikelnummern, fuer die noch keine
+              Diese Bestellung enthält Händler-Artikelnummern, für die noch keine
               ERP-Zuordnung hinterlegt ist.
             </span>
             <Button

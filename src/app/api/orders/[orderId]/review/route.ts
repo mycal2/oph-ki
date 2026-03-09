@@ -65,7 +65,7 @@ export async function PATCH(
     // 3. Validate orderId
     if (!UUID_REGEX.test(orderId)) {
       return NextResponse.json(
-        { success: false, error: "Ungueltige Bestellungs-ID." },
+        { success: false, error: "Ungültige Bestellungs-ID." },
         { status: 400 }
       );
     }
@@ -76,7 +76,7 @@ export async function PATCH(
       body = await request.json();
     } catch {
       return NextResponse.json(
-        { success: false, error: "Ungueltiger JSON-Body." },
+        { success: false, error: "Ungültiger JSON-Body." },
         { status: 400 }
       );
     }
@@ -117,7 +117,7 @@ export async function PATCH(
       return NextResponse.json(
         {
           success: false,
-          error: "Diese Bestellung wurde in der Zwischenzeit von einem anderen Benutzer geaendert. Bitte laden Sie die Seite neu.",
+          error: "Diese Bestellung wurde in der Zwischenzeit von einem anderen Benutzer geändert. Bitte laden Sie die Seite neu.",
         },
         { status: 409 }
       );
@@ -126,7 +126,7 @@ export async function PATCH(
     // 7. Don't allow editing exported orders
     if (order.status === "exported") {
       return NextResponse.json(
-        { success: false, error: "Exportierte Bestellungen koennen nicht mehr bearbeitet werden." },
+        { success: false, error: "Exportierte Bestellungen können nicht mehr bearbeitet werden." },
         { status: 400 }
       );
     }

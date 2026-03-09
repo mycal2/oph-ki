@@ -14,7 +14,7 @@ const STATUS_TABS: Array<{ value: OrderStatus | "all"; label: string }> = [
   { value: "uploaded", label: "Neu" },
   { value: "processing", label: "Verarbeitung" },
   { value: "extracted", label: "Extrahiert" },
-  { value: "review", label: "In Pruefung" },
+  { value: "review", label: "In Prüfung" },
   { value: "approved", label: "Freigegeben" },
   { value: "exported", label: "Exportiert" },
   { value: "error", label: "Fehler" },
@@ -122,7 +122,7 @@ export function OrdersFilterBar({
           <Input
             value={searchInput}
             onChange={(e) => handleSearchChange(e.target.value)}
-            placeholder="Haendler oder Bestellnummer suchen..."
+            placeholder="Händler oder Bestellnummer suchen..."
             className="pl-9 pr-8"
             aria-label="Bestellungen durchsuchen"
           />
@@ -131,7 +131,7 @@ export function OrdersFilterBar({
               type="button"
               onClick={() => handleSearchChange("")}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              aria-label="Suche loeschen"
+              aria-label="Suche löschen"
             >
               <X className="h-4 w-4" />
             </button>
@@ -166,7 +166,7 @@ export function OrdersFilterBar({
             className="shrink-0"
           >
             <X className="h-4 w-4" />
-            Filter zuruecksetzen
+            Filter zurücksetzen
           </Button>
         )}
       </div>

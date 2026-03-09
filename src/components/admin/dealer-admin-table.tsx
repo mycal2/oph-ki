@@ -93,7 +93,7 @@ export function DealerAdminTable({
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Haendler suchen..."
+              placeholder="Händler suchen..."
               className="w-64 pl-9"
             />
           </div>
@@ -109,7 +109,7 @@ export function DealerAdminTable({
         </div>
         <Button onClick={onCreateNew} size="sm">
           <Plus className="mr-1.5 h-4 w-4" />
-          Neuer Haendler
+          Neuer Händler
         </Button>
       </div>
 
@@ -118,7 +118,7 @@ export function DealerAdminTable({
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12 text-center">
           <Building2 className="mb-3 h-10 w-10 text-muted-foreground/50" />
           <p className="text-sm text-muted-foreground">
-            {search ? "Keine Haendler gefunden." : "Noch keine Haendler vorhanden."}
+            {search ? "Keine Händler gefunden." : "Noch keine Händler vorhanden."}
           </p>
         </div>
       ) : (
@@ -220,7 +220,7 @@ export function DealerAdminTable({
       )}
 
       <p className="text-xs text-muted-foreground">
-        {filtered.length} von {dealers.length} Haendlern
+        {filtered.length} von {dealers.length} Händlern
       </p>
     </div>
   );

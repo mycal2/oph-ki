@@ -140,7 +140,7 @@ export function ErpConfigListTable({
                 <TableHead className="hidden md:table-cell">Fallback</TableHead>
                 <TableHead className="text-right hidden sm:table-cell">Mandanten</TableHead>
                 <TableHead className="text-right hidden sm:table-cell">Versionen</TableHead>
-                <TableHead className="hidden lg:table-cell">Letzte Aenderung</TableHead>
+                <TableHead className="hidden lg:table-cell">Letzte Änderung</TableHead>
                 <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
@@ -225,7 +225,7 @@ export function ErpConfigListTable({
                               onClick={() => setDeleteTarget(item)}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
-                              Loeschen
+                              Löschen
                             </DropdownMenuItem>
                           </>
                         )}
@@ -243,10 +243,10 @@ export function ErpConfigListTable({
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Konfiguration loeschen?</AlertDialogTitle>
+            <AlertDialogTitle>Konfiguration löschen?</AlertDialogTitle>
             <AlertDialogDescription>
-              Sind Sie sicher, dass Sie die Konfiguration &quot;{deleteTarget?.name}&quot; loeschen moechten?
-              Diese Aktion kann nicht rueckgaengig gemacht werden.
+              Sind Sie sicher, dass Sie die Konfiguration &quot;{deleteTarget?.name}&quot; löschen möchten?
+              Diese Aktion kann nicht rückgängig gemacht werden.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -255,7 +255,7 @@ export function ErpConfigListTable({
               onClick={handleDeleteConfirm}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Loeschen
+              Löschen
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
