@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -70,6 +70,40 @@ const AVAILABLE_VARIABLES = [
 
 export function XmlTemplateEditor({ template, onChange }: XmlTemplateEditorProps) {
   const [refOpen, setRefOpen] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const cursorPosRef = useRef<number | null>(null); // null = textarea never focused
+
+  // Track cursor position on every interaction with the textarea
+  const handleCursorChange = useCallback(() => {
+    const el = textareaRef.current;
+    if (el) {
+      cursorPosRef.current = el.selectionStart;
+    }
+  }, []);
+
+  // OPH-31: Insert variable at cursor position
+  const handleVariableClick = useCallback((variablePath: string) => {
+    const snippet = `{{${variablePath}}}`;
+    const el = textareaRef.current;
+    // Use last known cursor position; fall back to end of template if never focused
+    const pos = cursorPosRef.current ?? template.length;
+    const selEnd = el ? el.selectionEnd : pos;
+
+    const before = template.slice(0, pos);
+    const after = template.slice(selEnd);
+    const newTemplate = before + snippet + after;
+    onChange(newTemplate);
+
+    // Restore focus and set cursor after inserted snippet
+    const newCursorPos = pos + snippet.length;
+    requestAnimationFrame(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
+        cursorPosRef.current = newCursorPos;
+      }
+    });
+  }, [template, onChange]);
 
   return (
     <Card>
@@ -92,8 +126,11 @@ export function XmlTemplateEditor({ template, onChange }: XmlTemplateEditorProps
         <div className="space-y-1.5">
           <Label className="text-sm">Template</Label>
           <Textarea
+            ref={textareaRef}
             value={template}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={(e) => { onChange(e.target.value); handleCursorChange(); }}
+            onClick={handleCursorChange}
+            onKeyUp={handleCursorChange}
             placeholder={EXAMPLE_TEMPLATE}
             className="min-h-[300px] font-mono text-xs leading-relaxed"
             spellCheck={false}
@@ -117,12 +154,18 @@ export function XmlTemplateEditor({ template, onChange }: XmlTemplateEditorProps
             <div className="rounded-lg border bg-muted/30 p-3">
               <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
                 {AVAILABLE_VARIABLES.map((v) => (
-                  <div key={v.path} className="flex items-baseline gap-2 text-xs">
-                    <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px] shrink-0">
+                  <button
+                    key={v.path}
+                    type="button"
+                    className="group flex items-baseline gap-2 text-xs text-left rounded px-1 py-0.5 -mx-1 hover:bg-primary/10 transition-colors cursor-pointer"
+                    onClick={() => handleVariableClick(v.path)}
+                    title="Klicken zum Einfuegen an Cursorposition"
+                  >
+                    <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px] shrink-0 group-hover:bg-primary/20">
                       {`{{${v.path}}}`}
                     </code>
                     <span className="text-muted-foreground truncate">{v.description}</span>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
