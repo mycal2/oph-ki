@@ -20,6 +20,7 @@ import {
   AlertTriangle,
   Loader2,
   Settings2,
+  Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +41,7 @@ import type {
   TenantOutputFormat,
   FieldMapping,
   XmlStructureNode,
+  ErpColumnMappingExtended,
 } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
@@ -113,7 +115,9 @@ interface FieldMapperPanelProps {
   outputFormat: TenantOutputFormat;
   configName: string;
   currentTemplate: string;
+  currentColumnMappings: ErpColumnMappingExtended[];
   onGenerateTemplate: (template: string) => void;
+  onGenerateCsvColumns: (columns: ErpColumnMappingExtended[]) => void;
   onSaveMappings: (mappings: FieldMapping[]) => Promise<boolean>;
   isSaving: boolean;
 }
@@ -299,10 +303,15 @@ export function FieldMapperPanel({
   outputFormat,
   configName,
   currentTemplate,
+  currentColumnMappings,
   onGenerateTemplate,
+  onGenerateCsvColumns,
   onSaveMappings,
   isSaving,
 }: FieldMapperPanelProps) {
+  const fileType = outputFormat.file_type;
+  const isCsv = fileType === "csv" || fileType === "xlsx";
+
   const [mappings, setMappings] = useState<FieldMapping[]>(
     outputFormat.field_mappings ?? []
   );
@@ -310,6 +319,7 @@ export function FieldMapperPanel({
   const [editingField, setEditingField] = useState<string | null>(null);
   const [overwriteConfirmOpen, setOverwriteConfirmOpen] = useState(false);
   const [pendingTemplate, setPendingTemplate] = useState<string | null>(null);
+  const [pendingCsvColumns, setPendingCsvColumns] = useState<ErpColumnMappingExtended[] | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -429,17 +439,33 @@ export function FieldMapperPanel({
     await onSaveMappings(mappings);
   }, [mappings, onSaveMappings]);
 
-  // Generate template from mappings
+  // Generate output from mappings — branches on file type
   const handleGenerateTemplate = useCallback(async () => {
     // First save mappings
     const saved = await onSaveMappings(mappings);
     if (!saved) return;
 
-    // Import the generator
-    const { generateTemplateFromMappings } = await import(
+    const { generateTemplateFromMappings, generateCsvColumnsFromMappings } = await import(
       "@/lib/generate-template-from-mappings"
     );
 
+    if (isCsv) {
+      // CSV/XLSX: generate ErpColumnMappingExtended[]
+      const csvColumns = generateCsvColumnsFromMappings(
+        outputFormat.detected_schema,
+        mappings
+      );
+      // Check if CSV columns already have content
+      if (currentColumnMappings.length > 0) {
+        setPendingCsvColumns(csvColumns);
+        setOverwriteConfirmOpen(true);
+      } else {
+        onGenerateCsvColumns(csvColumns);
+      }
+      return;
+    }
+
+    // XML: generate Handlebars template string
     const result = generateTemplateFromMappings(
       outputFormat.detected_schema,
       outputFormat.file_type,
@@ -450,7 +476,6 @@ export function FieldMapperPanel({
 
     if (!result.template) return;
 
-    // Check if template already has content
     if (currentTemplate.trim()) {
       setPendingTemplate(result.template);
       setOverwriteConfirmOpen(true);
@@ -462,16 +487,22 @@ export function FieldMapperPanel({
     outputFormat,
     configName,
     currentTemplate,
+    currentColumnMappings,
+    isCsv,
     onSaveMappings,
     onGenerateTemplate,
+    onGenerateCsvColumns,
   ]);
 
   const handleConfirmOverwrite = useCallback(() => {
-    if (pendingTemplate) {
+    if (pendingCsvColumns) {
+      onGenerateCsvColumns(pendingCsvColumns);
+    } else if (pendingTemplate) {
       onGenerateTemplate(pendingTemplate);
     }
     setOverwriteConfirmOpen(false);
     setPendingTemplate(null);
+    setPendingCsvColumns(null);
   }, [pendingTemplate, onGenerateTemplate]);
 
   // The field being edited in the transformation picker
@@ -622,18 +653,27 @@ export function FieldMapperPanel({
 
           {/* Action buttons */}
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              size="sm"
-              onClick={handleGenerateTemplate}
-              disabled={mappings.length === 0 || isSaving}
-            >
-              {isSaving ? (
-                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-              ) : (
-                <Wand2 className="mr-1.5 h-4 w-4" />
-              )}
-              Template generieren
-            </Button>
+            {fileType === "json" ? (
+              <Alert className="flex-1">
+                <Info className="h-4 w-4" />
+                <AlertDescription className="text-xs">
+                  JSON-Export verwendet das Canonical-Format direkt — kein Template erforderlich.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <Button
+                size="sm"
+                onClick={handleGenerateTemplate}
+                disabled={mappings.length === 0 || isSaving}
+              >
+                {isSaving ? (
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                ) : (
+                  <Wand2 className="mr-1.5 h-4 w-4" />
+                )}
+                {isCsv ? "Spalten-Konfiguration generieren" : "Template generieren"}
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -665,10 +705,15 @@ export function FieldMapperPanel({
       <Dialog open={overwriteConfirmOpen} onOpenChange={setOverwriteConfirmOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Bestehendes Template ueberschreiben?</DialogTitle>
+            <DialogTitle>
+              {pendingCsvColumns
+                ? "Bestehende Spalten-Konfiguration ueberschreiben?"
+                : "Bestehendes Template ueberschreiben?"}
+            </DialogTitle>
             <DialogDescription>
-              Das XML-Template-Feld enthaelt bereits Inhalt. Moechten Sie diesen durch
-              das aus den Zuordnungen generierte Template ersetzen?
+              {pendingCsvColumns
+                ? "Die CSV Spalten-Konfiguration enthaelt bereits Eintraege. Moechten Sie diese durch die aus den Zuordnungen generierte Konfiguration ersetzen?"
+                : "Das XML-Template-Feld enthaelt bereits Inhalt. Moechten Sie diesen durch das aus den Zuordnungen generierte Template ersetzen?"}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col sm:flex-row gap-2">
@@ -677,6 +722,7 @@ export function FieldMapperPanel({
               onClick={() => {
                 setOverwriteConfirmOpen(false);
                 setPendingTemplate(null);
+                setPendingCsvColumns(null);
               }}
             >
               Abbrechen

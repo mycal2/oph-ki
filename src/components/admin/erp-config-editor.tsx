@@ -226,10 +226,17 @@ export function ErpConfigEditor({
   const handleFieldMapperGenerateTemplate = useCallback(
     (template: string) => {
       setXmlTemplate(template);
-      // Switch to XML format if not already selected
-      if (format !== "xml") {
-        setFormat("xml");
-      }
+      if (format !== "xml") setFormat("xml");
+      markDirty();
+    },
+    [format, markDirty]
+  );
+
+  // OPH-33: Accept generated CSV columns from field mapper
+  const handleFieldMapperGenerateCsvColumns = useCallback(
+    (columns: import("@/lib/types").ErpColumnMappingExtended[]) => {
+      setColumnMappings(columns);
+      if (format !== "csv") setFormat("csv");
       markDirty();
     },
     [format, markDirty]
@@ -494,14 +501,16 @@ export function ErpConfigEditor({
                 Feld-Zuordnung (Visual Field Mapper)
               </h3>
               <p className="text-sm text-muted-foreground">
-                Ordnen Sie die erkannten Felder aus der Beispieldatei den Handlebars-Variablen
-                zu. Nach dem Zuordnen koennen Sie ein XML-Template automatisch generieren lassen.
+                Ordnen Sie die erkannten Felder aus der Beispieldatei den verfuegbaren Variablen
+                zu. Klicken Sie danach auf "Generieren", um die Konfiguration automatisch zu befuellen.
               </p>
               <FieldMapperPanel
                 outputFormat={savedOutputFormat}
                 configName={configName}
                 currentTemplate={xmlTemplate}
+                currentColumnMappings={columnMappings}
                 onGenerateTemplate={handleFieldMapperGenerateTemplate}
+                onGenerateCsvColumns={handleFieldMapperGenerateCsvColumns}
                 onSaveMappings={handleSaveFieldMappings}
                 isSaving={isFieldMapperSaving}
               />

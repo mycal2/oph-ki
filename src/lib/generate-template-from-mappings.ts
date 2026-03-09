@@ -1,11 +1,9 @@
 /**
  * OPH-32: Generate a Handlebars XML template from field mappings.
+ * OPH-33: Also generates CSV column config (ErpColumnMappingExtended[]) from field mappings.
  *
  * Takes the detected schema, XML structure (if any), and user-defined field mappings
- * to produce a Handlebars XML template. Unmapped fields are omitted.
- *
- * For XML samples: preserves original nesting structure.
- * For flat samples (CSV/XLSX/JSON): generates a simple XML with config name as root.
+ * to produce either a Handlebars XML template or a CSV column config.
  */
 
 import type {
@@ -13,6 +11,7 @@ import type {
   OutputFormatSchemaColumn,
   OutputFormatFileType,
   XmlStructureNode,
+  ErpColumnMappingExtended,
 } from "@/lib/types";
 
 export interface TemplateFromMappingsResult {
@@ -271,4 +270,67 @@ export function generateTemplateFromMappings(
   }
 
   return generateFlatTemplate(columns, mappings, configName);
+}
+
+// ---------------------------------------------------------------------------
+// OPH-33: CSV column config generation
+// ---------------------------------------------------------------------------
+
+/**
+ * Convert a Field Mapper variable path to the CSV source_field convention.
+ * Field Mapper uses "this.X" for line-item fields; CSV builder uses "items[].X".
+ * Header fields (order.X) are unchanged.
+ */
+function toSourceField(variablePath: string): string {
+  if (variablePath.startsWith("this.")) {
+    return "items[]." + variablePath.slice("this.".length);
+  }
+  return variablePath;
+}
+
+/**
+ * OPH-33: Generate an ErpColumnMappingExtended[] array from field mappings.
+ *
+ * Used when the uploaded output format sample is CSV or XLSX.
+ * Preserves detected_schema column order.
+ * Unmapped columns are included with empty source_field.
+ * Mapped columns include the variable path converted to CSV convention.
+ */
+export function generateCsvColumnsFromMappings(
+  columns: OutputFormatSchemaColumn[],
+  mappings: FieldMapping[]
+): ErpColumnMappingExtended[] {
+  const mappingMap = new Map<string, FieldMapping>();
+  for (const m of mappings) {
+    mappingMap.set(m.target_field, m);
+  }
+
+  return columns.map((col) => {
+    const mapping = mappingMap.get(col.column_name);
+
+    if (!mapping) {
+      return {
+        source_field: "",
+        target_column_name: col.column_name,
+        required: false,
+        transformations: [],
+      };
+    }
+
+    // Convert transformation from FieldMapping to ErpTransformationStep[]
+    const transformations: ErpColumnMappingExtended["transformations"] = [];
+    if (mapping.transformation_type === "date" && mapping.transformation_options?.format) {
+      transformations.push({ type: "date_format", param: mapping.transformation_options.format });
+    } else if (mapping.transformation_type === "number" && mapping.transformation_options?.format) {
+      transformations.push({ type: "round", param: mapping.transformation_options.format });
+    }
+    // prefix_suffix has no direct ErpTransformationStep equivalent — omit
+
+    return {
+      source_field: toSourceField(mapping.variable_path),
+      target_column_name: col.column_name,
+      required: col.is_required,
+      transformations,
+    };
+  });
 }
