@@ -14,7 +14,12 @@ export interface Tenant {
   status: TenantStatus;
   erp_type: ErpType;
   contact_email: string;
-  email_notifications_enabled: boolean;
+  /** OPH-35: Granular email notification settings. */
+  email_confirmation_enabled: boolean;
+  email_results_enabled: boolean;
+  email_results_format: "standard_csv" | "tenant_format";
+  email_results_confidence_enabled: boolean;
+  email_postprocess_enabled: boolean;
   created_at: string;
   updated_at: string;
   /** OPH-16: Trial period start date. */
@@ -761,8 +766,12 @@ export interface DataDeletionLogEntry {
 /** Response from GET /api/settings/data-retention. */
 export interface DataRetentionSettings {
   dataRetentionDays: number;
-  /** OPH-13: Whether email notifications are enabled for this tenant (read-only for tenant users). */
-  emailNotificationsEnabled: boolean;
+  /** OPH-35: Granular email notification settings (read-only for tenant users). */
+  emailConfirmationEnabled: boolean;
+  emailResultsEnabled: boolean;
+  emailResultsFormat: "standard_csv" | "tenant_format";
+  emailResultsConfidenceEnabled: boolean;
+  emailPostprocessEnabled: boolean;
 }
 
 /** Response from DELETE /api/orders/[orderId]. */

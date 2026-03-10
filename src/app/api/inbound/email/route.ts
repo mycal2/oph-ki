@@ -99,7 +99,7 @@ export async function POST(
 
     const { data: tenant, error: tenantError } = await adminClient
       .from("tenants")
-      .select("id, name, slug, status, contact_email, allowed_email_domains, email_notifications_enabled")
+      .select("id, name, slug, status, contact_email, allowed_email_domains, email_confirmation_enabled")
       .eq("slug", slug)
       .single();
 
@@ -530,10 +530,10 @@ export async function POST(
     }
 
     // 15. Send confirmation email to sender
-    // OPH-13: Gate behind email_notifications_enabled (trial tenants always get emails)
+    // OPH-35: Gate behind email_confirmation_enabled (trial tenants always get emails)
     {
       const serverApiToken = process.env.POSTMARK_SERVER_API_TOKEN;
-      const shouldSendEmail = isTrial || tenant.email_notifications_enabled;
+      const shouldSendEmail = isTrial || tenant.email_confirmation_enabled;
       if (serverApiToken && shouldSendEmail) {
         const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 

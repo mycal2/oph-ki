@@ -137,8 +137,12 @@ export function TenantFormSheet({
   const [trialExpiresAt, setTrialExpiresAt] = useState<string | null>(null);
   // OPH-17: Allowed email domains
   const [allowedEmailDomains, setAllowedEmailDomains] = useState<string[]>([]);
-  // OPH-13: Email notifications toggle
-  const [emailNotifications, setEmailNotifications] = useState(true);
+  // OPH-35: Granular email notification toggles
+  const [emailConfirmation, setEmailConfirmation] = useState(true);
+  const [emailResults, setEmailResults] = useState(true);
+  const [emailResultsFormat, setEmailResultsFormat] = useState<"standard_csv" | "tenant_format">("standard_csv");
+  const [emailResultsConfidence, setEmailResultsConfidence] = useState(true);
+  const [emailPostprocess, setEmailPostprocess] = useState(false);
   // OPH-28: ERP config selector
   const [erpConfigId, setErpConfigId] = useState<string | null>(null);
   const [erpConfigs, setErpConfigs] = useState<
@@ -172,7 +176,11 @@ export function TenantFormSheet({
     setTrialStartedAt(null);
     setTrialExpiresAt(null);
     setAllowedEmailDomains([]);
-    setEmailNotifications(true);
+    setEmailConfirmation(true);
+    setEmailResults(true);
+    setEmailResultsFormat("standard_csv");
+    setEmailResultsConfidence(true);
+    setEmailPostprocess(false);
     setErpConfigId(null);
     setUsers([]);
     setActiveTab("profile");
@@ -191,7 +199,11 @@ export function TenantFormSheet({
     setTrialStartedAt(tenant.trial_started_at);
     setTrialExpiresAt(tenant.trial_expires_at);
     setAllowedEmailDomains(tenant.allowed_email_domains ?? []);
-    setEmailNotifications(tenant.email_notifications_enabled);
+    setEmailConfirmation(tenant.email_confirmation_enabled);
+    setEmailResults(tenant.email_results_enabled);
+    setEmailResultsFormat(tenant.email_results_format);
+    setEmailResultsConfidence(tenant.email_results_confidence_enabled);
+    setEmailPostprocess(tenant.email_postprocess_enabled);
     setErpConfigId(tenant.erp_config_id ?? null);
     setTenantName(tenant.name);
   }, []);
@@ -275,7 +287,11 @@ export function TenantFormSheet({
         erp_type: erpType,
         status,
         allowed_email_domains: allowedEmailDomains,
-        email_notifications_enabled: emailNotifications,
+        email_confirmation_enabled: emailConfirmation,
+        email_results_enabled: emailResults,
+        email_results_format: emailResultsFormat,
+        email_results_confidence_enabled: emailResultsConfidence,
+        email_postprocess_enabled: emailPostprocess,
         erp_config_id: erpConfigId,
       };
       const result = await onSave(data, false);
@@ -559,22 +575,69 @@ export function TenantFormSheet({
                       )}
                     </div>
 
-                    {/* OPH-13: Email notifications toggle */}
-                    <div className="flex items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <Label htmlFor="email-notifications" className="flex items-center gap-2 text-sm font-medium">
-                          <Mail className="h-4 w-4 text-muted-foreground" />
-                          E-Mail-Benachrichtigungen
-                        </Label>
-                        <p className="text-xs text-muted-foreground">
-                          Automatische E-Mails bei Bestellungseingang und nach Extraktion.
-                        </p>
+                    {/* OPH-35: Granular email notification toggles */}
+                    <div className="rounded-lg border p-4 space-y-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">E-Mail-Benachrichtigungen</span>
                       </div>
-                      <Switch
-                        id="email-notifications"
-                        checked={emailNotifications}
-                        onCheckedChange={setEmailNotifications}
-                      />
+
+                      {/* Toggle a: Confirmation email */}
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label htmlFor="email-confirmation" className="text-sm">Bestätigungs-E-Mail</Label>
+                          <p className="text-xs text-muted-foreground">E-Mail bei Bestellungseingang.</p>
+                        </div>
+                        <Switch id="email-confirmation" checked={emailConfirmation} onCheckedChange={setEmailConfirmation} />
+                      </div>
+
+                      {/* Toggle b: Results email */}
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label htmlFor="email-results" className="text-sm">Ergebnis-E-Mail</Label>
+                          <p className="text-xs text-muted-foreground">E-Mail nach erfolgreicher Extraktion.</p>
+                        </div>
+                        <Switch id="email-results" checked={emailResults} onCheckedChange={setEmailResults} />
+                      </div>
+
+                      {/* Toggle c: Attachment format */}
+                      <div className={`flex items-center justify-between ${!emailResults ? "opacity-50" : ""}`}>
+                        <div className="space-y-0.5">
+                          <Label htmlFor="email-results-format" className="text-sm">Anhang-Format</Label>
+                          <p className="text-xs text-muted-foreground">Format des CSV-/ERP-Anhangs in der Ergebnis-E-Mail.</p>
+                        </div>
+                        <Select
+                          value={emailResultsFormat}
+                          onValueChange={(v) => setEmailResultsFormat(v as "standard_csv" | "tenant_format")}
+                          disabled={!emailResults}
+                        >
+                          <SelectTrigger id="email-results-format" className="w-[180px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="standard_csv">Standard CSV</SelectItem>
+                            <SelectItem value="tenant_format">Mandanten-Format</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Toggle d: Confidence score */}
+                      <div className={`flex items-center justify-between ${!emailResults ? "opacity-50" : ""}`}>
+                        <div className="space-y-0.5">
+                          <Label htmlFor="email-confidence" className="text-sm">Konfidenz-Score</Label>
+                          <p className="text-xs text-muted-foreground">Extraktions-Konfidenz in Ergebnis-E-Mail anzeigen.</p>
+                        </div>
+                        <Switch id="email-confidence" checked={emailResultsConfidence} onCheckedChange={setEmailResultsConfidence} disabled={!emailResults} />
+                      </div>
+
+                      {/* Toggle e: Post-process (placeholder) */}
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label htmlFor="email-postprocess" className="text-sm">Nachbearbeitung (in Vorbereitung)</Label>
+                          <p className="text-xs text-muted-foreground">Zukünftiger Nachbearbeitungsschritt. Keine Auswirkung.</p>
+                        </div>
+                        <Switch id="email-postprocess" checked={emailPostprocess} onCheckedChange={setEmailPostprocess} />
+                      </div>
                     </div>
                   </TabsContent>
 

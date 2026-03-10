@@ -29,8 +29,14 @@ export default function DataProtectionSettingsPage() {
   const [retentionError, setRetentionError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // OPH-13: Email notification status (read-only)
-  const [emailNotificationsEnabled, setEmailNotificationsEnabled] = useState<boolean | null>(null);
+  // OPH-35: Email notification status (read-only)
+  const [emailSettings, setEmailSettings] = useState<{
+    emailConfirmationEnabled: boolean;
+    emailResultsEnabled: boolean;
+    emailResultsFormat: "standard_csv" | "tenant_format";
+    emailResultsConfidenceEnabled: boolean;
+    emailPostprocessEnabled: boolean;
+  } | null>(null);
 
   // Export state
   const [isExporting, setIsExporting] = useState(false);
@@ -49,7 +55,13 @@ export default function DataProtectionSettingsPage() {
 
       setRetentionDays(json.data.dataRetentionDays);
       setSavedRetentionDays(json.data.dataRetentionDays);
-      setEmailNotificationsEnabled(json.data.emailNotificationsEnabled);
+      setEmailSettings({
+        emailConfirmationEnabled: json.data.emailConfirmationEnabled,
+        emailResultsEnabled: json.data.emailResultsEnabled,
+        emailResultsFormat: json.data.emailResultsFormat,
+        emailResultsConfidenceEnabled: json.data.emailResultsConfidenceEnabled,
+        emailPostprocessEnabled: json.data.emailPostprocessEnabled,
+      });
     } catch {
       setRetentionError("Verbindungsfehler beim Laden der Einstellungen.");
     } finally {
@@ -209,8 +221,8 @@ export default function DataProtectionSettingsPage() {
         </CardContent>
       </Card>
 
-      {/* OPH-13: E-Mail-Benachrichtigungen (read-only) */}
-      {emailNotificationsEnabled !== null && (
+      {/* OPH-35: E-Mail-Benachrichtigungen (read-only, 5 toggles) */}
+      {emailSettings !== null && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -221,22 +233,40 @@ export default function DataProtectionSettingsPage() {
               Automatische E-Mails bei Bestellungseingang und nach erfolgreicher Extraktion.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              {emailNotificationsEnabled ? (
-                <>
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  <span className="text-sm font-medium text-green-700">Aktiviert</span>
-                </>
-              ) : (
-                <>
-                  <XCircle className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium text-muted-foreground">Deaktiviert</span>
-                </>
-              )}
-            </div>
+          <CardContent className="space-y-3">
+            {[
+              { label: "Bestätigungs-E-Mail", enabled: emailSettings.emailConfirmationEnabled },
+              { label: "Ergebnis-E-Mail", enabled: emailSettings.emailResultsEnabled },
+              {
+                label: "Anhang-Format",
+                value: emailSettings.emailResultsFormat === "tenant_format" ? "Mandanten-Format" : "Standard CSV",
+              },
+              { label: "Konfidenz-Score in Ergebnis-E-Mail", enabled: emailSettings.emailResultsConfidenceEnabled },
+              { label: "Nachbearbeitung (in Vorbereitung)", enabled: emailSettings.emailPostprocessEnabled },
+            ].map((row) => (
+              <div key={row.label} className="flex items-center gap-2">
+                {"enabled" in row ? (
+                  row.enabled ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+                  ) : (
+                    <XCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+                  )
+                ) : null}
+                <span className="text-sm">
+                  <span className="font-medium">{row.label}</span>
+                  {"value" in row && (
+                    <span className="text-muted-foreground ml-1">— {row.value}</span>
+                  )}
+                  {"enabled" in row && (
+                    <span className={row.enabled ? "text-green-700 ml-1" : "text-muted-foreground ml-1"}>
+                      — {row.enabled ? "Aktiv" : "Inaktiv"}
+                    </span>
+                  )}
+                </span>
+              </div>
+            ))}
             <p className="text-xs text-muted-foreground mt-2">
-              Diese Einstellung wird von Ihrem Plattform-Administrator verwaltet.
+              Diese Einstellungen werden von Ihrem Plattform-Administrator verwaltet.
             </p>
           </CardContent>
         </Card>

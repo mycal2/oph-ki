@@ -50,11 +50,11 @@ export async function GET(): Promise<NextResponse<ApiResponse<DataRetentionSetti
       );
     }
 
-    // 2. Fetch tenant's data retention setting + notification preference
+    // 2. Fetch tenant's data retention setting + notification preferences (OPH-35)
     const adminClient = createAdminClient();
     const { data: tenant, error: tenantError } = await adminClient
       .from("tenants")
-      .select("data_retention_days, email_notifications_enabled")
+      .select("data_retention_days, email_confirmation_enabled, email_results_enabled, email_results_format, email_results_confidence_enabled, email_postprocess_enabled")
       .eq("id", tenantId)
       .single();
 
@@ -69,7 +69,11 @@ export async function GET(): Promise<NextResponse<ApiResponse<DataRetentionSetti
       success: true,
       data: {
         dataRetentionDays: tenant.data_retention_days as number,
-        emailNotificationsEnabled: tenant.email_notifications_enabled as boolean,
+        emailConfirmationEnabled: tenant.email_confirmation_enabled as boolean,
+        emailResultsEnabled: tenant.email_results_enabled as boolean,
+        emailResultsFormat: tenant.email_results_format as "standard_csv" | "tenant_format",
+        emailResultsConfidenceEnabled: tenant.email_results_confidence_enabled as boolean,
+        emailPostprocessEnabled: tenant.email_postprocess_enabled as boolean,
       },
     });
   } catch (error) {
@@ -159,7 +163,7 @@ export async function PATCH(
       .from("tenants")
       .update({ data_retention_days: dataRetentionDays })
       .eq("id", tenantId)
-      .select("data_retention_days, email_notifications_enabled")
+      .select("data_retention_days, email_confirmation_enabled, email_results_enabled, email_results_format, email_results_confidence_enabled, email_postprocess_enabled")
       .single();
 
     if (updateError || !updated) {
@@ -174,7 +178,11 @@ export async function PATCH(
       success: true,
       data: {
         dataRetentionDays: updated.data_retention_days as number,
-        emailNotificationsEnabled: updated.email_notifications_enabled as boolean,
+        emailConfirmationEnabled: updated.email_confirmation_enabled as boolean,
+        emailResultsEnabled: updated.email_results_enabled as boolean,
+        emailResultsFormat: updated.email_results_format as "standard_csv" | "tenant_format",
+        emailResultsConfidenceEnabled: updated.email_results_confidence_enabled as boolean,
+        emailPostprocessEnabled: updated.email_postprocess_enabled as boolean,
       },
     });
   } catch (error) {

@@ -233,17 +233,17 @@ export async function POST(
     if (serverApiToken) {
       after(async () => {
         try {
-          // Check tenant's notification preference
+          // OPH-35: Check tenant's confirmation email preference
           const { data: tenantRow } = await adminClient
             .from("tenants")
-            .select("email_notifications_enabled, status")
+            .select("email_confirmation_enabled, status")
             .eq("id", tenantId)
             .single();
 
           if (
             !tenantRow ||
             tenantRow.status === "trial" ||
-            !tenantRow.email_notifications_enabled
+            !tenantRow.email_confirmation_enabled
           ) {
             return;
           }

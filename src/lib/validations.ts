@@ -461,7 +461,14 @@ export const updateTenantSchema = z.object({
     message: "Ungültiger Status.",
   }).optional(),
   allowed_email_domains: allowedEmailDomainsField.optional(),
-  email_notifications_enabled: z.boolean().optional(),
+  /** OPH-35: Granular email notification settings. */
+  email_confirmation_enabled: z.boolean().optional(),
+  email_results_enabled: z.boolean().optional(),
+  email_results_format: z.enum(["standard_csv", "tenant_format"], {
+    message: "Ungültiges Anhang-Format. Erlaubt: standard_csv, tenant_format",
+  }).optional(),
+  email_results_confidence_enabled: z.boolean().optional(),
+  email_postprocess_enabled: z.boolean().optional(),
   /** OPH-29: Assign an ERP config to this tenant. */
   erp_config_id: z.string().uuid("Ungültige ERP-Konfigurations-ID.").nullable().optional(),
 });

@@ -576,9 +576,10 @@ export async function POST(
       // --- OPH-13: Non-trial result email with notification toggle ---
       const serverApiToken = process.env.POSTMARK_SERVER_API_TOKEN;
       if (serverApiToken && tenantId) {
+        // OPH-35: Fetch granular email notification settings
         const { data: tenantRow } = await adminClient
           .from("tenants")
-          .select("status, email_notifications_enabled")
+          .select("status, email_results_enabled, email_results_confidence_enabled")
           .eq("id", tenantId)
           .single();
 
@@ -639,8 +640,8 @@ export async function POST(
               }
             });
           }
-        } else if (tenantRow?.email_notifications_enabled) {
-          // OPH-13: Non-trial tenant with notifications enabled
+        } else if (tenantRow?.email_results_enabled) {
+          // OPH-35: Non-trial tenant with results email enabled
           const { data: orderMeta } = await adminClient
             .from("orders")
             .select("uploaded_by, sender_email")
@@ -694,6 +695,8 @@ export async function POST(
 
                 if (!toEmail) return;
 
+                // OPH-35: Only include confidence score if toggle is enabled
+                const includeConfidence = tenantRow?.email_results_confidence_enabled !== false;
                 await sendOrderResultEmail({
                   serverApiToken,
                   toEmail,
@@ -701,7 +704,9 @@ export async function POST(
                   orderId,
                   siteUrl,
                   isReExtraction,
-                  confidenceScore: finalExtractedData.extraction_metadata?.confidence_score ?? null,
+                  confidenceScore: includeConfidence
+                    ? (finalExtractedData.extraction_metadata?.confidence_score ?? null)
+                    : null,
                   orderSummary: {
                     orderNumber: finalExtractedData.order.order_number ?? null,
                     orderDate: finalExtractedData.order.order_date ?? null,
@@ -743,13 +748,14 @@ export async function POST(
       // --- OPH-13: Send failure email to non-trial tenant submitter ---
       const failureApiToken = process.env.POSTMARK_SERVER_API_TOKEN;
       if (failureApiToken && tenantId) {
-        const { data: tenantRow } = await adminClient
+        // OPH-35: Fetch granular email notification settings for failure path
+        const { data: failureTenantRow } = await adminClient
           .from("tenants")
-          .select("status, email_notifications_enabled")
+          .select("status, email_results_enabled")
           .eq("id", tenantId)
           .single();
 
-        if (tenantRow?.status === "trial") {
+        if (failureTenantRow?.status === "trial") {
           // OPH-16: Trial flow — always send failure email to sender
           const { data: orderMeta } = await adminClient
             .from("orders")
@@ -774,8 +780,8 @@ export async function POST(
               }
             });
           }
-        } else if (tenantRow?.email_notifications_enabled) {
-          // OPH-13: Non-trial tenant with notifications enabled
+        } else if (failureTenantRow?.email_results_enabled) {
+          // OPH-35: Non-trial tenant with results email enabled
           const { data: orderMeta } = await adminClient
             .from("orders")
             .select("uploaded_by, sender_email")
