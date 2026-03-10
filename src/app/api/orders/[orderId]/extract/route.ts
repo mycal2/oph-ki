@@ -12,7 +12,9 @@ import { getMappingsForDealer, applyMappings, formatMappingsForPrompt } from "@/
 import { mimeTypeToFormatType, getColumnMappingProfile, formatColumnMappingForPrompt } from "@/lib/column-mappings";
 import { sendTrialResultEmail, sendTrialFailureEmail, sendOrderResultEmail, sendOrderFailureEmail, sendPlatformErrorNotification } from "@/lib/postmark";
 import { calculateConfidenceScore } from "@/lib/confidence-score";
-import type { AppMetadata, ApiResponse, ErpColumnMappingExtended, OutputFormatSchemaColumn } from "@/lib/types";
+import { generateExportContent } from "@/lib/erp-transformations";
+import { generateFilename } from "@/lib/export-utils";
+import type { AppMetadata, ApiResponse, CanonicalLineItem, CanonicalOrderData, ErpColumnMappingExtended, ExportFormat, OutputFormatSchemaColumn } from "@/lib/types";
 
 /** Max extraction attempts per order before rejecting further retries. */
 const MAX_EXTRACTION_ATTEMPTS = 5;
@@ -21,6 +23,28 @@ const MAX_EXTRACTION_ATTEMPTS = 5;
 function safeCompare(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
+
+/** Generate a standard CSV from extracted line items (used as fallback for email attachment). */
+function generateStandardCsv(
+  lineItems: CanonicalLineItem[],
+  extractedData: CanonicalOrderData
+): string {
+  const orderCurrency = (extractedData.order.currency as string) ?? "";
+  const csvHeader = "Pos;Artikelnummer;Bezeichnung;Menge;Einheit;Einzelpreis;Gesamtpreis;Währung";
+  const csvRows = lineItems.map((item, idx) =>
+    [
+      item.position ?? idx + 1,
+      `"${String(item.article_number ?? "").replace(/"/g, '""')}"`,
+      `"${String(item.description ?? "").replace(/"/g, '""')}"`,
+      item.quantity ?? "",
+      item.unit ?? "",
+      item.unit_price ?? "",
+      item.total_price ?? "",
+      orderCurrency,
+    ].join(";")
+  );
+  return [csvHeader, ...csvRows].join("\n");
 }
 
 /**
@@ -579,7 +603,7 @@ export async function POST(
         // OPH-35: Fetch granular email notification settings
         const { data: tenantRow } = await adminClient
           .from("tenants")
-          .select("status, email_results_enabled, email_results_confidence_enabled")
+          .select("status, slug, email_results_enabled, email_results_confidence_enabled, email_results_format, erp_config_id")
           .eq("id", tenantId)
           .single();
 
@@ -653,21 +677,44 @@ export async function POST(
             const lineItems = finalExtractedData.order.line_items ?? [];
             const isReExtraction = currentAttempts > 0; // currentAttempts was incremented before extraction
 
-            const orderCurrency = (finalExtractedData.order.currency as string) ?? "";
-            const csvHeader = "Pos;Artikelnummer;Bezeichnung;Menge;Einheit;Einzelpreis;Gesamtpreis;Währung";
-            const csvRows = lineItems.map((item, idx) =>
-              [
-                item.position ?? idx + 1,
-                `"${String(item.article_number ?? "").replace(/"/g, '""')}"`,
-                `"${String(item.description ?? "").replace(/"/g, '""')}"`,
-                item.quantity ?? "",
-                item.unit ?? "",
-                item.unit_price ?? "",
-                item.total_price ?? "",
-                orderCurrency,
-              ].join(";")
-            );
-            const csvContent = [csvHeader, ...csvRows].join("\n");
+            // OPH-35: Generate attachment in tenant format or standard CSV
+            let csvContent: string;
+            let attachmentFilename: string | undefined;
+            const useTenantFormat = tenantRow?.email_results_format === "tenant_format" && tenantRow?.erp_config_id;
+
+            if (useTenantFormat) {
+              // Fetch ERP config for tenant-specific format
+              const { data: erpConfig } = await adminClient
+                .from("erp_configs")
+                .select("*")
+                .eq("id", tenantRow.erp_config_id as string)
+                .maybeSingle();
+
+              if (erpConfig) {
+                const effectiveFormat = (erpConfig.format as ExportFormat) ?? "csv";
+                const columnMappings = (erpConfig.column_mappings as ErpColumnMappingExtended[]) ?? [];
+                const tenantSlug = (tenantRow.slug as string) ?? "export";
+                const { content } = generateExportContent(
+                  finalExtractedData,
+                  effectiveFormat,
+                  columnMappings,
+                  {
+                    separator: (erpConfig.separator as string) ?? ";",
+                    quoteChar: (erpConfig.quote_char as string) ?? '"',
+                    lineEnding: (erpConfig.line_ending as string) ?? "CRLF",
+                    decimalSeparator: (erpConfig.decimal_separator as string) ?? ".",
+                    xmlTemplate: (erpConfig.xml_template as string) ?? null,
+                  }
+                );
+                csvContent = content;
+                attachmentFilename = generateFilename(tenantSlug, finalExtractedData.order.order_number, effectiveFormat);
+              } else {
+                // Fallback to standard CSV if ERP config not found
+                csvContent = generateStandardCsv(lineItems, finalExtractedData);
+              }
+            } else {
+              csvContent = generateStandardCsv(lineItems, finalExtractedData);
+            }
 
             const dealerName = finalExtractedData.order.dealer?.name ?? null;
 
@@ -717,6 +764,7 @@ export async function POST(
                   },
                   lineItems,
                   csvContent,
+                  attachmentFilename,
                 });
               } catch (err) {
                 console.error("Failed to send order result email:", err);

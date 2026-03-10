@@ -546,8 +546,9 @@ export async function sendOrderResultEmail(params: {
     total_price?: number | string | null;
   }>;
   csvContent: string;
+  attachmentFilename?: string;
 }): Promise<void> {
-  const { serverApiToken, toEmail, toName, orderId, siteUrl, isReExtraction, confidenceScore, orderSummary, lineItems, csvContent } = params;
+  const { serverApiToken, toEmail, toName, orderId, siteUrl, isReExtraction, confidenceScore, orderSummary, lineItems, csvContent, attachmentFilename } = params;
 
   const fromAddress = resolveSenderAddress(siteUrl);
   if (!fromAddress) return;
@@ -650,7 +651,7 @@ export async function sendOrderResultEmail(params: {
       <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Gesamtbetrag:</td><td style="padding:4px 0;font-weight:700;color:#111827">${esc(total)}</td></tr>
     </table>
     ${itemsHtml}
-    <p style="margin:24px 0 12px;font-size:14px;color:#374151">Die vollständigen Daten finden Sie als CSV-Datei im Anhang.</p>
+    <p style="margin:24px 0 12px;font-size:14px;color:#374151">Die vollständigen Daten finden Sie als Datei im Anhang.</p>
     <a href="${esc(orderUrl)}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500">Bestellung prüfen & freigeben</a>
   `);
 
@@ -669,7 +670,7 @@ export async function sendOrderResultEmail(params: {
     `  Positionen:    ${orderSummary.itemCount}`,
     `  Gesamtbetrag:  ${total}`,
     warningsText,
-    `Die vollständigen Daten finden Sie als CSV-Datei im Anhang.`,
+    `Die vollständigen Daten finden Sie als Datei im Anhang.`,
     "",
     `Bestellung prüfen & freigeben: ${orderUrl}`,
     "",
@@ -678,6 +679,14 @@ export async function sendOrderResultEmail(params: {
   ].join("\n");
 
   const csvDate = new Date().toISOString().slice(0, 10);
+  const defaultName = `bestellung_${orderId.slice(0, 8)}_${csvDate}.csv`;
+  const finalName = attachmentFilename ?? defaultName;
+  const contentType = finalName.endsWith(".xml")
+    ? "application/xml"
+    : finalName.endsWith(".json")
+      ? "application/json"
+      : "text/csv";
+
   await postmarkFetchWithRetry(serverApiToken, {
     From: fromAddress,
     To: toEmail,
@@ -686,9 +695,9 @@ export async function sendOrderResultEmail(params: {
     TextBody: textBody,
     Attachments: [
       {
-        Name: `bestellung_${orderId.slice(0, 8)}_${csvDate}.csv`,
+        Name: finalName,
         Content: Buffer.from(csvContent, "utf-8").toString("base64"),
-        ContentType: "text/csv",
+        ContentType: contentType,
       },
     ],
   }, "Order result email");
