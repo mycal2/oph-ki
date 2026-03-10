@@ -527,6 +527,8 @@ export async function sendOrderResultEmail(params: {
   orderId: string;
   siteUrl: string;
   isReExtraction: boolean;
+  emailSubject?: string | null;
+  customerNumber?: string | null;
   confidenceScore?: number | null;
   orderSummary: {
     orderNumber: string | null;
@@ -548,7 +550,7 @@ export async function sendOrderResultEmail(params: {
   csvContent: string;
   attachmentFilename?: string;
 }): Promise<void> {
-  const { serverApiToken, toEmail, toName, orderId, siteUrl, isReExtraction, confidenceScore, orderSummary, lineItems, csvContent, attachmentFilename } = params;
+  const { serverApiToken, toEmail, toName, orderId, siteUrl, isReExtraction, emailSubject, customerNumber, confidenceScore, orderSummary, lineItems, csvContent, attachmentFilename } = params;
 
   const fromAddress = resolveSenderAddress(siteUrl);
   if (!fromAddress) return;
@@ -642,11 +644,16 @@ export async function sendOrderResultEmail(params: {
   const htmlBody = wrapHtmlEmail(siteUrl, `
     <h2 style="margin:0 0 8px;font-size:18px;color:#111827">Bestellung extrahiert${updatedSuffix}</h2>
     <p style="margin:0 0 24px;color:#6b7280;font-size:14px">Die Bestelldaten wurden erfolgreich extrahiert.</p>
-    ${warningsHtml}
+    ${warningsHtml}${emailSubject ? `
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:10px 14px;margin-bottom:16px">
+      <p style="margin:0;font-size:12px;color:#6b7280;font-weight:600">Original E-Mail</p>
+      <p style="margin:4px 0 0;font-size:13px;color:#374151">Betreff: ${esc(emailSubject)}</p>
+    </div>` : ""}
     <table style="font-size:14px;margin-bottom:20px">
       <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Bestellnummer:</td><td style="padding:4px 0;font-weight:500">${esc(orderSummary.orderNumber ?? "–")}</td></tr>
       <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Bestelldatum:</td><td style="padding:4px 0;font-weight:500">${esc(orderSummary.orderDate ?? "–")}</td></tr>
-      <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Händler:</td><td style="padding:4px 0;font-weight:500">${esc(orderSummary.dealerName ?? "–")}</td></tr>
+      <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Händler:</td><td style="padding:4px 0;font-weight:500">${esc(orderSummary.dealerName ?? "–")}</td></tr>${customerNumber ? `
+      <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Kundennummer:</td><td style="padding:4px 0;font-weight:500">${esc(customerNumber)}</td></tr>` : ""}
       <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Positionen:</td><td style="padding:4px 0;font-weight:500">${orderSummary.itemCount}</td></tr>
       <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Gesamtbetrag:</td><td style="padding:4px 0;font-weight:700;color:#111827">${esc(total)}</td></tr>${confidenceScore != null ? `
       <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Extraktionssicherheit:</td><td style="padding:4px 0;font-weight:500;color:${confidenceScore >= 0.8 ? "#16a34a" : confidenceScore >= 0.5 ? "#ca8a04" : "#dc2626"}">${Math.round(confidenceScore * 100)} %</td></tr>` : ""}
@@ -668,12 +675,14 @@ export async function sendOrderResultEmail(params: {
     `Hallo ${toName || toEmail},`,
     "",
     `Die Bestelldaten wurden erfolgreich extrahiert${updatedSuffix}.`,
+    ...(emailSubject ? ["", `  Original E-Mail`, `  Betreff: ${emailSubject}`] : []),
     "",
-    `  Bestellnummer: ${orderSummary.orderNumber ?? "–"}`,
-    `  Bestelldatum:  ${orderSummary.orderDate ?? "–"}`,
-    `  Händler:       ${orderSummary.dealerName ?? "–"}`,
-    `  Positionen:    ${orderSummary.itemCount}`,
-    `  Gesamtbetrag:  ${total}`,
+    `  Bestellnummer:  ${orderSummary.orderNumber ?? "–"}`,
+    `  Bestelldatum:   ${orderSummary.orderDate ?? "–"}`,
+    `  Händler:        ${orderSummary.dealerName ?? "–"}`,
+    ...(customerNumber ? [`  Kundennummer:   ${customerNumber}`] : []),
+    `  Positionen:     ${orderSummary.itemCount}`,
+    `  Gesamtbetrag:   ${total}`,
     ...(confidenceText ? [confidenceText] : []),
     warningsText,
     `Die vollständigen Daten finden Sie als Datei im Anhang.`,

@@ -668,7 +668,7 @@ export async function POST(
           // OPH-35: Non-trial tenant with results email enabled
           const { data: orderMeta } = await adminClient
             .from("orders")
-            .select("uploaded_by, sender_email")
+            .select("uploaded_by, sender_email, subject")
             .eq("id", orderId)
             .single();
 
@@ -751,6 +751,8 @@ export async function POST(
                   orderId,
                   siteUrl,
                   isReExtraction,
+                  emailSubject: (orderMeta.subject as string | null) ?? null,
+                  customerNumber: ((finalExtractedData.order as unknown as Record<string, unknown>).customer_number as string | null) ?? null,
                   confidenceScore: includeConfidence
                     ? (finalExtractedData.extraction_metadata?.confidence_score ?? null)
                     : null,
