@@ -652,8 +652,8 @@ export async function sendOrderResultEmail(params: {
     <table style="font-size:14px;margin-bottom:20px">
       <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Bestellnummer:</td><td style="padding:4px 0;font-weight:500">${esc(orderSummary.orderNumber ?? "–")}</td></tr>
       <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Bestelldatum:</td><td style="padding:4px 0;font-weight:500">${esc(orderSummary.orderDate ?? "–")}</td></tr>
-      <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Händler:</td><td style="padding:4px 0;font-weight:500">${esc(orderSummary.dealerName ?? "–")}</td></tr>${customerNumber ? `
-      <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Kundennummer:</td><td style="padding:4px 0;font-weight:500">${esc(customerNumber)}</td></tr>` : ""}
+      <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Händler:</td><td style="padding:4px 0;font-weight:500">${esc(orderSummary.dealerName ?? "–")}</td></tr>
+      <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Kundennummer:</td><td style="padding:4px 0;font-weight:500">${esc(customerNumber ?? "–")}</td></tr>
       <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Positionen:</td><td style="padding:4px 0;font-weight:500">${orderSummary.itemCount}</td></tr>
       <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Gesamtbetrag:</td><td style="padding:4px 0;font-weight:700;color:#111827">${esc(total)}</td></tr>${confidenceScore != null ? `
       <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Extraktionssicherheit:</td><td style="padding:4px 0;font-weight:500;color:${confidenceScore >= 0.8 ? "#16a34a" : confidenceScore >= 0.5 ? "#ca8a04" : "#dc2626"}">${Math.round(confidenceScore * 100)} %</td></tr>` : ""}
@@ -680,7 +680,7 @@ export async function sendOrderResultEmail(params: {
     `  Bestellnummer:  ${orderSummary.orderNumber ?? "–"}`,
     `  Bestelldatum:   ${orderSummary.orderDate ?? "–"}`,
     `  Händler:        ${orderSummary.dealerName ?? "–"}`,
-    ...(customerNumber ? [`  Kundennummer:   ${customerNumber}`] : []),
+    `  Kundennummer:   ${customerNumber ?? "–"}`,
     `  Positionen:     ${orderSummary.itemCount}`,
     `  Gesamtbetrag:   ${total}`,
     ...(confidenceText ? [confidenceText] : []),

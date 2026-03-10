@@ -751,7 +751,7 @@ export async function POST(
                   orderId,
                   siteUrl,
                   isReExtraction,
-                  emailSubject: (orderMeta.subject as string | null) ?? null,
+                  emailSubject: (orderMeta.subject as string | null) ?? orderSubject ?? null,
                   customerNumber: ((finalExtractedData.order as unknown as Record<string, unknown>).customer_number as string | null) ?? null,
                   confidenceScore: includeConfidence
                     ? (finalExtractedData.extraction_metadata?.confidence_score ?? null)
