@@ -154,6 +154,7 @@ export function TenantAdminTable({
                 <TableHead>Name</TableHead>
                 <TableHead className="hidden md:table-cell">Slug</TableHead>
                 <TableHead className="hidden sm:table-cell">ERP-Typ</TableHead>
+                <TableHead className="hidden lg:table-cell">ERP-Konfiguration</TableHead>
                 <TableHead className="hidden sm:table-cell">Status</TableHead>
                 <TableHead className="text-right">Bestellungen</TableHead>
                 <TableHead className="text-right hidden sm:table-cell">Letzter Monat</TableHead>
@@ -192,6 +193,9 @@ export function TenantAdminTable({
                       <Badge variant="secondary" className="text-xs">
                         {ERP_LABELS[tenant.erp_type]}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
+                      {tenant.erp_config_name ?? "—"}
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">
                       <div className="flex flex-col gap-1">
