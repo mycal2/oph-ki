@@ -15,29 +15,32 @@ Currently, each tenant has a single boolean `email_notifications_enabled` that t
 This feature replaces that single toggle with four granular, independently controllable switches, giving Platform Admins
 fine-grained control over what each tenant receives.
 
-The four toggles are:
+The five toggles are:
 - **a. Confirmation email** — sent immediately on order receipt ("Bestellung empfangen")
 - **b. Results email** — sent when extraction completes, with structured order data
 - **c. Results email attachment format** — when b is enabled: standard CSV vs. the tenant's configured ERP output format (XML, CSV, JSON, etc.)
-- **d. Post-process** — placeholder toggle for a future post-processing step; visible in UI but has no backend effect yet
+- **d. Confidence score in results email** — when b is enabled: whether the overall extraction confidence score is shown in the results email body
+- **e. Post-process** — placeholder toggle for a future post-processing step; visible in UI but has no backend effect yet
 
-The existing `email_notifications_enabled` column is replaced by these four new fields.
+The existing `email_notifications_enabled` column is replaced by these five new fields.
 
 ## User Stories
 
 1. As a Platform Admin, I want to enable or disable the confirmation email per tenant, so that tenants who only care about extraction results aren't notified twice.
 2. As a Platform Admin, I want to enable or disable the results email per tenant, so that tenants who prefer to work solely inside the platform aren't sent emails they don't need.
 3. As a Platform Admin, I want to choose whether the results email attachment uses standard CSV or the tenant's own configured ERP format, so that tenants receive extraction results in the format their ERP system can directly import.
-4. As a Platform Admin, I want a post-process toggle I can enable per tenant today, so that when the post-process feature is defined and built, it is already configured for the tenants who need it.
-5. As a Tenant Admin, I want to see (read-only) which email notifications are active for my tenant, so that I can tell my team what to expect after submitting an order.
+4. As a Platform Admin, I want to control whether the extraction confidence score is shown in the results email, so that tenants who find it confusing can receive a cleaner email.
+5. As a Platform Admin, I want a post-process toggle I can enable per tenant today, so that when the post-process feature is defined and built, it is already configured for the tenants who need it.
+6. As a Tenant Admin, I want to see (read-only) which email notifications are active for my tenant, so that I can tell my team what to expect after submitting an order.
 
 ## Acceptance Criteria
 
 ### AC-1: Granular toggles replace master toggle
-- [ ] The single `email_notifications_enabled` field is retired and replaced by four new per-tenant fields:
+- [ ] The single `email_notifications_enabled` field is retired and replaced by five new per-tenant fields:
   - `email_confirmation_enabled` (boolean, default: true)
   - `email_results_enabled` (boolean, default: true)
   - `email_results_format` (enum: `"standard_csv"` | `"tenant_format"`, default: `"standard_csv"`)
+  - `email_results_confidence_enabled` (boolean, default: true)
   - `email_postprocess_enabled` (boolean, default: false)
 - [ ] All existing email-sending code that currently checks `email_notifications_enabled` is updated to check the relevant new field
 
@@ -58,27 +61,35 @@ The existing `email_notifications_enabled` column is replaced by these four new 
 - [ ] When format is `"tenant_format"` AND the tenant has NO configured ERP output format: fall back to the standard CSV attachment (same as `"standard_csv"` mode) — no email is withheld
 - [ ] The fallback to CSV is silent (no error notification)
 
-### AC-5: Post-process toggle (d)
+### AC-5: Confidence score toggle (d)
+- [ ] When `email_results_confidence_enabled` is true AND `email_results_enabled` is true: the results email body includes the overall extraction confidence score (e.g. "Konfidenz: 94 %")
+- [ ] When `email_results_confidence_enabled` is false: the confidence score is omitted from the results email body entirely — no placeholder, no mention
+- [ ] Toggle d is only meaningful when toggle b is enabled; when b is off, d has no effect
+- [ ] Default for new tenants: **enabled** (confidence score shown by default)
+- [ ] Existing tenants migrated from `email_notifications_enabled = true` get `email_results_confidence_enabled = true`
+
+### AC-6: Post-process toggle (e)
 - [ ] Toggle `email_postprocess_enabled` is visible and editable in the admin UI
 - [ ] Setting this toggle has no backend effect in this feature — it is stored in the database only
 - [ ] The UI labels the toggle clearly as a future feature placeholder (e.g. "Nachbearbeitung (in Vorbereitung)")
 - [ ] No error or warning is thrown if this toggle is true at runtime
 
-### AC-6: Admin UI — Platform Admin
-- [ ] The four toggles are displayed in the tenant edit form (Admin > Mandanten > Edit)
-- [ ] Toggles a and b are standard on/off switches
+### AC-7: Admin UI — Platform Admin
+- [ ] All five toggles are displayed in the tenant edit form (Admin > Mandanten > Edit)
+- [ ] Toggles a, b, d, e are standard on/off switches
 - [ ] Toggle c is shown as a two-option selector (Standard CSV / Mandanten-Format) and is visually disabled / grayed out when toggle b is off
-- [ ] Toggle d is shown as an on/off switch with a label indicating it is reserved for future use
+- [ ] Toggle d is visually disabled / grayed out when toggle b is off
+- [ ] Toggle e is shown with a label indicating it is reserved for future use
 - [ ] Changes take effect immediately for all future emails (no restart required)
 
-### AC-7: Tenant settings read-only view
-- [ ] The tenant's own settings page (e.g. `/settings/data-protection` or equivalent) shows the current state of all four toggles as read-only
+### AC-8: Tenant settings read-only view
+- [ ] The tenant's own settings page (e.g. `/settings/data-protection` or equivalent) shows the current state of all five toggles as read-only
 - [ ] Text reads: "Diese Einstellung wird von Ihrem Plattform-Administrator verwaltet."
 - [ ] The post-process toggle is shown with the same "in Vorbereitung" label
 
-### AC-8: Migration — existing tenants
-- [ ] Existing tenants with `email_notifications_enabled = true` are migrated to: `email_confirmation_enabled = true`, `email_results_enabled = true`, `email_results_format = 'standard_csv'`, `email_postprocess_enabled = false`
-- [ ] Existing tenants with `email_notifications_enabled = false` are migrated to: `email_confirmation_enabled = false`, `email_results_enabled = false`, `email_results_format = 'standard_csv'`, `email_postprocess_enabled = false`
+### AC-9: Migration — existing tenants
+- [ ] Existing tenants with `email_notifications_enabled = true` are migrated to: `email_confirmation_enabled = true`, `email_results_enabled = true`, `email_results_format = 'standard_csv'`, `email_results_confidence_enabled = true`, `email_postprocess_enabled = false`
+- [ ] Existing tenants with `email_notifications_enabled = false` are migrated to: `email_confirmation_enabled = false`, `email_results_enabled = false`, `email_results_format = 'standard_csv'`, `email_results_confidence_enabled = true`, `email_postprocess_enabled = false`
 - [ ] The `email_notifications_enabled` column is removed after migration
 
 ### AC-9: Validation
@@ -121,43 +132,46 @@ Admin > Mandanten > Edit (existing: tenant-form-sheet.tsx)
 |   +-- Toggle c: Anhang-Format (two-option selector, disabled when b is off)
 |   |   +-- Option 1: Standard CSV
 |   |   +-- Option 2: Mandanten-Format (XML/CSV/JSON per ERP config)
-|   +-- Toggle d: Nachbearbeitung (on/off, labeled "in Vorbereitung")
+|   +-- Toggle d: Konfidenz-Score (on/off switch, disabled when b is off)
+|   +-- Toggle e: Nachbearbeitung (on/off, labeled "in Vorbereitung")
 
 Tenant Settings Page (existing: /settings/data-protection/)
 +-- [UPDATE] E-Mail-Benachrichtigungen Section (read-only)
 |   +-- Read-only row: Bestätigungs-E-Mail — Aktiv / Inaktiv
 |   +-- Read-only row: Ergebnis-E-Mail — Aktiv / Inaktiv
 |   +-- Read-only row: Anhang-Format — Standard CSV / Mandanten-Format
+|   +-- Read-only row: Konfidenz-Score — Aktiv / Inaktiv
 |   +-- Read-only row: Nachbearbeitung — Aktiv / Inaktiv (in Vorbereitung)
 |   +-- Note: "Diese Einstellung wird von Ihrem Plattform-Administrator verwaltet."
 ```
 
 ### Data Model
 
-Changes to the `tenants` database table — the old field is replaced by four new ones:
+Changes to the `tenants` database table — the old field is replaced by five new ones:
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `email_notifications_enabled` | ~~removed~~ | — | Replaced by the four fields below |
+| `email_notifications_enabled` | ~~removed~~ | — | Replaced by the five fields below |
 | `email_confirmation_enabled` | boolean | true | Send confirmation email on receipt |
 | `email_results_enabled` | boolean | true | Send results email after extraction |
 | `email_results_format` | enum (`standard_csv` / `tenant_format`) | `standard_csv` | Attachment format for results email |
+| `email_results_confidence_enabled` | boolean | true | Show confidence score in results email body |
 | `email_postprocess_enabled` | boolean | false | Post-process placeholder (no effect yet) |
 
 **One-time migration:**
-- Old `= true` → confirmation ✅, results ✅, format: `standard_csv`, postprocess ❌
-- Old `= false` → confirmation ❌, results ❌, format: `standard_csv`, postprocess ❌
+- Old `= true` → confirmation ✅, results ✅, format: `standard_csv`, confidence ✅, postprocess ❌
+- Old `= false` → confirmation ❌, results ❌, format: `standard_csv`, confidence ✅, postprocess ❌
 
 ### Backend Touch Points (no new API routes)
 
 | File | Change |
 |------|--------|
-| Database migration | Add 4 columns, migrate from old column, drop old column |
-| `tenant-form-sheet.tsx` | Replace single toggle with four-control section |
-| `/settings/data-protection` page | Extend read-only section with four status rows |
-| `settings/data-retention` API | Return four new fields instead of old single field |
-| `admin/tenants/[id]` PATCH | Accept and validate the four new fields |
-| `validations.ts` | Replace old boolean with four validated fields |
+| Database migration | Add 5 columns, migrate from old column, drop old column |
+| `tenant-form-sheet.tsx` | Replace single toggle with five-control section |
+| `/settings/data-protection` page | Extend read-only section with five status rows |
+| `settings/data-retention` API | Return five new fields instead of old single field |
+| `admin/tenants/[id]` PATCH | Accept and validate the five new fields |
+| `validations.ts` | Replace old boolean with five validated fields |
 | `types.ts` | Update Tenant type |
 | `upload/confirm` route | Check `email_confirmation_enabled` |
 | `extract` route | Check `email_results_enabled`; switch attachment to ERP format when `tenant_format` |
@@ -168,6 +182,7 @@ Changes to the `tenants` database table — the old field is replaced by four ne
 - **No new API routes** — all changes flow through the existing tenant PATCH endpoint.
 - **Attachment format reuses existing ERP export engine** — the export logic from OPH-6/OPH-9 already generates XML/CSV/JSON; toggle c just routes the results email to use it.
 - **Toggle c is disabled in UI when toggle b is off** — prevents confusing configuration state without adding backend validation complexity.
+- **Toggle d is disabled in UI when toggle b is off** — confidence score is only relevant when results email is active.
 - **Post-process toggle is backend-inert** — stored in DB, returned in API, but no email code reads it until the post-process feature is defined.
 - **No new packages needed** — shadcn/ui Switch and RadioGroup are already installed.
 
