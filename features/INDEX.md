@@ -47,7 +47,7 @@
 | OPH-33 | Field Mapper Output for All Formats (CSV, JSON, XML) | In Progress | [OPH-33-csv-field-mapper-prefill.md](OPH-33-csv-field-mapper-prefill.md) | 2026-03-09 |
 | OPH-34 | Admin Manual Upload with Tenant Selection | In Progress | [OPH-34-admin-upload-tenant-selection.md](OPH-34-admin-upload-tenant-selection.md) | 2026-03-09 |
 
-| OPH-35 | Per-Tenant Email Notification Settings | Planned | [OPH-35-per-tenant-email-notification-settings.md](OPH-35-per-tenant-email-notification-settings.md) | 2026-03-10 |
+| OPH-35 | Per-Tenant Email Notification Settings | In Progress | [OPH-35-per-tenant-email-notification-settings.md](OPH-35-per-tenant-email-notification-settings.md) | 2026-03-10 |
 
 <!-- Add features above this line -->
 

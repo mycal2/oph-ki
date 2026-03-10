@@ -110,7 +110,71 @@ The existing `email_notifications_enabled` column is replaced by these four new 
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Component Structure
+
+```
+Admin > Mandanten > Edit (existing: tenant-form-sheet.tsx)
++-- [UPDATE] E-Mail-Benachrichtigungen Section
+|   +-- Toggle a: Bestätigungs-E-Mail (on/off switch)
+|   +-- Toggle b: Ergebnis-E-Mail (on/off switch)
+|   +-- Toggle c: Anhang-Format (two-option selector, disabled when b is off)
+|   |   +-- Option 1: Standard CSV
+|   |   +-- Option 2: Mandanten-Format (XML/CSV/JSON per ERP config)
+|   +-- Toggle d: Nachbearbeitung (on/off, labeled "in Vorbereitung")
+
+Tenant Settings Page (existing: /settings/data-protection/)
++-- [UPDATE] E-Mail-Benachrichtigungen Section (read-only)
+|   +-- Read-only row: Bestätigungs-E-Mail — Aktiv / Inaktiv
+|   +-- Read-only row: Ergebnis-E-Mail — Aktiv / Inaktiv
+|   +-- Read-only row: Anhang-Format — Standard CSV / Mandanten-Format
+|   +-- Read-only row: Nachbearbeitung — Aktiv / Inaktiv (in Vorbereitung)
+|   +-- Note: "Diese Einstellung wird von Ihrem Plattform-Administrator verwaltet."
+```
+
+### Data Model
+
+Changes to the `tenants` database table — the old field is replaced by four new ones:
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `email_notifications_enabled` | ~~removed~~ | — | Replaced by the four fields below |
+| `email_confirmation_enabled` | boolean | true | Send confirmation email on receipt |
+| `email_results_enabled` | boolean | true | Send results email after extraction |
+| `email_results_format` | enum (`standard_csv` / `tenant_format`) | `standard_csv` | Attachment format for results email |
+| `email_postprocess_enabled` | boolean | false | Post-process placeholder (no effect yet) |
+
+**One-time migration:**
+- Old `= true` → confirmation ✅, results ✅, format: `standard_csv`, postprocess ❌
+- Old `= false` → confirmation ❌, results ❌, format: `standard_csv`, postprocess ❌
+
+### Backend Touch Points (no new API routes)
+
+| File | Change |
+|------|--------|
+| Database migration | Add 4 columns, migrate from old column, drop old column |
+| `tenant-form-sheet.tsx` | Replace single toggle with four-control section |
+| `/settings/data-protection` page | Extend read-only section with four status rows |
+| `settings/data-retention` API | Return four new fields instead of old single field |
+| `admin/tenants/[id]` PATCH | Accept and validate the four new fields |
+| `validations.ts` | Replace old boolean with four validated fields |
+| `types.ts` | Update Tenant type |
+| `upload/confirm` route | Check `email_confirmation_enabled` |
+| `extract` route | Check `email_results_enabled`; switch attachment to ERP format when `tenant_format` |
+| `inbound/email` route | Check `email_confirmation_enabled` |
+
+### Tech Decisions
+
+- **No new API routes** — all changes flow through the existing tenant PATCH endpoint.
+- **Attachment format reuses existing ERP export engine** — the export logic from OPH-6/OPH-9 already generates XML/CSV/JSON; toggle c just routes the results email to use it.
+- **Toggle c is disabled in UI when toggle b is off** — prevents confusing configuration state without adding backend validation complexity.
+- **Post-process toggle is backend-inert** — stored in DB, returned in API, but no email code reads it until the post-process feature is defined.
+- **No new packages needed** — shadcn/ui Switch and RadioGroup are already installed.
+
+### Deployment Order
+1. Run database migration (add new columns with defaults, migrate data, drop old column)
+2. Deploy backend code changes (API, validation, email routes)
+3. Deploy frontend changes (admin form, settings read-only view)
 
 ## QA Test Results
 _To be added by /qa_
