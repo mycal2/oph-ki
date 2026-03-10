@@ -81,9 +81,9 @@ ${CANONICAL_JSON_SCHEMA}
 11. The "sender" is the company or dealer that placed/sent the order. This is different from the delivery address (where goods are shipped). Look for sender info in letterheads, "From" fields, company stamps, headers, or contact blocks at the top of the document.
 12. **Customer Number (Kundennummer) extraction rules:**
     - The customer_number is the **manufacturer's customer ID** for the ordering dealer. It is assigned by the manufacturer, NOT the dealer's own reference or order number.
-    - Search for the customer number in **both** the order document (PDF, Excel, email attachment) **and** the forwarding email body text (the portion of text added by the person forwarding the order).
+    - Search for the customer number in **all** available sources: the order document (PDF, Excel, email attachment), the forwarding email body text, **and** the email subject line.
     - Recognise multi-language keywords indicating a customer number:
-      * German: "Kundennummer", "Kd.-Nr.", "Kd.Nr.", "Kundennr."
+      * German: "Kundennummer", "Kd.-Nr.", "Kd.Nr.", "Kundennr.", "Kdnr", "Kdnr.", "KdNr", "Kd-Nr", "Kd Nr", "Kndnummer", "Knd-Nr", "Knd.-Nr.", "Knd.Nr.", "Knd Nr", "Kunden-Nr", "Kunden-Nr.", "Kunden Nr"
       * English: "customer number", "customer no.", "customer ID", "account number"
       * French: "numéro client", "n° client"
       * Spanish: "número de cliente", "nº cliente"
@@ -211,7 +211,7 @@ export async function extractOrderData(
       }
       contentBlocks.push({
         type: "text",
-        text: `## Email Subject (from forwarded email)\nUse this to help identify the order number or sender if not found in the attachment.\n${subjectText}`,
+        text: `## Email Subject (from forwarded email)\nUse this to help identify the order number, customer number (Kundennummer), or sender if not found in the attachment.\n${subjectText}`,
       });
     }
   }

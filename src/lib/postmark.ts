@@ -648,7 +648,8 @@ export async function sendOrderResultEmail(params: {
       <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Bestelldatum:</td><td style="padding:4px 0;font-weight:500">${esc(orderSummary.orderDate ?? "–")}</td></tr>
       <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Händler:</td><td style="padding:4px 0;font-weight:500">${esc(orderSummary.dealerName ?? "–")}</td></tr>
       <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Positionen:</td><td style="padding:4px 0;font-weight:500">${orderSummary.itemCount}</td></tr>
-      <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Gesamtbetrag:</td><td style="padding:4px 0;font-weight:700;color:#111827">${esc(total)}</td></tr>
+      <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Gesamtbetrag:</td><td style="padding:4px 0;font-weight:700;color:#111827">${esc(total)}</td></tr>${confidenceScore != null ? `
+      <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Extraktionssicherheit:</td><td style="padding:4px 0;font-weight:500;color:${confidenceScore >= 0.8 ? "#16a34a" : confidenceScore >= 0.5 ? "#ca8a04" : "#dc2626"}">${Math.round(confidenceScore * 100)} %</td></tr>` : ""}
     </table>
     ${itemsHtml}
     <p style="margin:24px 0 12px;font-size:14px;color:#374151">Die vollständigen Daten finden Sie als Datei im Anhang.</p>
@@ -657,6 +658,10 @@ export async function sendOrderResultEmail(params: {
 
   const warningsText = warnings.length > 0
     ? ["", "  Hinweise:", ...warnings.map((w) => `    - ${w}`), ""].join("\n")
+    : "";
+
+  const confidenceText = confidenceScore != null
+    ? `  Extraktionssicherheit: ${Math.round(confidenceScore * 100)} %`
     : "";
 
   const textBody = [
@@ -669,6 +674,7 @@ export async function sendOrderResultEmail(params: {
     `  Händler:       ${orderSummary.dealerName ?? "–"}`,
     `  Positionen:    ${orderSummary.itemCount}`,
     `  Gesamtbetrag:  ${total}`,
+    ...(confidenceText ? [confidenceText] : []),
     warningsText,
     `Die vollständigen Daten finden Sie als Datei im Anhang.`,
     "",
