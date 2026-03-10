@@ -298,6 +298,7 @@ export async function POST(
         source: "email_inbound",
         message_id: messageId,
         sender_email: senderEmail,
+        subject: payload.Subject ? payload.Subject.slice(0, 500) : null,
         preview_token: previewToken,
         preview_token_expires_at: tokenExpiresAt.toISOString(),
         ...(warnings.length > 0 ? { ingestion_notes: warnings } : {}),
