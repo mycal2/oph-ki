@@ -137,9 +137,10 @@ export function ErpConfigEditor({
     setSuccessMessage(null);
   }, []);
 
-  // OPH-30: Track format changes.
+  // OPH-30 + OPH-33: Track format changes.
   // - XML samples: auto-fill the XML Template field directly (the uploaded XML IS the template)
-  // - Non-XML samples (CSV/XLSX/JSON): show a suggestion banner since it's a conversion
+  // - CSV/XLSX samples: auto-switch to CSV tab (Field Mapper handles pre-fill)
+  // - JSON samples: auto-switch to JSON tab
   const handleOutputFormatChange = useCallback((fmt: TenantOutputFormat | null) => {
     const previousFormat = savedOutputFormatRef.current;
     savedOutputFormatRef.current = fmt;
@@ -166,15 +167,26 @@ export function ErpConfigEditor({
         );
         if (result.template) {
           setXmlTemplate(result.template);
-          // Also switch to XML format tab if not already
           if (format !== "xml") {
             setFormat("xml");
           }
           markDirty();
         }
         setShowTemplateSuggestion(false);
+      } else if (fmt.file_type === "csv" || fmt.file_type === "xlsx") {
+        // OPH-33: Auto-switch to CSV tab for CSV/XLSX samples
+        if (format !== "csv") {
+          setFormat("csv");
+        }
+        setShowTemplateSuggestion(false);
+      } else if (fmt.file_type === "json") {
+        // OPH-33: Auto-switch to JSON tab for JSON samples
+        if (format !== "json") {
+          setFormat("json");
+        }
+        setShowTemplateSuggestion(false);
       } else {
-        // Non-XML: show suggestion banner
+        // Fallback: show suggestion banner
         setShowTemplateSuggestion(true);
       }
     }

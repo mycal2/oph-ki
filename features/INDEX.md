@@ -44,10 +44,9 @@
 | OPH-30 | Auto-Generate XML Template from Output Format Sample | Deployed | [OPH-30-xml-template-from-output-format.md](OPH-30-xml-template-from-output-format.md) | 2026-03-09 |
 | OPH-31 | Variable Click-to-Insert in XML Template Editor | Deployed | [OPH-31-variable-click-to-insert.md](OPH-31-variable-click-to-insert.md) | 2026-03-09 |
 | OPH-32 | Visual Field Mapper for ERP Output Format | Deployed | [OPH-32-visual-field-mapper.md](OPH-32-visual-field-mapper.md) | 2026-03-09 |
-| OPH-33 | Field Mapper Output for All Formats (CSV, JSON, XML) | In Progress | [OPH-33-csv-field-mapper-prefill.md](OPH-33-csv-field-mapper-prefill.md) | 2026-03-09 |
-| OPH-34 | Admin Manual Upload with Tenant Selection | In Progress | [OPH-34-admin-upload-tenant-selection.md](OPH-34-admin-upload-tenant-selection.md) | 2026-03-09 |
-
-| OPH-35 | Per-Tenant Email Notification Settings | In Progress | [OPH-35-per-tenant-email-notification-settings.md](OPH-35-per-tenant-email-notification-settings.md) | 2026-03-10 |
+| OPH-33 | Field Mapper Output for All Formats (CSV, JSON, XML) | In Review | [OPH-33-csv-field-mapper-prefill.md](OPH-33-csv-field-mapper-prefill.md) | 2026-03-09 |
+| OPH-34 | Admin Manual Upload with Tenant Selection | Deployed | [OPH-34-admin-upload-tenant-selection.md](OPH-34-admin-upload-tenant-selection.md) | 2026-03-09 |
+| OPH-35 | Per-Tenant Email Notification Settings | Deployed | [OPH-35-per-tenant-email-notification-settings.md](OPH-35-per-tenant-email-notification-settings.md) | 2026-03-10 |
 
 <!-- Add features above this line -->
 

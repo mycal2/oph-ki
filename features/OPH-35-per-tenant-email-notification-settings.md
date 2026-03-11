@@ -1,6 +1,6 @@
 # OPH-35: Per-Tenant Email Notification Settings
 
-## Status: Planned
+## Status: Deployed
 **Created:** 2026-03-10
 **Last Updated:** 2026-03-10
 

@@ -53,8 +53,8 @@ Eine mandantenfähige SaaS-Plattform ("Order Intelligence Platform"), die Dental
 | P1 | OPH-31: Variable Click-to-Insert in XML Template Editor | Deployed |
 | P1 | OPH-32: Visual Field Mapper for ERP Output Format | Deployed |
 | P1 | OPH-33: Field Mapper Output for All Formats (CSV, JSON, XML) | Planned |
-| P1 | OPH-34: Admin Manual Upload with Tenant Selection | Planned |
-| P1 | OPH-35: Per-Tenant Email Notification Settings | Planned |
+| P1 | OPH-34: Admin Manual Upload with Tenant Selection | Deployed |
+| P1 | OPH-35: Per-Tenant Email Notification Settings | Deployed |
 
 ## Success Metrics
 - Bearbeitungszeit pro Bestellung: von ~15 Min. manuell auf < 3 Min. mit System
