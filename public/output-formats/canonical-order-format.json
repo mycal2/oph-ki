@@ -1,0 +1,95 @@
+{
+  "order": {
+    "order_number": "603426",
+    "order_date": "2024-10-25",
+    "dealer": {
+      "id": "d476ba39-237f-4e04-87c9-6f6c885d08d7",
+      "name": "Dental-Union GmbH"
+    },
+    "sender": {
+      "company_name": "Dental-Union GmbH",
+      "street": "Gutenbergring 7-9",
+      "city": "Rodgau",
+      "postal_code": "63110",
+      "country": "DE",
+      "email": "auftragsbestaetigung@dental-union.de",
+      "phone": null,
+      "customer_number": "456456"
+    },
+    "delivery_address": {
+      "company": "Dental-Union GmbH",
+      "street": "Gutenbergring 7-9",
+      "city": "Rodgau",
+      "postal_code": "63110",
+      "country": "DE"
+    },
+    "billing_address": {
+      "company": "Dental-Union GmbH",
+      "street": "Gutenbergring 7-9",
+      "city": "Rodgau",
+      "postal_code": "63110",
+      "country": "DE"
+    },
+    "line_items": [
+      {
+        "position": 1,
+        "article_number": "BK 877",
+        "description": "Artikulationsseide 80my 80mm blau BK877 Ro 3m",
+        "quantity": 3,
+        "unit": "Rolle",
+        "unit_price": null,
+        "total_price": null,
+        "currency": null
+      },
+      {
+        "position": 2,
+        "article_number": "BK 172",
+        "description": "Gnatho-Film 16my 70x100 grün BK172 Pa 50",
+        "quantity": 1,
+        "unit": "Packung",
+        "unit_price": null,
+        "total_price": null,
+        "currency": null
+      },
+      {
+        "position": 3,
+        "article_number": "BK 171",
+        "description": "Gnatho-Film 16my 70x100 rot BK171 Pa 50",
+        "quantity": 1,
+        "unit": "Packung",
+        "unit_price": null,
+        "total_price": null,
+        "currency": null
+      },
+      {
+        "position": 4,
+        "article_number": "BK 74",
+        "description": "Arti-Fol 8my 75mm schwarz zweiseitig BK74 Ro 15m",
+        "quantity": 1,
+        "unit": "Rolle",
+        "unit_price": null,
+        "total_price": null,
+        "currency": null
+      }
+    ],
+    "total_amount": null,
+    "currency": null,
+    "notes": "Wir bitten um Zusendung einer vollständigen Auftragsbestätigung mit Angabe der Liefertermine. Sollte ein Artikel nicht mehr lieferbar sein, liefern Sie keinesfalls das Nachfolge-Ersatzprodukt, sondern senden eine Info an folgende E-Mail Adresse: Auftragsbestaetigung@dental-union.de",
+    "email_subject": "Bestellung 603426 - Dental-Union GmbH"
+  },
+  "extraction_metadata": {
+    "schema_version": "1.0.0",
+    "confidence_score": 0.9,
+    "model": "claude-sonnet-4-6",
+    "extracted_at": "2026-03-10T11:43:09.428Z",
+    "source_files": [
+      "HBS_Order_1009519_603426_20241025071751.pdf",
+      "email_body.txt"
+    ],
+    "dealer_hints_applied": false,
+    "column_mapping_applied": false,
+    "input_tokens": 4527,
+    "output_tokens": 886
+  },
+  "document_language": "DE"
+}

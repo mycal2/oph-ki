@@ -398,6 +398,7 @@ export async function extractOrderData(
           total_amount: parsed.order.total_amount ?? null,
           currency: parsed.order.currency ?? null,
           notes: parsed.order.notes ?? null,
+          email_subject: input.emailSubject ?? null,
         },
         extraction_metadata: {
           schema_version: SCHEMA_VERSION,
@@ -631,6 +632,7 @@ async function extractChunkedExcel(params: {
       total_amount: firstResult.order.total_amount ?? null,
       currency: firstResult.order.currency ?? null,
       notes: firstResult.order.notes ?? null,
+      email_subject: input.emailSubject ?? null,
     },
     extraction_metadata: {
       schema_version: SCHEMA_VERSION,

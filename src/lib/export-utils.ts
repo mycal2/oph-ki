@@ -50,6 +50,7 @@ export function getOrderFieldValue(order: CanonicalOrder, fieldPath: string): st
       case "currency": return order.currency ?? "";
       case "total_amount": return order.total_amount !== null ? String(order.total_amount) : "";
       case "notes": return order.notes ?? "";
+      case "email_subject": return order.email_subject ?? "";
       default: return "";
     }
   }

@@ -23,6 +23,7 @@ const SOURCE_FIELD_SUGGESTIONS = [
   "order.currency",
   "order.total_amount",
   "order.notes",
+  "order.email_subject",
   "order.dealer.name",
   "order.sender.company_name",
   "order.sender.customer_number",

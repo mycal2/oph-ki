@@ -67,6 +67,7 @@ const VARIABLE_GROUPS: VariableGroup[] = [
       { path: "order.currency", description: "Währung" },
       { path: "order.total_amount", description: "Gesamtbetrag" },
       { path: "order.notes", description: "Notizen" },
+      { path: "order.email_subject", description: "E-Mail-Betreff" },
       { path: "order.dealer.name", description: "Händlername" },
     ],
   },
@@ -503,7 +504,7 @@ export function FieldMapperPanel({
     setOverwriteConfirmOpen(false);
     setPendingTemplate(null);
     setPendingCsvColumns(null);
-  }, [pendingTemplate, onGenerateTemplate]);
+  }, [pendingTemplate, pendingCsvColumns, onGenerateTemplate, onGenerateCsvColumns]);
 
   // The field being edited in the transformation picker
   const editingMapping = editingField ? mappingMap.get(editingField) : undefined;

@@ -273,6 +273,8 @@ export interface CanonicalOrder {
   total_amount: number | null;
   currency: string | null;
   notes: string | null;
+  /** OPH-25: Email subject from the inbound email (Postmark, .eml, or manual input). */
+  email_subject: string | null;
 }
 
 export interface ExtractionMetadata {

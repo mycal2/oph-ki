@@ -134,7 +134,7 @@ export async function POST(
     ]);
     const knownOrderFields = new Set([
       "order.order_number", "order.order_date", "order.currency",
-      "order.total_amount", "order.notes",
+      "order.total_amount", "order.notes", "order.email_subject",
       "order.dealer.name", "order.dealer.id",
       "order.sender.company_name", "order.sender.customer_number",
       "order.sender.email", "order.sender.phone",

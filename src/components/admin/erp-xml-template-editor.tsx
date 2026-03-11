@@ -44,6 +44,7 @@ const AVAILABLE_VARIABLES = [
   { path: "order.currency", description: "Währung" },
   { path: "order.total_amount", description: "Gesamtbetrag" },
   { path: "order.notes", description: "Notizen" },
+  { path: "order.email_subject", description: "E-Mail-Betreff" },
   { path: "order.dealer.name", description: "Händlername" },
   { path: "order.sender.company_name", description: "Absender-Firma" },
   { path: "order.sender.customer_number", description: "Kundennummer" },
