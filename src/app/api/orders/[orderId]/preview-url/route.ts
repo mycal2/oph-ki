@@ -121,12 +121,16 @@ export async function GET(
     ).toISOString();
 
     for (const file of files) {
+      const mimeType = file.mime_type as string;
+      // Only set download option for non-PDF files so PDFs render inline in the iframe
+      const urlOptions = mimeType === "application/pdf"
+        ? undefined
+        : { download: file.original_filename as string };
+
       const { data: signedUrlData, error: signedUrlError } =
         await adminClient.storage
           .from("order-files")
-          .createSignedUrl(file.storage_path as string, SIGNED_URL_EXPIRY_SECONDS, {
-            download: file.original_filename as string,
-          });
+          .createSignedUrl(file.storage_path as string, SIGNED_URL_EXPIRY_SECONDS, urlOptions);
 
       if (signedUrlError || !signedUrlData?.signedUrl) {
         console.error(
