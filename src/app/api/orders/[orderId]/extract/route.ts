@@ -76,6 +76,7 @@ export async function POST(
 
     const adminClient = createAdminClient();
     let tenantId: string | null = null;
+    let isPlatformAdmin = false;
 
     // --- Dual authentication ---
     const internalSecret = request.headers.get("x-internal-secret");
@@ -129,7 +130,7 @@ export async function POST(
       }
 
       tenantId = appMetadata?.tenant_id ?? null;
-      const isPlatformAdmin = appMetadata?.role === "platform_admin";
+      isPlatformAdmin = appMetadata?.role === "platform_admin";
 
       if (!tenantId && !isPlatformAdmin) {
         return NextResponse.json(
@@ -145,7 +146,7 @@ export async function POST(
       .select("id, tenant_id, status, extraction_status, extraction_attempts, dealer_id, recognition_confidence, subject")
       .eq("id", orderId);
 
-    if (tenantId) {
+    if (tenantId && !isPlatformAdmin) {
       orderQuery = orderQuery.eq("tenant_id", tenantId);
     }
 
@@ -158,8 +159,8 @@ export async function POST(
       );
     }
 
-    // For platform_admin without tenant, use the order's tenant_id
-    if (!tenantId) {
+    // For platform_admin, use the order's tenant_id (admin's own tenant may differ)
+    if (isPlatformAdmin) {
       tenantId = order.tenant_id as string;
     }
 
