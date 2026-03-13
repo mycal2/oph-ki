@@ -438,6 +438,9 @@ export function ExtractionResultPreview({
                       <th className="px-3 py-2 text-left font-medium text-muted-foreground hidden sm:table-cell">
                         Art.-Nr.
                       </th>
+                      <th className="px-3 py-2 text-left font-medium text-muted-foreground hidden lg:table-cell">
+                        Lief.-Art.-Nr.
+                      </th>
                       <th className="px-3 py-2 text-left font-medium text-muted-foreground">
                         Beschreibung
                       </th>
@@ -460,6 +463,11 @@ export function ExtractionResultPreview({
                         </td>
                         <td className="px-3 py-2 hidden sm:table-cell font-mono text-xs">
                           {item.article_number ?? (
+                            <span className="text-muted-foreground italic">-</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 hidden lg:table-cell font-mono text-xs">
+                          {item.dealer_article_number ?? (
                             <span className="text-muted-foreground italic">-</span>
                           )}
                         </td>
@@ -491,7 +499,7 @@ export function ExtractionResultPreview({
                     <tfoot>
                       <tr className="bg-muted/30 font-medium">
                         <td
-                          colSpan={5}
+                          colSpan={6}
                           className="px-3 py-2 text-right hidden sm:table-cell"
                         >
                           Gesamt

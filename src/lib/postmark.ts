@@ -296,6 +296,7 @@ export async function sendTrialResultEmail(params: {
   lineItems: Array<{
     position?: number | string | null;
     article_number?: string | null;
+    dealer_article_number?: string | null;
     description?: string | null;
     quantity?: number | string | null;
     unit?: string | null;
@@ -318,10 +319,12 @@ export async function sendTrialResultEmail(params: {
   // Build HTML line items table
   let itemsHtml = "";
   if (lineItems.length > 0) {
+    const trialHasDealerArticle = lineItems.some((item) => item.dealer_article_number);
     const rows = lineItems.map((item) => `
       <tr>
         <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:center">${esc(String(item.position ?? ""))}</td>
-        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb">${esc(String(item.article_number ?? "–"))}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb">${esc(String(item.article_number ?? "–"))}</td>${trialHasDealerArticle ? `
+        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb">${esc(String(item.dealer_article_number ?? "–"))}</td>` : ""}
         <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb">${esc(String(item.description ?? "–"))}</td>
         <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right">${esc(String(item.quantity ?? ""))}</td>
         <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:center">${esc(String(item.unit ?? ""))}</td>
@@ -329,13 +332,16 @@ export async function sendTrialResultEmail(params: {
         <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:500">${item.total_price != null ? esc(String(item.total_price)) : ""}</td>
       </tr>`).join("");
 
+    const trialTotalColSpan = trialHasDealerArticle ? 7 : 6;
+
     itemsHtml = `
     <h3 style="margin:24px 0 12px;font-size:15px;color:#111827">Extrahierte Positionen</h3>
     <table style="width:100%;border-collapse:collapse;font-size:13px;border:1px solid #e5e7eb;border-radius:6px">
       <thead>
         <tr style="background:#f9fafb">
           <th style="padding:8px 10px;text-align:center;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Pos</th>
-          <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Artikelnr.</th>
+          <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Artikelnr.</th>${trialHasDealerArticle ? `
+          <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Lief.-Art.-Nr.</th>` : ""}
           <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Bezeichnung</th>
           <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Menge</th>
           <th style="padding:8px 10px;text-align:center;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Einheit</th>
@@ -346,7 +352,7 @@ export async function sendTrialResultEmail(params: {
       <tbody>${rows}</tbody>
       <tfoot>
         <tr style="background:#f9fafb">
-          <td colspan="6" style="padding:8px 10px;text-align:right;font-weight:600;border-top:2px solid #e5e7eb">Gesamtbetrag:</td>
+          <td colspan="${trialTotalColSpan}" style="padding:8px 10px;text-align:right;font-weight:600;border-top:2px solid #e5e7eb">Gesamtbetrag:</td>
           <td style="padding:8px 10px;text-align:right;font-weight:700;border-top:2px solid #e5e7eb;color:#111827">${esc(total)}</td>
         </tr>
       </tfoot>
@@ -541,6 +547,7 @@ export async function sendOrderResultEmail(params: {
   lineItems: Array<{
     position?: number | string | null;
     article_number?: string | null;
+    dealer_article_number?: string | null;
     description?: string | null;
     quantity?: number | string | null;
     unit?: string | null;
@@ -591,10 +598,12 @@ export async function sendOrderResultEmail(params: {
 
   let itemsHtml = "";
   if (displayItems.length > 0) {
+    const hasDealerArticle = displayItems.some((item) => item.dealer_article_number);
     const rows = displayItems.map((item) => `
       <tr>
         <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:center">${esc(String(item.position ?? ""))}</td>
-        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb">${esc(String(item.article_number ?? "–"))}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb">${esc(String(item.article_number ?? "–"))}</td>${hasDealerArticle ? `
+        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb">${esc(String(item.dealer_article_number ?? "–"))}</td>` : ""}
         <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb">${esc(String(item.description ?? "–"))}</td>
         <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right">${esc(String(item.quantity ?? ""))}</td>
         <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:center">${esc(String(item.unit ?? ""))}</td>
@@ -602,8 +611,10 @@ export async function sendOrderResultEmail(params: {
         <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:500">${item.total_price != null ? esc(String(item.total_price)) : ""}</td>
       </tr>`).join("");
 
+    const totalColSpan = hasDealerArticle ? 7 : 6;
+    const moreColSpan = hasDealerArticle ? 8 : 7;
     const moreRow = remainingCount > 0
-      ? `<tr><td colspan="7" style="padding:8px 10px;text-align:center;font-size:12px;color:#6b7280">… und ${remainingCount} weitere ${remainingCount === 1 ? "Position" : "Positionen"} (siehe CSV-Anhang)</td></tr>`
+      ? `<tr><td colspan="${moreColSpan}" style="padding:8px 10px;text-align:center;font-size:12px;color:#6b7280">… und ${remainingCount} weitere ${remainingCount === 1 ? "Position" : "Positionen"} (siehe CSV-Anhang)</td></tr>`
       : "";
 
     itemsHtml = `
@@ -612,7 +623,8 @@ export async function sendOrderResultEmail(params: {
       <thead>
         <tr style="background:#f9fafb">
           <th style="padding:8px 10px;text-align:center;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Pos</th>
-          <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Artikelnr.</th>
+          <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Artikelnr.</th>${hasDealerArticle ? `
+          <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Lief.-Art.-Nr.</th>` : ""}
           <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Bezeichnung</th>
           <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Menge</th>
           <th style="padding:8px 10px;text-align:center;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Einheit</th>
@@ -623,7 +635,7 @@ export async function sendOrderResultEmail(params: {
       <tbody>${rows}${moreRow}</tbody>
       <tfoot>
         <tr style="background:#f9fafb">
-          <td colspan="6" style="padding:8px 10px;text-align:right;font-weight:600;border-top:2px solid #e5e7eb">Gesamtbetrag:</td>
+          <td colspan="${totalColSpan}" style="padding:8px 10px;text-align:right;font-weight:600;border-top:2px solid #e5e7eb">Gesamtbetrag:</td>
           <td style="padding:8px 10px;text-align:right;font-weight:700;border-top:2px solid #e5e7eb;color:#111827">${esc(total)}</td>
         </tr>
       </tfoot>

@@ -136,6 +136,7 @@ const canonicalAddressSchema = z.object({
 const canonicalLineItemSchema = z.object({
   position: z.number().int().min(1),
   article_number: z.string().nullable(),
+  dealer_article_number: z.string().nullable().optional(),
   description: z.string(),  // Allow empty during editing; approval validates min. 1 non-empty
   quantity: z.number().min(0, "Menge muss mindestens 0 sein."),
   unit: z.string().nullable(),

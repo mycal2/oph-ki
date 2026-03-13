@@ -34,6 +34,7 @@
       {
         "position": 1,
         "article_number": "BK 877",
+        "dealer_article_number": null,
         "description": "Artikulationsseide 80my 80mm blau BK877 Ro 3m",
         "quantity": 3,
         "unit": "Rolle",
@@ -44,6 +45,7 @@
       {
         "position": 2,
         "article_number": "BK 172",
+        "dealer_article_number": null,
         "description": "Gnatho-Film 16my 70x100 grün BK172 Pa 50",
         "quantity": 1,
         "unit": "Packung",
@@ -54,6 +56,7 @@
       {
         "position": 3,
         "article_number": "BK 171",
+        "dealer_article_number": null,
         "description": "Gnatho-Film 16my 70x100 rot BK171 Pa 50",
         "quantity": 1,
         "unit": "Packung",
@@ -64,6 +67,7 @@
       {
         "position": 4,
         "article_number": "BK 74",
+        "dealer_article_number": null,
         "description": "Arti-Fol 8my 75mm schwarz zweiseitig BK74 Ro 15m",
         "quantity": 1,
         "unit": "Rolle",

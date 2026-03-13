@@ -45,6 +45,7 @@ const SOURCE_FIELD_SUGGESTIONS = [
   "order.billing_address.country",
   "items[].position",
   "items[].article_number",
+  "items[].dealer_article_number",
   "items[].description",
   "items[].quantity",
   "items[].unit",

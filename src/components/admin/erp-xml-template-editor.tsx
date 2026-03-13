@@ -62,6 +62,7 @@ const AVAILABLE_VARIABLES = [
   { path: "order.line_items", description: "Bestellpositionen (Array, mit #each)" },
   { path: "this.position", description: "Position (in #each)" },
   { path: "this.article_number", description: "Artikelnummer (in #each)" },
+  { path: "this.dealer_article_number", description: "Lieferantenartikelnr. (in #each)" },
   { path: "this.description", description: "Beschreibung (in #each)" },
   { path: "this.quantity", description: "Menge (in #each)" },
   { path: "this.unit", description: "Einheit (in #each)" },

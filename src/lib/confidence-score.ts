@@ -125,6 +125,7 @@ function checkMappingHasValue(
     const dummyItem = firstItem ?? {
       position: 0,
       article_number: null,
+      dealer_article_number: null,
       description: "",
       quantity: 0,
       unit: null,

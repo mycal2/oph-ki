@@ -44,6 +44,7 @@ function newLineItem(position: number): CanonicalLineItem {
   return {
     position,
     article_number: null,
+    dealer_article_number: null,
     description: "",
     quantity: 1,
     unit: null,
@@ -392,7 +393,22 @@ function LineItemRow({ item, index, onChange, onRemove, parseNum }: LineItemRowP
             className="h-8 text-sm"
           />
         </div>
-        <div className="space-y-1 col-span-2 sm:col-span-3">
+        <div className="space-y-1">
+          <Label htmlFor={`line-${index}-dealer-article`} className="text-xs">
+            Lief.-Art.-Nr.
+          </Label>
+          <Input
+            id={`line-${index}-dealer-article`}
+            value={item.dealer_article_number ?? ""}
+            onChange={(e) =>
+              onChange({ dealer_article_number: e.target.value || null })
+            }
+            placeholder="-"
+            className="h-8 text-sm"
+            aria-label={`Lieferantenartikelnummer Position ${item.position}`}
+          />
+        </div>
+        <div className="space-y-1 col-span-2">
           <Label htmlFor={`line-${index}-desc`} className="text-xs">
             Beschreibung *
           </Label>

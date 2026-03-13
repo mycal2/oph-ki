@@ -45,6 +45,7 @@ const FIELD_SUGGESTIONS = [
   "order_number",
   "order_date",
   "items[].product_code",
+  "items[].dealer_article_number",
   "items[].description",
   "items[].quantity",
   "items[].unit",

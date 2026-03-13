@@ -44,6 +44,7 @@ const CANONICAL_JSON_SCHEMA = `{
       {
         "position": "integer (1-based)",
         "article_number": "string | null",
+        "dealer_article_number": "string | null (the dealer's own internal article/product number for this item — only populate if the document clearly contains a separate dealer-specific reference number alongside or instead of the manufacturer's number; if only one article number is present and it appears to be the manufacturer's, leave this null)",
         "description": "string",
         "quantity": "number",
         "unit": "string | null (German standard term: Stueck, Packung, Karton, Flasche, Dose, Tube, Beutel, Rolle, Paar, Set, Liter, Milliliter, Gramm, Kilogramm, Meter)",
@@ -388,6 +389,7 @@ export async function extractOrderData(
           line_items: (parsed.order.line_items ?? []).map((item, idx) => ({
             position: item.position ?? idx + 1,
             article_number: item.article_number ?? null,
+            dealer_article_number: item.dealer_article_number ?? null,
             description: item.description ?? "",
             quantity: item.quantity ?? 0,
             unit: item.unit ?? null,
@@ -586,6 +588,7 @@ async function extractChunkedExcel(params: {
   const firstItems = (firstResult.order.line_items ?? []).map((item, idx) => ({
     position: item.position ?? idx + 1,
     article_number: item.article_number ?? null,
+    dealer_article_number: item.dealer_article_number ?? null,
     description: item.description ?? "",
     quantity: item.quantity ?? 0,
     unit: item.unit ?? null,
@@ -606,6 +609,7 @@ async function extractChunkedExcel(params: {
     const chunkItems = (result.parsed.order.line_items ?? []).map((item, idx) => ({
       position: positionOffset + idx + 1,
       article_number: item.article_number ?? null,
+      dealer_article_number: item.dealer_article_number ?? null,
       description: item.description ?? "",
       quantity: item.quantity ?? 0,
       unit: item.unit ?? null,

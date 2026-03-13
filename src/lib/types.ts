@@ -243,6 +243,8 @@ export interface CanonicalAddress {
 export interface CanonicalLineItem {
   position: number;
   article_number: string | null;
+  /** OPH-37: Dealer's own internal article/product number (Lieferantenartikelnummer). */
+  dealer_article_number: string | null;
   description: string;
   quantity: number;
   unit: string | null;

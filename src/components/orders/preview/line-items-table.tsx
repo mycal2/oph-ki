@@ -50,6 +50,9 @@ export function LineItemsTable({ lineItems, totalAmount, currency }: LineItemsTa
                 <th className="hidden px-3 py-2 text-left font-medium text-muted-foreground sm:table-cell">
                   Art.-Nr.
                 </th>
+                <th className="hidden px-3 py-2 text-left font-medium text-muted-foreground lg:table-cell">
+                  Lief.-Art.-Nr.
+                </th>
                 <th className="px-3 py-2 text-left font-medium text-muted-foreground">
                   Beschreibung
                 </th>
@@ -72,6 +75,11 @@ export function LineItemsTable({ lineItems, totalAmount, currency }: LineItemsTa
                   </td>
                   <td className="hidden px-3 py-2 font-mono text-xs sm:table-cell">
                     {item.article_number ?? (
+                      <span className="italic text-muted-foreground">-</span>
+                    )}
+                  </td>
+                  <td className="hidden px-3 py-2 font-mono text-xs lg:table-cell">
+                    {item.dealer_article_number ?? (
                       <span className="italic text-muted-foreground">-</span>
                     )}
                   </td>
@@ -103,7 +111,7 @@ export function LineItemsTable({ lineItems, totalAmount, currency }: LineItemsTa
               <tfoot>
                 <tr className="bg-muted/30 font-medium">
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="hidden px-3 py-2 text-right sm:table-cell"
                   >
                     Gesamt

@@ -99,6 +99,7 @@ const VARIABLE_GROUPS: VariableGroup[] = [
     variables: [
       { path: "this.position", description: "Position" },
       { path: "this.article_number", description: "Artikelnummer" },
+      { path: "this.dealer_article_number", description: "Lieferantenartikelnr." },
       { path: "this.description", description: "Beschreibung" },
       { path: "this.quantity", description: "Menge" },
       { path: "this.unit", description: "Einheit" },

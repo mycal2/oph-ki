@@ -56,6 +56,7 @@ Eine mandantenfähige SaaS-Plattform ("Order Intelligence Platform"), die Dental
 | P1 | OPH-34: Admin Manual Upload with Tenant Selection | Deployed |
 | P1 | OPH-35: Per-Tenant Email Notification Settings | Deployed |
 | P2 | OPH-36: Sticky PDF Preview on Order Review Page | Planned |
+| P1 | OPH-37: Dealer Article Number (Lieferantenartikelnummer) | Planned |
 
 ## Success Metrics
 - Bearbeitungszeit pro Bestellung: von ~15 Min. manuell auf < 3 Min. mit System

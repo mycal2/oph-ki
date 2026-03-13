@@ -128,7 +128,7 @@ export async function POST(
 
     // Check for unknown source fields
     const knownItemFields = new Set([
-      "position", "article_number", "description", "quantity",
+      "position", "article_number", "dealer_article_number", "description", "quantity",
       "unit", "unit_price", "total_price", "currency",
       "discount", "notes", "delivery_date", "ean", "supplier_sku",
     ]);

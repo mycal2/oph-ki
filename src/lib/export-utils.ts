@@ -18,6 +18,8 @@ export function getLineItemValue(item: CanonicalLineItem, field: string): string
       return String(item.position);
     case "article_number":
       return item.article_number ?? "";
+    case "dealer_article_number":
+      return item.dealer_article_number ?? "";
     case "description":
       return item.description;
     case "quantity":
