@@ -47,7 +47,8 @@
 | OPH-33 | Field Mapper Output for All Formats (CSV, JSON, XML) | In Review | [OPH-33-csv-field-mapper-prefill.md](OPH-33-csv-field-mapper-prefill.md) | 2026-03-09 |
 | OPH-34 | Admin Manual Upload with Tenant Selection | Deployed | [OPH-34-admin-upload-tenant-selection.md](OPH-34-admin-upload-tenant-selection.md) | 2026-03-09 |
 | OPH-35 | Per-Tenant Email Notification Settings | Deployed | [OPH-35-per-tenant-email-notification-settings.md](OPH-35-per-tenant-email-notification-settings.md) | 2026-03-10 |
+| OPH-36 | Sticky PDF Preview on Order Review Page | In Review | [OPH-36-sticky-pdf-preview.md](OPH-36-sticky-pdf-preview.md) | 2026-03-13 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-36
+## Next Available ID: OPH-37

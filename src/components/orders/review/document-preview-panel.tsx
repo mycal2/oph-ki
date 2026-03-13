@@ -49,9 +49,12 @@ export function DocumentPreviewPanel({ orderId }: DocumentPreviewPanelProps) {
     fetchPreviewUrls();
   }, [fetchPreviewUrls]);
 
+  // Shared sticky classes for the panel wrapper on desktop
+  const stickyClasses = "lg:sticky lg:top-[4.25rem] lg:h-[calc(100vh-4.25rem-1.5rem)]";
+
   if (isLoading) {
     return (
-      <Card className="h-full">
+      <Card className={cn("h-full", stickyClasses)}>
         <CardHeader className="pb-3">
           <Skeleton className="h-5 w-32" />
         </CardHeader>
@@ -64,7 +67,7 @@ export function DocumentPreviewPanel({ orderId }: DocumentPreviewPanelProps) {
 
   if (error) {
     return (
-      <Card className="h-full">
+      <Card className={cn("h-full", stickyClasses)}>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Dokument-Vorschau</CardTitle>
         </CardHeader>
@@ -83,7 +86,7 @@ export function DocumentPreviewPanel({ orderId }: DocumentPreviewPanelProps) {
 
   if (files.length === 0) {
     return (
-      <Card className="h-full">
+      <Card className={cn("h-full", stickyClasses)}>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Dokument-Vorschau</CardTitle>
         </CardHeader>
@@ -103,7 +106,7 @@ export function DocumentPreviewPanel({ orderId }: DocumentPreviewPanelProps) {
   const isPdf = activeFile?.mimeType === "application/pdf";
 
   return (
-    <Card className="h-full flex flex-col">
+    <Card className={cn("h-full flex flex-col", stickyClasses)}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-base">Dokument-Vorschau</CardTitle>
@@ -150,7 +153,7 @@ export function DocumentPreviewPanel({ orderId }: DocumentPreviewPanelProps) {
         {isPdf ? (
           <iframe
             src={activeFile.signedUrl}
-            className="w-full h-[500px] lg:h-[calc(100vh-280px)] min-h-[400px] rounded-md border"
+            className="w-full h-[500px] lg:h-full min-h-[400px] rounded-md border"
             title={`Vorschau: ${activeFile.filename}`}
           />
         ) : (

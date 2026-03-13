@@ -334,8 +334,8 @@ export function ReviewPageContent({ orderId }: ReviewPageContentProps) {
         </Alert>
       )}
 
-      {/* Two-column layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Two-column layout — items-start enables sticky positioning on left panel */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         {/* Left: Document Preview */}
         <DocumentPreviewPanel orderId={orderId} />
 
