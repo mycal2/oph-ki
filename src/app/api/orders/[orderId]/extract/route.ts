@@ -129,7 +129,9 @@ export async function POST(
       }
 
       tenantId = appMetadata?.tenant_id ?? null;
-      if (!tenantId) {
+      const isPlatformAdmin = appMetadata?.role === "platform_admin";
+
+      if (!tenantId && !isPlatformAdmin) {
         return NextResponse.json(
           { success: false, error: "Kein Mandant zugewiesen." },
           { status: 403 }
@@ -138,18 +140,27 @@ export async function POST(
     }
 
     // --- Fetch order and check concurrency ---
-    const { data: order, error: orderError } = await adminClient
+    let orderQuery = adminClient
       .from("orders")
       .select("id, tenant_id, status, extraction_status, extraction_attempts, dealer_id, recognition_confidence, subject")
-      .eq("id", orderId)
-      .eq("tenant_id", tenantId)
-      .single();
+      .eq("id", orderId);
+
+    if (tenantId) {
+      orderQuery = orderQuery.eq("tenant_id", tenantId);
+    }
+
+    const { data: order, error: orderError } = await orderQuery.single();
 
     if (orderError || !order) {
       return NextResponse.json(
         { success: false, error: "Bestellung nicht gefunden." },
         { status: 404 }
       );
+    }
+
+    // For platform_admin without tenant, use the order's tenant_id
+    if (!tenantId) {
+      tenantId = order.tenant_id as string;
     }
 
     // Concurrency guard: reject if already processing
