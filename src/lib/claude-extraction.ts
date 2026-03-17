@@ -377,11 +377,8 @@ export async function extractOrderData(
         extraction_metadata: { confidence_score: number };
       };
       try {
-        parsed = safeJsonParse(jsonStr);
+        parsed = safeJsonParse(jsonStr, input.orderId);
       } catch (parseError) {
-        // Log the problematic JSON for debugging
-        const snippet = jsonStr.substring(0, 500);
-        console.error(`[extraction] JSON parse failed for order ${input.orderId}. First 500 chars: ${snippet}`);
         throw parseError;
       }
 
@@ -696,12 +693,12 @@ function extractJson(text: string): string {
 /**
  * Attempts to parse JSON, repairing common issues from LLM output if needed.
  */
-function safeJsonParse<T>(jsonStr: string): T {
+function safeJsonParse<T>(jsonStr: string, orderId?: string): T {
   // First try direct parse
   try {
     return JSON.parse(jsonStr) as T;
-  } catch {
-    // Attempt repairs
+  } catch (e) {
+    console.error(`[safeJsonParse] Direct parse failed for order ${orderId ?? "unknown"}. Error: ${e instanceof Error ? e.message : e}. First 500 chars: ${jsonStr.substring(0, 500)}`);
   }
 
   let repaired = jsonStr;
@@ -743,10 +740,15 @@ function safeJsonParse<T>(jsonStr: string): T {
 
   try {
     return JSON.parse(repaired) as T;
-  } catch (finalError) {
+  } catch {
     // Last resort: try to use a character-by-character JSON string fixer
     repaired = fixJsonStrings(jsonStr);
-    return JSON.parse(repaired) as T;
+    try {
+      return JSON.parse(repaired) as T;
+    } catch (finalError) {
+      console.error(`[safeJsonParse] All repair attempts failed for order ${orderId ?? "unknown"}. fixJsonStrings first 500 chars: ${repaired.substring(0, 500)}`);
+      throw finalError;
+    }
   }
 }
 
