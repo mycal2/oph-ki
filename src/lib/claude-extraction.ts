@@ -703,6 +703,22 @@ function safeJsonParse<T>(jsonStr: string, orderId?: string): T {
 
   let repaired = jsonStr;
 
+  // Replace Unicode quotation marks inside string values with escaped ASCII equivalents.
+  // These cause issues when Claude outputs company names like UAB „Tavis" — the „ " chars
+  // can interfere with JSON string delimiters.
+  repaired = repaired.replace(/\u201E/g, '\\"');  // „ (double low-9 quotation mark)
+  repaired = repaired.replace(/\u201C/g, '\\"');  // " (left double quotation mark)
+  repaired = repaired.replace(/\u201D/g, '\\"');  // " (right double quotation mark)
+  repaired = repaired.replace(/\u201A/g, "\\'");  // ‚ (single low-9 quotation mark)
+  repaired = repaired.replace(/\u2018/g, "\\'");  // ' (left single quotation mark)
+  repaired = repaired.replace(/\u2019/g, "\\'");  // ' (right single quotation mark)
+
+  try {
+    return JSON.parse(repaired) as T;
+  } catch {
+    // Continue with more repairs
+  }
+
   // Fix trailing commas before } or ]
   repaired = repaired.replace(/,\s*([\]}])/g, "$1");
 
@@ -778,14 +794,19 @@ function fixJsonStrings(input: string): string {
           }
         } else if (ch === '"') {
           // Could be end-of-string or unescaped quote inside string
-          // Peek ahead: if next non-whitespace is : , } ] or end, it's a real close
+          // Peek ahead: if next non-whitespace is a valid JSON token after
+          // a string value, treat this as the real closing quote.
           const rest = input.substring(i + 1).trimStart();
+          const nextCh = rest.length > 0 ? rest[0] : '';
           if (
             rest.length === 0 ||
-            rest[0] === ':' ||
-            rest[0] === ',' ||
-            rest[0] === '}' ||
-            rest[0] === ']'
+            nextCh === ':' ||
+            nextCh === ',' ||
+            nextCh === '}' ||
+            nextCh === ']' ||
+            // A '"' follows → could be start of next key/value in the object
+            // Check if it looks like a key ("key":) or array element
+            (nextCh === '"' && /^"[^"]*"\s*:/.test(rest))
           ) {
             result.push('"');
             i++;
