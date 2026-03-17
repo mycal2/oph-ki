@@ -371,11 +371,11 @@ export async function extractOrderData(
 
       // Parse JSON from response (handle potential markdown fences)
       const jsonStr = extractJson(responseText);
-      const parsed = JSON.parse(jsonStr) as {
+      const parsed = safeJsonParse<{
         document_language?: string | null;
         order: CanonicalOrderData["order"];
         extraction_metadata: { confidence_score: number };
-      };
+      }>(jsonStr);
 
       // Build full canonical result
       const extractedData: CanonicalOrderData = {
@@ -505,11 +505,11 @@ async function extractSingleChunk(params: {
         .join("");
 
       const jsonStr = extractJson(responseText);
-      const parsed = JSON.parse(jsonStr) as {
+      const parsed = safeJsonParse<{
         document_language?: string | null;
         order: CanonicalOrderData["order"];
         extraction_metadata: { confidence_score: number };
-      };
+      }>(jsonStr);
 
       return {
         parsed,
@@ -683,4 +683,38 @@ function extractJson(text: string): string {
 
   // Return as-is and let JSON.parse handle the error
   return text.trim();
+}
+
+/**
+ * Attempts to parse JSON, repairing common issues from LLM output if needed.
+ */
+function safeJsonParse<T>(jsonStr: string): T {
+  // First try direct parse
+  try {
+    return JSON.parse(jsonStr) as T;
+  } catch {
+    // Attempt repairs
+  }
+
+  let repaired = jsonStr;
+
+  // Fix trailing commas before } or ]
+  repaired = repaired.replace(/,\s*([\]}])/g, "$1");
+
+  // Fix unescaped newlines inside string values
+  repaired = repaired.replace(
+    /"(?:[^"\\]|\\.)*"/g,
+    (match) => match.replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t")
+  );
+
+  try {
+    return JSON.parse(repaired) as T;
+  } catch {
+    // More aggressive: fix unescaped control characters
+  }
+
+  // Remove all control characters except \n \r \t (which are already escaped above)
+  repaired = repaired.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "");
+
+  return JSON.parse(repaired) as T;
 }
