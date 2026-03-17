@@ -125,7 +125,11 @@ ${CANONICAL_JSON_SCHEMA}
       * Polish: Ilosc, Liczba
       * Italian: Quantita, Qta
       * Dutch: Aantal, Hoeveelheid
-    - Extract the numeric value from that column.`;
+    - Extract the numeric value from that column.
+16. **Dealer-Specific Extraction Hints (CRITICAL):**
+    - If a "Dealer-Specific Extraction Hints" section is provided in the dealer context, you MUST follow those instructions with highest priority.
+    - Dealer hints override default extraction behavior. For example, if hints say to skip certain lines, those lines MUST NOT appear in line_items — even if they look like regular order rows.
+    - If hints specify how to map article numbers (e.g. which column is the dealer article number vs manufacturer article number), follow those mappings exactly.`;
 
 export interface ExtractionInput {
   orderId: string;
