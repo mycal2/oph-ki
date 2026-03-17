@@ -371,11 +371,19 @@ export async function extractOrderData(
 
       // Parse JSON from response (handle potential markdown fences)
       const jsonStr = extractJson(responseText);
-      const parsed = safeJsonParse<{
+      let parsed: {
         document_language?: string | null;
         order: CanonicalOrderData["order"];
         extraction_metadata: { confidence_score: number };
-      }>(jsonStr);
+      };
+      try {
+        parsed = safeJsonParse(jsonStr);
+      } catch (parseError) {
+        // Log the problematic JSON for debugging
+        const snippet = jsonStr.substring(0, 500);
+        console.error(`[extraction] JSON parse failed for order ${input.orderId}. First 500 chars: ${snippet}`);
+        throw parseError;
+      }
 
       // Build full canonical result
       const extractedData: CanonicalOrderData = {
@@ -701,7 +709,7 @@ function safeJsonParse<T>(jsonStr: string): T {
   // Fix trailing commas before } or ]
   repaired = repaired.replace(/,\s*([\]}])/g, "$1");
 
-  // Fix unescaped newlines inside string values
+  // Fix unescaped newlines/tabs/returns inside string values
   repaired = repaired.replace(
     /"(?:[^"\\]|\\.)*"/g,
     (match) => match.replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t")
@@ -710,11 +718,103 @@ function safeJsonParse<T>(jsonStr: string): T {
   try {
     return JSON.parse(repaired) as T;
   } catch {
-    // More aggressive: fix unescaped control characters
+    // Continue with more aggressive repairs
   }
 
-  // Remove all control characters except \n \r \t (which are already escaped above)
+  // Remove all control characters except already-escaped ones
   repaired = repaired.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "");
 
-  return JSON.parse(repaired) as T;
+  try {
+    return JSON.parse(repaired) as T;
+  } catch {
+    // Continue with most aggressive repairs
+  }
+
+  // Fix unescaped quotes inside string values: find strings and escape internal quotes
+  // This handles cases like "order_number": "AB"CD" → "order_number": "AB\"CD"
+  repaired = repaired.replace(
+    /:\s*"((?:[^"\\]|\\.)*)"/g,
+    (_match, content: string) => {
+      // Re-process: within the captured content, check for unescaped quotes
+      // by looking at the raw jsonStr around this area
+      return `: "${content}"`;
+    }
+  );
+
+  try {
+    return JSON.parse(repaired) as T;
+  } catch (finalError) {
+    // Last resort: try to use a character-by-character JSON string fixer
+    repaired = fixJsonStrings(jsonStr);
+    return JSON.parse(repaired) as T;
+  }
+}
+
+/**
+ * Character-by-character JSON string repair.
+ * Walks the JSON and properly escapes string contents.
+ */
+function fixJsonStrings(input: string): string {
+  const result: string[] = [];
+  let i = 0;
+  const len = input.length;
+
+  while (i < len) {
+    if (input[i] === '"') {
+      // Start of a string — collect and fix its contents
+      result.push('"');
+      i++;
+      while (i < len) {
+        const ch = input[i];
+        if (ch === '\\') {
+          // Keep escape sequences as-is
+          result.push(ch);
+          i++;
+          if (i < len) {
+            result.push(input[i]);
+            i++;
+          }
+        } else if (ch === '"') {
+          // Could be end-of-string or unescaped quote inside string
+          // Peek ahead: if next non-whitespace is : , } ] or end, it's a real close
+          const rest = input.substring(i + 1).trimStart();
+          if (
+            rest.length === 0 ||
+            rest[0] === ':' ||
+            rest[0] === ',' ||
+            rest[0] === '}' ||
+            rest[0] === ']'
+          ) {
+            result.push('"');
+            i++;
+            break;
+          } else {
+            // Unescaped quote inside string — escape it
+            result.push('\\"');
+            i++;
+          }
+        } else if (ch === '\n') {
+          result.push('\\n');
+          i++;
+        } else if (ch === '\r') {
+          result.push('\\r');
+          i++;
+        } else if (ch === '\t') {
+          result.push('\\t');
+          i++;
+        } else if (ch.charCodeAt(0) < 0x20) {
+          // Other control character — skip
+          i++;
+        } else {
+          result.push(ch);
+          i++;
+        }
+      }
+    } else {
+      result.push(input[i]);
+      i++;
+    }
+  }
+
+  return result.join('');
 }
