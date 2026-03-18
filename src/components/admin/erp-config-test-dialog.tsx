@@ -170,7 +170,7 @@ export function ErpConfigTestDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-y-auto max-h-[calc(90vh-8rem)]">
           {/* Input mode tabs */}
           <Tabs value={mode} onValueChange={(v) => setMode(v as "json" | "order")}>
             <TabsList>
