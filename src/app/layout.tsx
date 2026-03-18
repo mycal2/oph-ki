@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { EnvironmentBanner } from "@/components/environment-banner";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -14,7 +15,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="de" suppressHydrationWarning>
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <EnvironmentBanner />
+        {children}
+      </body>
     </html>
   );
 }
