@@ -289,11 +289,11 @@ export function ErpConfigTestDialog({
               )}
 
               {/* Output preview */}
-              <ScrollArea className="max-h-[300px]">
-                <pre className="rounded-lg border bg-muted/30 p-4 text-xs font-mono whitespace-pre-wrap break-all">
+              <div className="max-h-[400px] overflow-auto rounded-lg border bg-muted/30">
+                <pre className="p-4 text-xs font-mono whitespace-pre-wrap break-all">
                   {result.output}
                 </pre>
-              </ScrollArea>
+              </div>
             </div>
           )}
         </div>
