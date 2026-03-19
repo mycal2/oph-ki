@@ -18,7 +18,7 @@ export function EnvironmentBanner() {
 
   return (
     <div
-      className={`${env.color} text-center text-sm font-extrabold tracking-widest uppercase py-2.5 px-2 sticky top-0 z-[100]`}
+      className={`${env.color} text-center text-sm font-extrabold tracking-widest uppercase py-2.5 px-2 relative z-0`}
     >
       ⚠ {env.label} UMGEBUNG — Keine Produktionsdaten ⚠
     </div>
