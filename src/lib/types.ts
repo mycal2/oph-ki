@@ -473,6 +473,10 @@ export interface TenantUserListItem {
   role: UserRole;
   status: UserStatus;
   last_sign_in_at: string | null;
+  /** OPH-38: Whether the user has confirmed their email (null = not confirmed / pending invite). */
+  email_confirmed_at: string | null;
+  /** OPH-38: When the user was created / invited. */
+  created_at: string | null;
 }
 
 /**
