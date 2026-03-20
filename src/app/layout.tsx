@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Toaster } from "@/components/ui/sonner";
 import { EnvironmentBanner } from "@/components/environment-banner";
 import "./globals.css";
 
@@ -18,6 +19,7 @@ export default function RootLayout({
       <body className="antialiased">
         <EnvironmentBanner />
         {children}
+        <Toaster richColors />
       </body>
     </html>
   );

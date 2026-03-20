@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Loader2, MoreHorizontal, Power, PowerOff, UserPlus, Clock, Info, AlertTriangle, Mail } from "lucide-react";
+import { Loader2, MoreHorizontal, Power, PowerOff, UserPlus, Clock, Info, AlertTriangle, Mail, MailPlus, KeyRound } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -96,6 +97,10 @@ interface TenantFormSheetProps {
   onFetchUsers: (id: string) => Promise<TenantUserListItem[]>;
   onInviteUser: (email: string, role: "tenant_user" | "tenant_admin") => Promise<{ ok: boolean; error?: string }>;
   onToggleUserStatus: (userId: string, status: "active" | "inactive") => Promise<boolean>;
+  /** OPH-38: Resend invite for unconfirmed user. */
+  onResendInvite: (userId: string) => Promise<{ ok: boolean; error?: string }>;
+  /** OPH-38: Trigger password reset for active user. */
+  onResetPassword: (userId: string) => Promise<{ ok: boolean; error?: string }>;
   isMutating: boolean;
 }
 
@@ -121,6 +126,8 @@ export function TenantFormSheet({
   onFetchUsers,
   onInviteUser,
   onToggleUserStatus,
+  onResendInvite,
+  onResetPassword,
   isMutating,
 }: TenantFormSheetProps) {
   const isNew = !tenantId;
@@ -165,6 +172,14 @@ export function TenantFormSheet({
     action: "deactivate" | "reactivate";
   } | null>(null);
 
+  // OPH-38: Confirmation dialog state for resend invite / password reset
+  const [confirmUserAction, setConfirmUserAction] = useState<{
+    userId: string;
+    userName: string;
+    userEmail: string;
+    action: "resend-invite" | "reset-password";
+  } | null>(null);
+
   // Reset form
   const resetForm = useCallback(() => {
     setName("");
@@ -186,6 +201,7 @@ export function TenantFormSheet({
     setActiveTab("profile");
     setTenantName("");
     setConfirmUserToggle(null);
+    setConfirmUserAction(null);
   }, []);
 
   // Populate form from tenant data
@@ -317,6 +333,31 @@ export function TenantFormSheet({
       loadUsers();
     }
     setConfirmUserToggle(null);
+  };
+
+  // OPH-38: Execute the confirmed user action (resend invite or password reset)
+  const confirmUserActionHandler = async () => {
+    if (!confirmUserAction) return;
+    const { userId, userEmail, action } = confirmUserAction;
+
+    if (action === "resend-invite") {
+      const result = await onResendInvite(userId);
+      if (result.ok) {
+        toast.success(`Einladung erneut gesendet an ${userEmail}.`);
+      } else {
+        toast.error(result.error ?? "Einladung konnte nicht gesendet werden.");
+      }
+    } else {
+      const result = await onResetPassword(userId);
+      if (result.ok) {
+        toast.success(`Passwort-Reset E-Mail gesendet an ${userEmail}.`);
+      } else {
+        toast.error(result.error ?? "Passwort-Reset konnte nicht ausgelöst werden.");
+      }
+    }
+
+    setConfirmUserAction(null);
+    loadUsers();
   };
 
   const handleInvite = async (email: string, role: "tenant_user" | "tenant_admin") => {
@@ -712,20 +753,31 @@ export function TenantFormSheet({
                                       </Badge>
                                     </TableCell>
                                     <TableCell>
-                                      {u.status === "inactive" ? (
-                                        <Badge variant="outline" className={`text-xs ${sBadge.className}`}>
-                                          {sBadge.label}
-                                        </Badge>
-                                      ) : (
-                                        <Badge variant="secondary" className={`text-xs ${sBadge.className}`}>
-                                          {sBadge.label}
-                                        </Badge>
-                                      )}
+                                      <div className="flex flex-col gap-1">
+                                        {u.status === "inactive" ? (
+                                          <Badge variant="outline" className={`text-xs ${sBadge.className}`}>
+                                            {sBadge.label}
+                                          </Badge>
+                                        ) : (
+                                          <Badge variant="secondary" className={`text-xs ${sBadge.className}`}>
+                                            {sBadge.label}
+                                          </Badge>
+                                        )}
+                                        {/* OPH-38: Show pending indicator for unconfirmed users */}
+                                        {!u.email_confirmed_at && u.status === "active" && (
+                                          <span className="flex items-center gap-1 text-[11px] text-amber-600">
+                                            <MailPlus className="h-3 w-3" />
+                                            Einladung ausstehend
+                                          </span>
+                                        )}
+                                      </div>
                                     </TableCell>
                                     <TableCell className="hidden sm:table-cell text-xs text-muted-foreground">
                                       {u.last_sign_in_at
                                         ? new Date(u.last_sign_in_at).toLocaleDateString("de-DE")
-                                        : "—"}
+                                        : !u.email_confirmed_at && u.created_at
+                                          ? <span title="Einladung gesendet am">Eingeladen: {new Date(u.created_at).toLocaleDateString("de-DE")}</span>
+                                          : "—"}
                                     </TableCell>
                                     <TableCell>
                                       <DropdownMenu>
@@ -740,6 +792,38 @@ export function TenantFormSheet({
                                           </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
+                                          {/* OPH-38: Resend invite (only for unconfirmed users) */}
+                                          {!u.email_confirmed_at && u.status === "active" && (
+                                            <DropdownMenuItem
+                                              onClick={() =>
+                                                setConfirmUserAction({
+                                                  userId: u.id,
+                                                  userName: displayName,
+                                                  userEmail: u.email,
+                                                  action: "resend-invite",
+                                                })
+                                              }
+                                            >
+                                              <MailPlus className="mr-2 h-4 w-4" />
+                                              Einladung erneut senden
+                                            </DropdownMenuItem>
+                                          )}
+                                          {/* OPH-38: Password reset (for all active users) */}
+                                          {u.status === "active" && (
+                                            <DropdownMenuItem
+                                              onClick={() =>
+                                                setConfirmUserAction({
+                                                  userId: u.id,
+                                                  userName: displayName,
+                                                  userEmail: u.email,
+                                                  action: "reset-password",
+                                                })
+                                              }
+                                            >
+                                              <KeyRound className="mr-2 h-4 w-4" />
+                                              Passwort zurücksetzen
+                                            </DropdownMenuItem>
+                                          )}
                                           {u.status === "active" ? (
                                             <DropdownMenuItem
                                               onClick={() => handleToggleUser(u.id, u.status, displayName)}
@@ -749,12 +833,22 @@ export function TenantFormSheet({
                                               Deaktivieren
                                             </DropdownMenuItem>
                                           ) : (
-                                            <DropdownMenuItem
-                                              onClick={() => handleToggleUser(u.id, u.status, displayName)}
-                                            >
-                                              <Power className="mr-2 h-4 w-4" />
-                                              Reaktivieren
-                                            </DropdownMenuItem>
+                                            <>
+                                              <DropdownMenuItem disabled title="Benutzer ist deaktiviert">
+                                                <MailPlus className="mr-2 h-4 w-4" />
+                                                Einladung erneut senden
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem disabled title="Benutzer ist deaktiviert">
+                                                <KeyRound className="mr-2 h-4 w-4" />
+                                                Passwort zurücksetzen
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem
+                                                onClick={() => handleToggleUser(u.id, u.status, displayName)}
+                                              >
+                                                <Power className="mr-2 h-4 w-4" />
+                                                Reaktivieren
+                                              </DropdownMenuItem>
+                                            </>
                                           )}
                                         </DropdownMenuContent>
                                       </DropdownMenu>
@@ -849,6 +943,47 @@ export function TenantFormSheet({
               {confirmUserToggle?.action === "deactivate"
                 ? "Deaktivieren"
                 : "Reaktivieren"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* OPH-38: Confirmation dialog for resend invite / password reset */}
+      <AlertDialog
+        open={!!confirmUserAction}
+        onOpenChange={(open) => {
+          if (!open) setConfirmUserAction(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmUserAction?.action === "resend-invite"
+                ? "Einladung erneut senden?"
+                : "Passwort zurücksetzen?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmUserAction?.action === "resend-invite" ? (
+                <>
+                  Eine neue Einladungs-E-Mail wird an{" "}
+                  <span className="font-semibold">{confirmUserAction?.userEmail}</span>{" "}
+                  gesendet. Der Benutzer kann damit sein Konto aktivieren.
+                </>
+              ) : (
+                <>
+                  Eine Passwort-Reset-E-Mail wird an{" "}
+                  <span className="font-semibold">{confirmUserAction?.userEmail}</span>{" "}
+                  gesendet. Der Benutzer kann damit ein neues Passwort festlegen.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmUserActionHandler}>
+              {confirmUserAction?.action === "resend-invite"
+                ? "Einladung senden"
+                : "Reset senden"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

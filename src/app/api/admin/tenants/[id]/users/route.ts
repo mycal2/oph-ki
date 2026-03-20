@@ -66,7 +66,7 @@ export async function GET(
     // Uses getUserById per profile to avoid fetching all platform users (BUG-1 fix).
     const authUsersMap = new Map<
       string,
-      { email: string; last_sign_in_at: string | null }
+      { email: string; last_sign_in_at: string | null; email_confirmed_at: string | null; created_at: string | null }
     >();
 
     const authResults = await Promise.allSettled(
@@ -81,6 +81,8 @@ export async function GET(
         authUsersMap.set(authUser.id, {
           email: authUser.email ?? "",
           last_sign_in_at: authUser.last_sign_in_at ?? null,
+          email_confirmed_at: authUser.email_confirmed_at ?? null,
+          created_at: authUser.created_at ?? null,
         });
       }
     }
@@ -96,6 +98,8 @@ export async function GET(
         role: profile.role,
         status: profile.status,
         last_sign_in_at: authData?.last_sign_in_at ?? null,
+        email_confirmed_at: authData?.email_confirmed_at ?? null,
+        created_at: authData?.created_at ?? null,
       };
     });
 

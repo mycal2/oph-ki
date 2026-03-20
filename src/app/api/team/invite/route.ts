@@ -117,6 +117,16 @@ export async function POST(
       );
     }
 
+    // Set app_metadata so getUser() returns tenant_id and role
+    // (inviteUserByEmail `data` only sets user_metadata, not app_metadata)
+    await adminClient.auth.admin.updateUserById(inviteData.user.id, {
+      app_metadata: {
+        tenant_id: appMetadata.tenant_id,
+        role: role,
+        user_status: "active",
+      },
+    });
+
     return NextResponse.json(
       {
         success: true,

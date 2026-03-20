@@ -20,6 +20,10 @@ interface UseAdminTenantsReturn {
   fetchTenantUsers: (id: string) => Promise<TenantUserListItem[]>;
   inviteUser: (tenantId: string, data: AdminInviteUserInput) => Promise<{ ok: boolean; error?: string }>;
   toggleUserStatus: (tenantId: string, userId: string, status: "active" | "inactive") => Promise<boolean>;
+  /** OPH-38: Resend invitation email for an unconfirmed user. */
+  resendInvite: (tenantId: string, userId: string) => Promise<{ ok: boolean; error?: string }>;
+  /** OPH-38: Trigger password reset email for an active user. */
+  resetPassword: (tenantId: string, userId: string) => Promise<{ ok: boolean; error?: string }>;
   exportCsv: () => Promise<void>;
   isMutating: boolean;
   mutationError: string | null;
@@ -206,6 +210,62 @@ export function useAdminTenants(): UseAdminTenantsReturn {
     []
   );
 
+  // OPH-38: Resend invite for unconfirmed user
+  const resendInvite = useCallback(
+    async (tenantId: string, userId: string) => {
+      setIsMutating(true);
+      setMutationError(null);
+
+      try {
+        const res = await fetch(
+          `/api/admin/tenants/${tenantId}/users/${userId}/resend-invite`,
+          { method: "POST" }
+        );
+        const json = (await res.json()) as ApiResponse;
+
+        if (!res.ok || !json.success) {
+          const errMsg = json.error ?? "Einladung konnte nicht erneut gesendet werden.";
+          return { ok: false, error: errMsg };
+        }
+
+        return { ok: true };
+      } catch {
+        return { ok: false, error: "Verbindungsfehler beim Senden der Einladung." };
+      } finally {
+        setIsMutating(false);
+      }
+    },
+    []
+  );
+
+  // OPH-38: Trigger password reset for active user
+  const resetPassword = useCallback(
+    async (tenantId: string, userId: string) => {
+      setIsMutating(true);
+      setMutationError(null);
+
+      try {
+        const res = await fetch(
+          `/api/admin/tenants/${tenantId}/users/${userId}/reset-password`,
+          { method: "POST" }
+        );
+        const json = (await res.json()) as ApiResponse;
+
+        if (!res.ok || !json.success) {
+          const errMsg = json.error ?? "Passwort-Reset konnte nicht ausgelöst werden.";
+          return { ok: false, error: errMsg };
+        }
+
+        return { ok: true };
+      } catch {
+        return { ok: false, error: "Verbindungsfehler beim Passwort-Reset." };
+      } finally {
+        setIsMutating(false);
+      }
+    },
+    []
+  );
+
   const exportCsv = useCallback(async () => {
     try {
       const res = await fetch("/api/admin/tenants/export");
@@ -239,6 +299,8 @@ export function useAdminTenants(): UseAdminTenantsReturn {
     fetchTenantUsers,
     inviteUser,
     toggleUserStatus,
+    resendInvite,
+    resetPassword,
     exportCsv,
     isMutating,
     mutationError,
