@@ -1,6 +1,6 @@
 # OPH-38: Admin: Resend Invite & Trigger Password Reset for Tenant Users
 
-## Status: In Review
+## Status: Deployed
 **Created:** 2026-03-20
 **Last Updated:** 2026-03-20
 
@@ -220,4 +220,8 @@ Admin → Tenants → [Tenant] → Users tab (existing)
 - **Recommendation:** Deploy, but address BUG-3 (missing timestamp) and BUG-4 (silent email failure) in a follow-up sprint.
 
 ## Deployment
-_To be added by /deploy_
+- **Production URL:** https://oph-ki.ids.online
+- **Deployed:** 2026-03-20
+- **Git Tag:** v1.38.0-OPH-38
+- **Commit:** feat(OPH-38): Admin resend invite & trigger password reset for tenant users
+- **All 5 QA bugs fixed before deployment**
