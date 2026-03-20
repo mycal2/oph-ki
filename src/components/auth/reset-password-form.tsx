@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,14 +15,41 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { resetPasswordAction } from "@/lib/auth-actions";
+import { createClient } from "@/lib/supabase/client";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 
 export function ResetPasswordForm() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // Process the hash fragment from Supabase recovery links to establish a session.
+  // The #access_token is only visible client-side; the server action needs an active session.
+  useEffect(() => {
+    const supabase = createClient();
+    const hash = window.location.hash;
+
+    if (hash && hash.includes("access_token")) {
+      // Supabase client auto-detects the hash and sets the session
+      supabase.auth.onAuthStateChange((event) => {
+        if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
+          setSessionReady(true);
+          // Clean up the hash from the URL
+          window.history.replaceState(null, "", window.location.pathname);
+        }
+      });
+    } else {
+      // No hash — user may already have a session (e.g., page refresh)
+      supabase.auth.getSession().then(({ data }) => {
+        if (data.session) {
+          setSessionReady(true);
+        }
+      });
+    }
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -118,12 +145,17 @@ export function ResetPasswordForm() {
           <Button
             type="submit"
             className="w-full font-bold"
-            disabled={isLoading}
+            disabled={isLoading || !sessionReady}
           >
             {isLoading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Speichern...
+              </>
+            ) : !sessionReady ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Sitzung wird hergestellt...
               </>
             ) : (
               "Passwort speichern"
