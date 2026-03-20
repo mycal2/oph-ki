@@ -33,14 +33,26 @@ export function ResetPasswordForm() {
     const hash = window.location.hash;
 
     if (hash && hash.includes("access_token")) {
-      // Supabase client auto-detects the hash and sets the session
-      supabase.auth.onAuthStateChange((event) => {
-        if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
-          setSessionReady(true);
-          // Clean up the hash from the URL
-          window.history.replaceState(null, "", window.location.pathname);
-        }
-      });
+      // Parse tokens from hash fragment and set session explicitly
+      const params = new URLSearchParams(hash.substring(1));
+      const accessToken = params.get("access_token");
+      const refreshToken = params.get("refresh_token");
+
+      if (accessToken && refreshToken) {
+        supabase.auth
+          .setSession({ access_token: accessToken, refresh_token: refreshToken })
+          .then(({ error: sessionError }) => {
+            if (!sessionError) {
+              setSessionReady(true);
+              window.history.replaceState(null, "", window.location.pathname);
+            } else {
+              console.error("Failed to set session from hash:", sessionError.message);
+              setError("Sitzung konnte nicht hergestellt werden. Bitte fordern Sie einen neuen Link an.");
+            }
+          });
+      } else {
+        setError("Ungültiger Reset-Link. Bitte fordern Sie einen neuen Link an.");
+      }
     } else {
       // No hash — user may already have a session (e.g., page refresh)
       supabase.auth.getSession().then(({ data }) => {
