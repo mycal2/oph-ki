@@ -64,3 +64,76 @@ Each manufacturer (tenant) maintains a catalog of their own articles. This catal
 - EC-5: Platform admin imports for a tenant → same rules apply, scoped to that tenant
 - EC-6: Very large catalog (5,000+ rows) → import must not time out; show progress indicator
 - EC-7: Article number already exists on manual add → show inline error "Artikel-Nr. bereits vorhanden"
+
+## Tech Design (Solution Architect)
+
+### Component Structure
+
+```
+Settings → "Artikelstamm" Tab (tenant_admin)
++-- ArticleCatalogPage
+    +-- ArticleCatalogToolbar
+    |   +-- Search Input
+    |   +-- "Artikel hinzufügen" Button
+    |   +-- "Importieren" Button (CSV/Excel)
+    |   +-- "Exportieren" Button (CSV download)
+    +-- ArticleCatalogTable
+    |   +-- Columns: Herst.-Art.-Nr., Name, Kategorie, Farbe, Verpackung, Ref.-Nr., GTIN, Suchbegriffe
+    |   +-- Per-row: Edit + Delete action buttons
+    +-- Empty State (with import / add CTA)
+    +-- ArticleFormDialog (Add / Edit, reused for both)
+    +-- ArticleDeleteDialog (confirmation)
+    +-- ArticleImportDialog
+        +-- File drop zone (CSV / Excel)
+        +-- Import Preview Table (parsed rows, errors highlighted)
+        +-- Confirm Import Button
+        +-- Import Result Summary (created / updated / skipped)
+
+Admin Panel → Tenant Detail Sheet → "Artikelstamm" Tab (platform_admin)
++-- Same ArticleCatalogPage component, tenant_id injected from Admin context
+```
+
+### Database Table: `article_catalog`
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | UUID | Primary key, auto-generated |
+| `tenant_id` | UUID | Foreign key → tenants, RLS-enforced |
+| `article_number` | text | Unique per tenant (Herst.-Art.-Nr.) |
+| `name` | text | Required (Artikelbezeichnung) |
+| `category` | text | Optional |
+| `color` | text | Optional (Farbe/Shade) |
+| `packaging` | text | Optional (Verpackungseinheit) |
+| `ref_no` | text | Optional (Ref.-Nr.) |
+| `gtin` | text | Optional (GTIN/EAN) |
+| `keywords` | text | Optional, comma-separated aliases |
+| `created_at` | timestamp | Auto |
+| `updated_at` | timestamp | Auto |
+
+**Unique constraint:** `(tenant_id, article_number)` — enforced at DB level.
+**RLS:** Tenant users read/write only their own rows. Platform admin uses service role (bypasses RLS).
+**Index:** on `tenant_id` for fast catalog lookups during AI matching (OPH-40).
+
+### API Routes
+
+| Method | Route | Purpose |
+|---|---|---|
+| GET | `/api/articles` | List tenant articles (paginated, searchable) |
+| POST | `/api/articles` | Create single article |
+| PUT | `/api/articles/[id]` | Update single article |
+| DELETE | `/api/articles/[id]` | Delete single article |
+| POST | `/api/articles/import` | Bulk upsert from CSV/Excel |
+| GET | `/api/articles/export` | Download full catalog as CSV |
+| GET | `/api/admin/tenants/[id]/articles` | Platform admin: list any tenant's articles |
+| POST | `/api/admin/tenants/[id]/articles/import` | Platform admin: bulk import for any tenant |
+
+### Tech Decisions
+
+- **`xlsx` package** (already installed) — parses both `.csv` and `.xlsx` files, consistent with existing dealer mappings import
+- **Upsert on import** — tenant admins frequently re-export → edit → re-import; rejecting duplicates would break this workflow
+- **Keywords as comma-separated text** — simpler than a join table; sufficient for full-text matching at the scale of a single tenant's catalog
+- **Shared component for Settings + Admin** — same `ArticleCatalogPage` receives `tenantId` as a prop; no code duplication
+
+### Dependencies
+
+- `xlsx` — already installed, no new packages needed
