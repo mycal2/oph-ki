@@ -34,6 +34,8 @@ export default function AdminTenantsPage() {
     fetchTenantUsers,
     inviteUser,
     toggleUserStatus,
+    resendInvite,
+    resetPassword,
     exportCsv,
     isMutating,
     mutationError,
@@ -117,6 +119,24 @@ export default function AdminTenantsPage() {
     [editingTenantId, toggleUserStatus]
   );
 
+  // OPH-38: Resend invite for unconfirmed user
+  const handleResendInvite = useCallback(
+    async (userId: string) => {
+      if (!editingTenantId) return { ok: false, error: "Kein Mandant ausgewählt." };
+      return resendInvite(editingTenantId, userId);
+    },
+    [editingTenantId, resendInvite]
+  );
+
+  // OPH-38: Trigger password reset
+  const handleResetPassword = useCallback(
+    async (userId: string) => {
+      if (!editingTenantId) return { ok: false, error: "Kein Mandant ausgewählt." };
+      return resetPassword(editingTenantId, userId);
+    },
+    [editingTenantId, resetPassword]
+  );
+
   // Loading state
   if (isLoadingRole) {
     return (
@@ -187,6 +207,8 @@ export default function AdminTenantsPage() {
         onFetchUsers={fetchTenantUsers}
         onInviteUser={handleInviteUser}
         onToggleUserStatus={handleToggleUserStatus}
+        onResendInvite={handleResendInvite}
+        onResetPassword={handleResetPassword}
         isMutating={isMutating}
       />
 

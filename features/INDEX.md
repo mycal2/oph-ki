@@ -49,7 +49,8 @@
 | OPH-35 | Per-Tenant Email Notification Settings | Deployed | [OPH-35-per-tenant-email-notification-settings.md](OPH-35-per-tenant-email-notification-settings.md) | 2026-03-10 |
 | OPH-36 | Sticky PDF Preview on Order Review Page | In Review | [OPH-36-sticky-pdf-preview.md](OPH-36-sticky-pdf-preview.md) | 2026-03-13 |
 | OPH-37 | Dealer Article Number (Lieferantenartikelnummer) | In Review | [OPH-37-dealer-article-number.md](OPH-37-dealer-article-number.md) | 2026-03-13 |
+| OPH-38 | Admin: Resend Invite & Trigger Password Reset for Tenant Users | Deployed | [OPH-38-admin-resend-invite-password-reset.md](OPH-38-admin-resend-invite-password-reset.md) | 2026-03-20 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-38
+## Next Available ID: OPH-39
