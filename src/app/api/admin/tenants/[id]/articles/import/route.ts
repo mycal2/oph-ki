@@ -115,6 +115,8 @@ export async function POST(
         category: row.category,
         color: row.color,
         packaging: row.packaging,
+        size1: row.size1,
+        size2: row.size2,
         ref_no: row.ref_no,
         gtin: row.gtin,
         keywords: row.keywords,

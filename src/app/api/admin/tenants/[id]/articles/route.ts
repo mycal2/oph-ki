@@ -137,6 +137,8 @@ export async function POST(
         category: parsed.data.category ?? null,
         color: parsed.data.color ?? null,
         packaging: parsed.data.packaging ?? null,
+        size1: parsed.data.size1 ?? null,
+        size2: parsed.data.size2 ?? null,
         ref_no: parsed.data.ref_no ?? null,
         gtin: parsed.data.gtin ?? null,
         keywords: parsed.data.keywords ?? null,

@@ -71,7 +71,7 @@ export async function generateArticleExportCsv(
 
   const { data: articles, error: queryError } = await adminClient
     .from("article_catalog")
-    .select("article_number, name, category, color, packaging, ref_no, gtin, keywords")
+    .select("article_number, name, category, color, packaging, size1, size2, ref_no, gtin, keywords")
     .eq("tenant_id", tenantId)
     .order("article_number", { ascending: true })
     .limit(50000);
@@ -93,7 +93,7 @@ export async function generateArticleExportCsv(
     return val;
   };
 
-  const header = "Herst.-Art.-Nr.;Artikelbezeichnung;Kategorie;Farbe;Verpackungseinheit;Ref.-Nr.;GTIN;Suchbegriffe";
+  const header = "Herst.-Art.-Nr.;Artikelbezeichnung;Kategorie;Farbe;Verpackungseinheit;Groesse 1;Groesse 2;Ref.-Nr.;GTIN;Suchbegriffe";
   const rows = (articles ?? []).map((a) =>
     [
       esc(a.article_number as string),
@@ -101,6 +101,8 @@ export async function generateArticleExportCsv(
       esc(a.category as string | null),
       esc(a.color as string | null),
       esc(a.packaging as string | null),
+      esc(a.size1 as string | null),
+      esc(a.size2 as string | null),
       esc(a.ref_no as string | null),
       esc(a.gtin as string | null),
       esc(a.keywords as string | null),

@@ -112,6 +112,8 @@ export async function PUT(
     if (fields.category !== undefined) updateData.category = fields.category;
     if (fields.color !== undefined) updateData.color = fields.color;
     if (fields.packaging !== undefined) updateData.packaging = fields.packaging;
+    if (fields.size1 !== undefined) updateData.size1 = fields.size1;
+    if (fields.size2 !== undefined) updateData.size2 = fields.size2;
     if (fields.ref_no !== undefined) updateData.ref_no = fields.ref_no;
     if (fields.gtin !== undefined) updateData.gtin = fields.gtin;
     if (fields.keywords !== undefined) updateData.keywords = fields.keywords;

@@ -751,6 +751,18 @@ export const createArticleSchema = z.object({
     .trim()
     .nullable()
     .optional(),
+  size1: z
+    .string()
+    .max(200, "Groesse 1 darf maximal 200 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+  size2: z
+    .string()
+    .max(200, "Groesse 2 darf maximal 200 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
   ref_no: z
     .string()
     .max(200, "Ref.-Nr. darf maximal 200 Zeichen lang sein.")
@@ -799,6 +811,18 @@ export const updateArticleSchema = z.object({
   packaging: z
     .string()
     .max(200, "Verpackungseinheit darf maximal 200 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+  size1: z
+    .string()
+    .max(200, "Groesse 1 darf maximal 200 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+  size2: z
+    .string()
+    .max(200, "Groesse 2 darf maximal 200 Zeichen lang sein.")
     .trim()
     .nullable()
     .optional(),

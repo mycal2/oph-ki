@@ -18,6 +18,8 @@ interface CatalogEntry {
   gtin: string | null;
   keywords: string | null;
   packaging: string | null;
+  size1: string | null;
+  size2: string | null;
 }
 
 /**
@@ -101,7 +103,7 @@ export async function matchArticleNumbers(
   // Load entire catalog for this tenant
   const { data: catalog, error } = await adminClient
     .from("article_catalog")
-    .select("article_number, name, gtin, keywords, packaging")
+    .select("article_number, name, gtin, keywords, packaging, size1, size2")
     .eq("tenant_id", tenantId)
     .limit(10000);
 
@@ -124,14 +126,52 @@ export async function matchArticleNumbers(
     gtin: (row.gtin as string | null) ?? null,
     keywords: (row.keywords as string | null) ?? null,
     packaging: (row.packaging as string | null) ?? null,
+    size1: (row.size1 as string | null) ?? null,
+    size2: (row.size2 as string | null) ?? null,
   }));
 
-  // Pre-compute keywords for each catalog entry
-  const catalogKeywords = catalogEntries.map((entry) => parseKeywords(entry.keywords));
+  // Pre-compute keywords for each catalog entry (including size1/size2 as extra keywords)
+  const catalogKeywords = catalogEntries.map((entry) => {
+    const kw = parseKeywords(entry.keywords);
+    // Add size1/size2 as additional keywords for matching
+    if (entry.size1) kw.push(entry.size1.trim().toLowerCase());
+    if (entry.size2) kw.push(entry.size2.trim().toLowerCase());
+    return kw;
+  });
 
   return lineItems.map((item) => {
-    // Already has article_number from extraction: mark as extracted, skip matching
+    // Already has article_number from extraction: check if it matches a catalog keyword
+    // (the extracted "article number" might actually be a dealer code, not the manufacturer's)
     if (item.article_number) {
+      const extractedLower = item.article_number.trim().toLowerCase();
+
+      // Check if the extracted article_number is a keyword in any catalog entry
+      for (let i = 0; i < catalogEntries.length; i++) {
+        const entry = catalogEntries[i];
+        const entryKeywords = catalogKeywords[i];
+
+        // Exact keyword match: the extracted article_number is actually a dealer alias
+        if (entryKeywords.includes(extractedLower)) {
+          return {
+            ...item,
+            article_number: entry.article_number,
+            // Move the original extracted value to dealer_article_number (if not already set)
+            dealer_article_number: item.dealer_article_number || item.article_number,
+            article_number_source: "catalog_match" as const,
+            article_number_match_reason: `Alias-Übereinstimmung: Extrahierte Nr. '${item.article_number}' gefunden in Suchbegriffen von '${entry.article_number}'`,
+          };
+        }
+
+        // Exact article_number match: the extracted number IS the manufacturer article number
+        if (extractedLower === entry.article_number.trim().toLowerCase()) {
+          return {
+            ...item,
+            article_number_source: "extracted" as const,
+          };
+        }
+      }
+
+      // No catalog match found — keep extracted value as-is
       return {
         ...item,
         article_number_source: "extracted" as const,
@@ -226,22 +266,44 @@ export async function matchArticleNumbers(
     const topScore = candidates[0].score;
     const topCandidates = candidates.filter((c) => Math.abs(c.score - topScore) < 0.01);
 
-    // If multiple candidates with the same top score, try packaging tie-breaker
-    if (topCandidates.length > 1 && item.unit) {
-      const unitLower = item.unit.toLowerCase();
-      const packagingMatch = topCandidates.find(
-        (c) => c.catalogEntry.packaging?.toLowerCase() === unitLower
-      );
-      if (packagingMatch) {
-        return {
-          ...item,
-          article_number: packagingMatch.catalogEntry.article_number,
-          article_number_source: "catalog_match" as const,
-          article_number_match_reason: packagingMatch.reason + " (Verpackung bestätigt)",
-        };
+    // If multiple candidates with the same top score, try tie-breakers
+    if (topCandidates.length > 1) {
+      const descLower = item.description ? normalizeText(item.description) : "";
+      const unitLower = item.unit?.toLowerCase() ?? "";
+
+      // Tie-breaker 1: size1/size2 match against description
+      if (descLower) {
+        const sizeMatch = topCandidates.find((c) => {
+          const s1 = c.catalogEntry.size1?.toLowerCase();
+          const s2 = c.catalogEntry.size2?.toLowerCase();
+          return (s1 && descLower.includes(s1)) || (s2 && descLower.includes(s2));
+        });
+        if (sizeMatch) {
+          return {
+            ...item,
+            article_number: sizeMatch.catalogEntry.article_number,
+            article_number_source: "catalog_match" as const,
+            article_number_match_reason: sizeMatch.reason + " (Groesse bestätigt)",
+          };
+        }
       }
 
-      // Tie with no packaging resolution: leave empty (EC-1)
+      // Tie-breaker 2: packaging match against unit
+      if (unitLower) {
+        const packagingMatch = topCandidates.find(
+          (c) => c.catalogEntry.packaging?.toLowerCase() === unitLower
+        );
+        if (packagingMatch) {
+          return {
+            ...item,
+            article_number: packagingMatch.catalogEntry.article_number,
+            article_number_source: "catalog_match" as const,
+            article_number_match_reason: packagingMatch.reason + " (Verpackung bestätigt)",
+          };
+        }
+      }
+
+      // Tie with no resolution: leave empty (EC-1)
       return item;
     }
 

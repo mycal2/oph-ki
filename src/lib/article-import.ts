@@ -49,6 +49,18 @@ const COLUMN_MAP: Record<string, string> = {
   "gtin / ean": "gtin",
   "gtin/ean": "gtin",
   "barcode": "gtin",
+  // size1
+  "size1": "size1",
+  "groesse 1": "size1",
+  "groesse1": "size1",
+  "größe 1": "size1",
+  "größe1": "size1",
+  // size2
+  "size2": "size2",
+  "groesse 2": "size2",
+  "groesse2": "size2",
+  "größe 2": "size2",
+  "größe2": "size2",
   // keywords
   "keywords": "keywords",
   "suchbegriffe": "keywords",
@@ -62,6 +74,8 @@ export interface ParsedArticleRow {
   category: string | null;
   color: string | null;
   packaging: string | null;
+  size1: string | null;
+  size2: string | null;
   ref_no: string | null;
   gtin: string | null;
   keywords: string | null;
@@ -180,6 +194,8 @@ export function parseArticleFile(buffer: Buffer, filename: string): ParseResult 
       category: getField("category", 200),
       color: getField("color", 200),
       packaging: getField("packaging", 200),
+      size1: getField("size1", 200),
+      size2: getField("size2", 200),
       ref_no: getField("ref_no", 200),
       gtin: getField("gtin", 50),
       keywords: getField("keywords", 1000),

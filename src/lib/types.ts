@@ -892,6 +892,8 @@ export interface ArticleCatalogItem {
   category: string | null;
   color: string | null;
   packaging: string | null;
+  size1: string | null;
+  size2: string | null;
   ref_no: string | null;
   gtin: string | null;
   keywords: string | null;
