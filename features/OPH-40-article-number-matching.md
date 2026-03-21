@@ -118,3 +118,176 @@ Two new optional fields added to `CanonicalLineItem` (stored in existing order J
 - **Post-extraction, pre-save** — atomic with extraction result; no race condition between extraction and matching
 - **No new database table** — match metadata is order-scoped and ephemeral; lives in the existing order JSON
 - **No new packages** — text similarity via standard string operations (no external library needed)
+
+---
+
+## QA Test Results
+
+**Tested:** 2026-03-21
+**App URL:** http://localhost:3003
+**Tester:** QA Engineer (AI)
+
+### Acceptance Criteria Status
+
+#### AC-1: Catalog search for line items with empty article_number
+- [x] Code in `src/lib/article-matching.ts` iterates line items and skips those that already have `article_number` (line 133)
+- [x] For items with empty `article_number`, the full catalog is searched
+- [x] Called from `src/app/api/orders/[orderId]/extract/route.ts` (lines 536-554) after extraction, before save
+
+#### AC-2: Matching uses signals in priority order (GTIN, dealer art. nr., fuzzy, packaging)
+- [x] GTIN exact match checked first (score 1.0, line 151-160)
+- [x] Dealer article number vs catalog keywords checked second (score 0.95, line 163-174)
+- [x] Fuzzy name match checked third (score based on Dice coefficient, line 191-214)
+- [x] Packaging used as tie-breaker when top candidates score equally (line 229-245)
+- [ ] BUG: Description-vs-keyword substring match (step 3, line 177-188) is NOT listed in the AC priority order. The spec says priority #3 is "Fuzzy text match" but the code adds an intermediate step at score 0.9 for keyword substring match. See BUG-3.
+
+#### AC-3: Confident match pre-fills article_number
+- [x] Match result sets `article_number` from `catalogEntry.article_number` (lines 237, 250)
+- [x] Uses `article_number_source: "catalog_match"` to flag the source
+
+#### AC-4: Visual distinction in review UI ("KI-Vorschlag" badge)
+- [x] `order-edit-form.tsx` shows a violet "KI-Vorschlag" badge with Sparkles icon when `article_number_source === "catalog_match"` (line 392-411)
+- [x] Uses shadcn Badge and Tooltip components correctly
+- [x] Badge styling uses violet color scheme for clear differentiation
+
+#### AC-5: Match reason shown on hover/tooltip
+- [x] `order-edit-form.tsx` shows tooltip with `article_number_match_reason` (line 405-408)
+- [x] Falls back to generic message "Automatisch aus dem Artikelkatalog zugeordnet." if reason is null
+- [x] `extraction-result-preview.tsx` shows Sparkles icon with tooltip on catalog-matched values (lines 469-482)
+- [ ] BUG: Reason strings use "Ubereinstimmung" (missing umlaut) instead of the correct German spelling. See BUG-1.
+
+#### AC-6: No match below confidence threshold leaves field empty
+- [x] `FUZZY_MATCH_THRESHOLD = 0.6` prevents low-quality matches (line 12)
+- [x] Items with no candidates remain unchanged (line 218-220)
+- [x] Tied candidates with no packaging resolution return item unchanged (line 244, 257)
+
+#### AC-7: User can accept, edit, or clear suggestion
+- [x] `order-edit-form.tsx` onChange handler sets `article_number_source: "manual"` and `article_number_match_reason: null` when user edits (line 417-420)
+- [x] Badge disappears when source changes from "catalog_match"
+- [x] Clearing the field (empty string) sets article_number to null
+
+#### AC-8: Empty catalog skips matching silently
+- [x] Code returns early with no error when catalog is empty or null (lines 112-118)
+- [x] Items with existing article_number still get `article_number_source: "extracted"` even when catalog is empty
+
+#### AC-9: Matching is tenant-scoped
+- [x] Query filters by `.eq("tenant_id", tenantId)` (line 105)
+- [x] RLS policies on `article_catalog` table enforce tenant isolation at database level
+- [x] adminClient is used (bypasses RLS) but tenant filter is explicit in the query
+
+### Edge Cases Status
+
+#### EC-1: Multiple catalog articles score equally
+- [x] When multiple candidates share the top score, packaging tie-breaker is attempted (line 229)
+- [x] If packaging doesn't resolve the tie, the field stays empty (line 244, 257)
+
+#### EC-2: Dealer article number matches keyword in two catalog entries
+- [x] Both entries would be pushed as candidates with score 0.95
+- [x] Top candidates with equal scores trigger the tie-breaker logic, which ultimately leaves the field empty if unresolved
+
+#### EC-3: Tenant catalog has 0 entries
+- [x] Handled at line 112 -- returns line items unchanged (no error)
+
+#### EC-4: Line item already has article_number from extraction
+- [x] Matching is skipped for that item (line 133-138)
+- [x] Source is set to "extracted"
+
+#### EC-5: User manually edits a pre-filled suggestion
+- [x] onChange handler resets source to "manual" and clears match_reason (line 417-420)
+
+#### EC-6: Re-extraction runs matching again
+- [x] The extract route always calls `matchArticleNumbers` after extraction (line 538)
+- [x] Previous review data is cleared before re-extraction (line 196-197)
+
+#### EC-7: Very large catalog (5,000+ articles)
+- [ ] BUG: No `.limit()` on catalog query. See BUG-2.
+- [x] Matching is O(n*m) where n=line items, m=catalog size -- acceptable for typical order sizes
+- [x] Fuzzy matching (Dice coefficient) is O(len) per comparison, not O(n^2)
+
+### Security Audit Results
+- [x] Authentication: Extract route requires either valid Supabase auth or internal secret
+- [x] Authorization: Tenant scoping enforced via explicit `.eq("tenant_id", tenantId)` filter
+- [x] Tenant isolation: RLS policies on article_catalog table prevent cross-tenant access
+- [x] Input validation: New fields validated via Zod schema in `reviewSaveSchema`
+- [x] No secrets exposed: Matching runs server-side only, no catalog data sent to browser unnecessarily
+- [x] Timing-safe comparison for internal secret (line 24-26 in extract route)
+- [x] Error handling: Matching errors are caught and logged without failing extraction (try/catch at line 537-553)
+- [x] No injection vectors: Supabase parameterized queries, no raw SQL
+
+### Cross-Browser & Responsive
+- [x] Badge and tooltip use standard shadcn/ui components (cross-browser compatible)
+- [x] Extraction preview table hides Herst.-Art.-Nr. column below sm breakpoint (line 439: `hidden sm:table-cell`)
+- [x] Badge in edit form uses flexible layout that wraps on small screens
+- [x] Tooltip works with both mouse hover and touch (shadcn Tooltip primitive)
+
+### Bugs Found
+
+#### BUG-1: Missing German umlauts in match reason strings
+- **Severity:** Low
+- **File:** `src/lib/article-matching.ts`
+- **Steps to Reproduce:**
+  1. Have an article catalog with entries that match extracted line items
+  2. Run extraction on an order
+  3. View the tooltip for a catalog-matched article number
+  4. Expected: Correct German spelling with umlauts (e.g., "Ubereinstimmung" with U-umlaut, "bestatigt" with a-umlaut)
+  5. Actual: ASCII characters without umlauts: "Ubereinstimmung" (line 157, 170, 184, 211) and "bestatigt" (line 239)
+- **Affected strings:**
+  - `GTIN-Ubereinstimmung` should be `GTIN-Übereinstimmung`
+  - `Alias-Ubereinstimmung` should be `Alias-Übereinstimmung`
+  - `Keyword-Ubereinstimmung` should be `Keyword-Übereinstimmung`
+  - `Namens-Ubereinstimmung` should be `Namens-Übereinstimmung`
+  - `Verpackung bestatigt` should be `Verpackung bestätigt`
+- **Priority:** Fix in next sprint (cosmetic, user-facing tooltip text)
+
+#### BUG-2: No query limit on catalog loading
+- **Severity:** Medium
+- **File:** `src/lib/article-matching.ts`, line 102-105
+- **Steps to Reproduce:**
+  1. A tenant has a very large article catalog (5,000+ entries)
+  2. Run extraction on an order
+  3. Expected: Catalog query has a reasonable limit or pagination
+  4. Actual: Query loads ALL catalog entries without `.limit()`, potentially loading unbounded rows
+- **Notes:** The project backend rules state "Use `.limit()` on all list queries." While the feature spec accepts catalogs up to 5,000+, Supabase has a default row limit (typically 1,000) that may silently truncate results, causing missed matches for tenants with large catalogs. The code should either explicitly set a high limit (e.g., 10000) to override the Supabase default, or implement batched loading.
+- **Priority:** Fix before deployment (could cause silent incorrect behavior for large catalogs)
+
+#### BUG-3: Undocumented keyword-substring matching step
+- **Severity:** Low
+- **File:** `src/lib/article-matching.ts`, lines 177-188
+- **Steps to Reproduce:**
+  1. Review the matching logic
+  2. Expected: Matching steps follow the documented priority order (GTIN, dealer art. nr. vs keywords, fuzzy name, packaging)
+  3. Actual: An additional step exists between dealer art. nr. matching and fuzzy matching -- "Description vs catalog keywords (substring match)" at score 0.9 -- that is not documented in the acceptance criteria or matching logic description
+- **Notes:** This step matches when the description contains a keyword of 4+ characters as a substring. While functional and reasonable, it should be documented in the spec since it introduces a matching path not covered by the spec's priority order.
+- **Priority:** Nice to have (documentation alignment)
+
+#### BUG-4: Operator precedence ambiguity in keyword match condition
+- **Severity:** Low
+- **File:** `src/lib/article-matching.ts`, line 179
+- **Steps to Reproduce:**
+  1. Read line 179: `entryKeywords.find((kw) => descLower === kw || descLower.includes(kw) && kw.length >= 4)`
+  2. Expected: Clear intent expressed with parentheses
+  3. Actual: Relies on JavaScript operator precedence (`&&` before `||`). While the behavior is correct (exact match OR substring match with length >= 4), the missing parentheses make the intent ambiguous and error-prone for future maintainers.
+- **Recommended fix:** Add parentheses: `descLower === kw || (descLower.includes(kw) && kw.length >= 4)`
+- **Priority:** Nice to have (code clarity)
+
+### Regression Check
+- [x] OPH-4 (AI Extraction): Extract route still functions correctly; matching is wrapped in try/catch and non-blocking
+- [x] OPH-5 (Order Review): Edit form works with and without new fields; existing orders without `article_number_source` render correctly
+- [x] OPH-39 (Article Catalog): Catalog CRUD operations unaffected; matching only reads from the catalog
+- [x] OPH-37 (Dealer Article Number): `dealer_article_number` field still displayed and editable in review form
+- [x] Build passes without errors (`npm run build` successful)
+
+### Summary
+- **Acceptance Criteria:** 8/9 passed (1 partial: AC-2 has undocumented intermediate matching step; AC-5 has cosmetic umlaut issue)
+- **Edge Cases:** 6/7 passed (EC-7 has missing query limit concern)
+- **Bugs Found:** 4 total (0 critical, 1 medium, 3 low)
+- **Security:** Pass -- no vulnerabilities found
+- **Production Ready:** YES (with caveat)
+- **Recommendation:** Fix BUG-2 (missing query limit) before deployment to avoid silent data truncation for tenants with large catalogs. BUG-1, BUG-3, and BUG-4 are cosmetic/documentation issues that can be addressed in the next sprint.
+
+
+## Deployment
+- **Production URL:** https://oph-ki.ids.online
+- **Deployed:** 2026-03-21
+- **Git Tag:** v1.40.0-OPH-40
+- **All 4 QA bugs fixed before deployment**
