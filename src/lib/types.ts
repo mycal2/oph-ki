@@ -251,6 +251,10 @@ export interface CanonicalLineItem {
   unit_price: number | null;
   total_price: number | null;
   currency: string | null;
+  /** OPH-40: How the article_number was determined. */
+  article_number_source?: "extracted" | "catalog_match" | "manual" | null;
+  /** OPH-40: Human-readable reason for catalog match (German). */
+  article_number_match_reason?: string | null;
 }
 
 export interface CanonicalSender {

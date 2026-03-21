@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Plus, Trash2, AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Trash2, AlertTriangle, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Collapsible,
   CollapsibleContent,
@@ -380,14 +387,38 @@ function LineItemRow({ item, index, onChange, onRemove, parseNum }: LineItemRowP
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="space-y-1">
-          <Label htmlFor={`line-${index}-article`} className="text-xs">
+          <Label htmlFor={`line-${index}-article`} className="text-xs flex items-center gap-1">
             Herst.-Art.-Nr.
+            {item.article_number_source === "catalog_match" && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] px-1 py-0 gap-0.5 font-normal text-violet-700 border-violet-300 dark:text-violet-400 dark:border-violet-600 cursor-help"
+                    >
+                      <Sparkles className="h-2.5 w-2.5" />
+                      KI-Vorschlag
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs">
+                    <p className="text-xs">
+                      {item.article_number_match_reason ?? "Automatisch aus dem Artikelkatalog zugeordnet."}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </Label>
           <Input
             id={`line-${index}-article`}
             value={item.article_number ?? ""}
             onChange={(e) =>
-              onChange({ article_number: e.target.value || null })
+              onChange({
+                article_number: e.target.value || null,
+                article_number_source: "manual",
+                article_number_match_reason: null,
+              })
             }
             placeholder="-"
             className="h-8 text-sm"

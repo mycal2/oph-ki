@@ -143,6 +143,10 @@ const canonicalLineItemSchema = z.object({
   unit_price: z.number().nullable(),
   total_price: z.number().nullable(),
   currency: z.string().nullable(),
+  /** OPH-40: How the article_number was determined. */
+  article_number_source: z.enum(["extracted", "catalog_match", "manual"]).nullable().optional(),
+  /** OPH-40: Human-readable reason for catalog match. */
+  article_number_match_reason: z.string().nullable().optional(),
 });
 
 /** Sender sub-schema for extraction/review data. */

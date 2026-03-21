@@ -51,7 +51,7 @@
 | OPH-37 | Dealer Article Number (Lieferantenartikelnummer) | In Review | [OPH-37-dealer-article-number.md](OPH-37-dealer-article-number.md) | 2026-03-13 |
 | OPH-38 | Admin: Resend Invite & Trigger Password Reset for Tenant Users | Deployed | [OPH-38-admin-resend-invite-password-reset.md](OPH-38-admin-resend-invite-password-reset.md) | 2026-03-20 |
 | OPH-39 | Manufacturer Article Catalog | Deployed | [OPH-39-manufacturer-article-catalog.md](OPH-39-manufacturer-article-catalog.md) | 2026-03-20 |
-| OPH-40 | AI Article Number Matching during Extraction | In Progress | [OPH-40-article-number-matching.md](OPH-40-article-number-matching.md) | 2026-03-20 |
+| OPH-40 | AI Article Number Matching during Extraction | In Review | [OPH-40-article-number-matching.md](OPH-40-article-number-matching.md) | 2026-03-20 |
 
 <!-- Add features above this line -->
 
