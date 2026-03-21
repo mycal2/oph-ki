@@ -19,8 +19,8 @@ export default function ArticleCatalogSettingsPage() {
     );
   }
 
-  // Only tenant_admin and platform_admin can manage the catalog
-  if (role !== "tenant_admin" && role !== "platform_admin") {
+  // tenant_user gets read-only access; other unknown roles are blocked
+  if (role !== "tenant_admin" && role !== "platform_admin" && role !== "tenant_user") {
     return (
       <div className="flex items-center justify-center py-20">
         <p className="text-muted-foreground">
@@ -30,5 +30,7 @@ export default function ArticleCatalogSettingsPage() {
     );
   }
 
-  return <ArticleCatalogPage />;
+  const readOnly = role === "tenant_user";
+
+  return <ArticleCatalogPage readOnly={readOnly} />;
 }

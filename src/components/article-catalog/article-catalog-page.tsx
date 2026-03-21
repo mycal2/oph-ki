@@ -39,11 +39,14 @@ interface ArticleCatalogPageProps {
   adminTenantId?: string | null;
   /** When true, hide the page-level heading (used when embedded in a sheet/tab). */
   compact?: boolean;
+  /** When true, hide add/edit/delete/import buttons (read-only view for tenant_user). */
+  readOnly?: boolean;
 }
 
 export function ArticleCatalogPage({
   adminTenantId,
   compact = false,
+  readOnly = false,
 }: ArticleCatalogPageProps) {
   const {
     articles,
@@ -186,25 +189,27 @@ export function ArticleCatalogPage({
         </div>
 
         {/* Action buttons */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
-            <Upload className="mr-2 h-4 w-4" />
-            Importieren
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExport}
-            disabled={total === 0}
-          >
-            <Download className="mr-2 h-4 w-4" />
-            Exportieren
-          </Button>
-          <Button size="sm" onClick={handleAddNew}>
-            <Plus className="mr-2 h-4 w-4" />
-            Artikel hinzufuegen
-          </Button>
-        </div>
+        {!readOnly && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+              <Upload className="mr-2 h-4 w-4" />
+              Importieren
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExport}
+              disabled={total === 0}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Exportieren
+            </Button>
+            <Button size="sm" onClick={handleAddNew}>
+              <Plus className="mr-2 h-4 w-4" />
+              Artikel hinzufuegen
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Article count */}
@@ -239,19 +244,22 @@ export function ArticleCatalogPage({
             <>
               <p className="text-sm font-medium">Noch keine Artikel vorhanden</p>
               <p className="text-sm text-muted-foreground mt-1 max-w-md">
-                Fuegen Sie Artikel einzeln hinzu oder importieren Sie eine CSV-/Excel-Datei,
-                um den Artikelstamm zu befuellen.
+                {readOnly
+                  ? "Der Artikelstamm ist leer. Kontaktieren Sie Ihren Administrator."
+                  : "Fuegen Sie Artikel einzeln hinzu oder importieren Sie eine CSV-/Excel-Datei, um den Artikelstamm zu befuellen."}
               </p>
-              <div className="flex gap-2 mt-4">
-                <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
-                  <Upload className="mr-2 h-4 w-4" />
-                  CSV/Excel importieren
-                </Button>
-                <Button size="sm" onClick={handleAddNew}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Artikel hinzufuegen
-                </Button>
-              </div>
+              {!readOnly && (
+                <div className="flex gap-2 mt-4">
+                  <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    CSV/Excel importieren
+                  </Button>
+                  <Button size="sm" onClick={handleAddNew}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Artikel hinzufuegen
+                  </Button>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -272,7 +280,7 @@ export function ArticleCatalogPage({
                   <TableHead className="hidden xl:table-cell">Ref.-Nr.</TableHead>
                   <TableHead className="hidden xl:table-cell">GTIN</TableHead>
                   <TableHead className="hidden xl:table-cell">Suchbegriffe</TableHead>
-                  <TableHead className="w-[80px] text-right">Aktionen</TableHead>
+                  {!readOnly && <TableHead className="w-[80px] text-right">Aktionen</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -325,28 +333,30 @@ export function ArticleCatalogPage({
                         <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handleEdit(article)}
-                          aria-label={`Artikel ${article.article_number} bearbeiten`}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => handleDeleteClick(article)}
-                          aria-label={`Artikel ${article.article_number} loeschen`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+                    {!readOnly && (
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleEdit(article)}
+                            aria-label={`Artikel ${article.article_number} bearbeiten`}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => handleDeleteClick(article)}
+                            aria-label={`Artikel ${article.article_number} loeschen`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>

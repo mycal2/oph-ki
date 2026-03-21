@@ -134,7 +134,10 @@ export function useArticleCatalog(options: UseArticleCatalogOptions = {}): UseAr
   const updateArticle = useCallback(
     async (id: string, data: UpdateArticleInput): Promise<{ ok: boolean; error?: string }> => {
       try {
-        const res = await fetch(`/api/articles/${id}`, {
+        const url = adminTenantId
+          ? `/api/admin/tenants/${adminTenantId}/articles/${id}`
+          : `/api/articles/${id}`;
+        const res = await fetch(url, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
@@ -151,14 +154,17 @@ export function useArticleCatalog(options: UseArticleCatalogOptions = {}): UseAr
         return { ok: false, error: "Netzwerkfehler beim Aktualisieren des Artikels." };
       }
     },
-    [fetchArticles]
+    [adminTenantId, fetchArticles]
   );
 
   // Delete single article
   const deleteArticle = useCallback(
     async (id: string): Promise<{ ok: boolean; error?: string }> => {
       try {
-        const res = await fetch(`/api/articles/${id}`, {
+        const url = adminTenantId
+          ? `/api/admin/tenants/${adminTenantId}/articles/${id}`
+          : `/api/articles/${id}`;
+        const res = await fetch(url, {
           method: "DELETE",
         });
         const json: ApiResponse = await res.json();
@@ -173,7 +179,7 @@ export function useArticleCatalog(options: UseArticleCatalogOptions = {}): UseAr
         return { ok: false, error: "Netzwerkfehler beim Loeschen des Artikels." };
       }
     },
-    [fetchArticles]
+    [adminTenantId, fetchArticles]
   );
 
   // Import CSV/Excel file

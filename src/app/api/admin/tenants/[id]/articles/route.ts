@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { requirePlatformAdmin, isErrorResponse } from "@/lib/admin-auth";
-import type { ArticleCatalogItem } from "@/lib/types";
+import { createArticleSchema } from "@/lib/validations";
+import type { ArticleCatalogItem, ApiResponse } from "@/lib/types";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -73,6 +74,96 @@ export async function GET(
     });
   } catch (error) {
     console.error("Unexpected error in GET /api/admin/tenants/[id]/articles:", error);
+    return NextResponse.json(
+      { success: false, error: "Interner Serverfehler." },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * POST /api/admin/tenants/[id]/articles
+ *
+ * Platform admin: creates a single article for a specific tenant.
+ */
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+): Promise<NextResponse> {
+  try {
+    const { id: tenantId } = await params;
+
+    if (!UUID_REGEX.test(tenantId)) {
+      return NextResponse.json(
+        { success: false, error: "Ungueltige Mandanten-ID." },
+        { status: 400 }
+      );
+    }
+
+    const auth = await requirePlatformAdmin();
+    if (isErrorResponse(auth)) return auth;
+    const { adminClient } = auth;
+
+    // Verify tenant exists
+    const { data: tenant, error: tenantError } = await adminClient
+      .from("tenants")
+      .select("id")
+      .eq("id", tenantId)
+      .single();
+
+    if (tenantError || !tenant) {
+      return NextResponse.json(
+        { success: false, error: "Mandant nicht gefunden." },
+        { status: 404 }
+      );
+    }
+
+    const body = await request.json();
+    const parsed = createArticleSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: parsed.error.issues[0]?.message ?? "Ungueltige Eingabe." },
+        { status: 400 }
+      );
+    }
+
+    const { data: newArticle, error: insertError } = await adminClient
+      .from("article_catalog")
+      .insert({
+        tenant_id: tenantId,
+        article_number: parsed.data.article_number,
+        name: parsed.data.name,
+        category: parsed.data.category ?? null,
+        color: parsed.data.color ?? null,
+        packaging: parsed.data.packaging ?? null,
+        ref_no: parsed.data.ref_no ?? null,
+        gtin: parsed.data.gtin ?? null,
+        keywords: parsed.data.keywords ?? null,
+      })
+      .select("id")
+      .single();
+
+    if (insertError) {
+      if (insertError.code === "23505") {
+        return NextResponse.json(
+          { success: false, error: "Artikel-Nr. bereits vorhanden." },
+          { status: 409 }
+        );
+      }
+      console.error("Error creating article for admin:", insertError.message);
+      return NextResponse.json(
+        { success: false, error: "Artikel konnte nicht erstellt werden." },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(
+      { success: true, data: { id: newArticle.id as string } },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Unexpected error in POST /api/admin/tenants/[id]/articles:", error);
     return NextResponse.json(
       { success: false, error: "Interner Serverfehler." },
       { status: 500 }
