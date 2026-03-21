@@ -436,10 +436,10 @@ export function ExtractionResultPreview({
                         #
                       </th>
                       <th className="px-3 py-2 text-left font-medium text-muted-foreground hidden sm:table-cell">
-                        Art.-Nr.
+                        Herst.-Art.-Nr.
                       </th>
                       <th className="px-3 py-2 text-left font-medium text-muted-foreground hidden lg:table-cell">
-                        Lief.-Art.-Nr.
+                        Händler-Art.-Nr.
                       </th>
                       <th className="px-3 py-2 text-left font-medium text-muted-foreground">
                         Beschreibung

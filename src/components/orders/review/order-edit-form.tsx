@@ -381,7 +381,7 @@ function LineItemRow({ item, index, onChange, onRemove, parseNum }: LineItemRowP
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="space-y-1">
           <Label htmlFor={`line-${index}-article`} className="text-xs">
-            Art.-Nr.
+            Herst.-Art.-Nr.
           </Label>
           <Input
             id={`line-${index}-article`}
@@ -395,7 +395,7 @@ function LineItemRow({ item, index, onChange, onRemove, parseNum }: LineItemRowP
         </div>
         <div className="space-y-1">
           <Label htmlFor={`line-${index}-dealer-article`} className="text-xs">
-            Lief.-Art.-Nr.
+            Händler-Art.-Nr.
           </Label>
           <Input
             id={`line-${index}-dealer-article`}
