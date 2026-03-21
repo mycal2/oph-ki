@@ -874,3 +874,39 @@ export interface ConfidenceScoreData {
   /** True if ERP field mapping is not yet configured. */
   mapping_not_configured: boolean;
 }
+
+/**
+ * OPH-39: Manufacturer Article Catalog types.
+ */
+
+/** A single article in the manufacturer's catalog (Artikelstamm). */
+export interface ArticleCatalogItem {
+  id: string;
+  tenant_id: string;
+  article_number: string;
+  name: string;
+  category: string | null;
+  color: string | null;
+  packaging: string | null;
+  ref_no: string | null;
+  gtin: string | null;
+  keywords: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Result summary from a bulk article import (CSV/Excel). */
+export interface ArticleImportResult {
+  created: number;
+  updated: number;
+  skipped: number;
+  errors: string[];
+}
+
+/** Paginated response for article catalog list. */
+export interface ArticleCatalogPageResponse {
+  articles: ArticleCatalogItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}

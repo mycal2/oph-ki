@@ -1,8 +1,8 @@
 # OPH-39: Manufacturer Article Catalog
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-03-20
-**Last Updated:** 2026-03-20
+**Last Updated:** 2026-03-21
 
 ## Dependencies
 - Requires: OPH-1 (Multi-Tenant Auth) — tenant_admin and platform_admin roles

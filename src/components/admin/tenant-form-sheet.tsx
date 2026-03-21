@@ -51,6 +51,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { TagInput } from "@/components/admin/tag-input";
 import { TenantInviteDialog } from "@/components/admin/tenant-invite-dialog";
+import { ArticleCatalogPage } from "@/components/article-catalog/article-catalog-page";
 import type {
   Tenant,
   TenantStatus,
@@ -421,6 +422,11 @@ export function TenantFormSheet({
                     {!isNew && (
                       <TabsTrigger value="users" className="flex-1">
                         Benutzer
+                      </TabsTrigger>
+                    )}
+                    {!isNew && (
+                      <TabsTrigger value="articles" className="flex-1">
+                        Artikelstamm
                       </TabsTrigger>
                     )}
                   </TabsList>
@@ -860,6 +866,16 @@ export function TenantFormSheet({
                           </Table>
                         </div>
                       )}
+                    </TabsContent>
+                  )}
+
+                  {/* Tab: Artikelstamm (OPH-39) */}
+                  {!isNew && (
+                    <TabsContent value="articles" className="px-6 pb-6 mt-0">
+                      <ArticleCatalogPage
+                        adminTenantId={tenantId}
+                        compact
+                      />
                     </TabsContent>
                   )}
                 </ScrollArea>
