@@ -191,11 +191,12 @@ export function ArticleCatalogPage({
         {/* Action buttons */}
         {!readOnly && (
           <div className="flex items-center gap-2 flex-wrap">
-            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+            <Button type="button" variant="outline" size="sm" onClick={() => setImportOpen(true)}>
               <Upload className="mr-2 h-4 w-4" />
               Importieren
             </Button>
             <Button
+              type="button"
               variant="outline"
               size="sm"
               onClick={handleExport}
@@ -204,7 +205,7 @@ export function ArticleCatalogPage({
               <Download className="mr-2 h-4 w-4" />
               Exportieren
             </Button>
-            <Button size="sm" onClick={handleAddNew}>
+            <Button type="button" size="sm" onClick={handleAddNew}>
               <Plus className="mr-2 h-4 w-4" />
               Artikel hinzufuegen
             </Button>
@@ -250,11 +251,11 @@ export function ArticleCatalogPage({
               </p>
               {!readOnly && (
                 <div className="flex gap-2 mt-4">
-                  <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setImportOpen(true)}>
                     <Upload className="mr-2 h-4 w-4" />
                     CSV/Excel importieren
                   </Button>
-                  <Button size="sm" onClick={handleAddNew}>
+                  <Button type="button" size="sm" onClick={handleAddNew}>
                     <Plus className="mr-2 h-4 w-4" />
                     Artikel hinzufuegen
                   </Button>
@@ -337,6 +338,7 @@ export function ArticleCatalogPage({
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
                           <Button
+                            type="button"
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8"
@@ -346,6 +348,7 @@ export function ArticleCatalogPage({
                             <Pencil className="h-4 w-4" />
                           </Button>
                           <Button
+                            type="button"
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-destructive hover:text-destructive"
@@ -371,6 +374,7 @@ export function ArticleCatalogPage({
               </p>
               <div className="flex items-center gap-2">
                 <Button
+                  type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => setPage(page - 1)}
@@ -380,6 +384,7 @@ export function ArticleCatalogPage({
                   Zurueck
                 </Button>
                 <Button
+                  type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => setPage(page + 1)}

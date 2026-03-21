@@ -393,7 +393,10 @@ export function TenantFormSheet({
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="w-full sm:max-w-xl p-0 flex flex-col">
+        <SheetContent
+          className="w-full sm:max-w-xl p-0 flex flex-col"
+          onInteractOutside={(e) => e.preventDefault()}
+        >
           <SheetHeader className="px-6 pt-6 pb-0">
             <SheetTitle>
               {isNew ? "Neuen Mandanten anlegen" : "Mandant bearbeiten"}
