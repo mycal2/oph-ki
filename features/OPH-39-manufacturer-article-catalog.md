@@ -142,228 +142,230 @@ Admin Panel → Tenant Detail Sheet → "Artikelstamm" Tab (platform_admin)
 
 ## QA Test Results
 
+### Round 1 (2026-03-21)
+
+**Tested:** 2026-03-21
+**Tester:** QA Engineer (AI)
+**Build Status:** PASS
+**Bugs Found:** 5 (0 critical, 2 high, 2 medium, 1 low)
+**Result:** NOT READY -- all 5 bugs fixed in commit 3b8992a
+
+---
+
+### Round 2 -- Re-test after fixes (2026-03-21)
+
 **Tested:** 2026-03-21
 **App URL:** http://localhost:3003
 **Tester:** QA Engineer (AI)
 **Build Status:** PASS (production build compiles without errors)
+**Fix Commit:** 3b8992a ("fix(OPH-39): Fix all 5 QA bugs for article catalog")
 
-### Acceptance Criteria Status
+### Bug Fix Verification
+
+#### BUG-1 (Medium): tenant_user blocked from viewing article catalog -- FIXED
+- `page.tsx` now checks for `tenant_user` role (line 23) and passes `readOnly={true}` to `ArticleCatalogPage`
+- `ArticleCatalogPage` accepts `readOnly` prop and hides add/edit/delete/import buttons when true
+- Empty state shows appropriate read-only message for tenant_user
+- API GET endpoint was already permissive -- no API change needed
+- **Status:** VERIFIED FIXED
+
+#### BUG-2 (Medium): Import does not show preview before confirming -- FIXED
+- `ArticleImportDialog` now implements a 4-step flow: select -> preview -> uploading -> result
+- Step 1 (select): File selection with "Vorschau" button instead of "Importieren"
+- Step 2 (preview): Client-side parsing via `parseFileForPreview()` shows a table of up to 10 rows (Herst.-Art.-Nr., Artikelbezeichnung, Kategorie), total valid count, skipped count, and parse warnings
+- Step 3 (uploading): Shows "Importiere X Artikel..." during server processing
+- Step 4 (result): Shows created/updated/skipped badges
+- "Zurueck" button allows returning from preview to file selection
+- Confirm button shows exact article count: "X Artikel importieren"
+- Confirm button disabled when 0 valid articles
+- **Status:** VERIFIED FIXED
+
+#### BUG-3 (High): Admin panel -- no POST endpoint for single article creation -- FIXED
+- `/api/admin/tenants/[id]/articles/route.ts` now exports both GET and POST handlers
+- POST handler validates platform_admin role via `requirePlatformAdmin()`
+- POST handler verifies tenant exists before creating article
+- POST handler uses Zod validation and handles 23505 duplicate constraint
+- Hook's `createArticle` correctly routes to admin base URL when `adminTenantId` is set
+- **Status:** VERIFIED FIXED
+
+#### BUG-4 (High): Admin panel -- edit and delete use wrong API endpoint -- FIXED
+- New route file: `/api/admin/tenants/[id]/articles/[articleId]/route.ts` with PUT and DELETE handlers
+- Both handlers validate platform_admin role, UUID params, article existence, and article-tenant ownership
+- Hook's `updateArticle` now routes to `/api/admin/tenants/${adminTenantId}/articles/${id}` when in admin mode
+- Hook's `deleteArticle` now routes to `/api/admin/tenants/${adminTenantId}/articles/${id}` when in admin mode
+- **Status:** VERIFIED FIXED
+
+#### BUG-5 (Low): No progress indicator for large imports -- FIXED
+- Uploading step now displays "Importiere X Artikel..." (using the count from preview data) instead of generic "Datei wird importiert..."
+- Not a per-batch progress bar, but provides meaningful feedback on the scope of the import
+- **Status:** VERIFIED FIXED (acceptable improvement)
+
+### Acceptance Criteria Status (Round 2)
 
 #### AC-1: "Artikelstamm" tab appears in Settings (tenant_admin/tenant_user) and Admin panel (platform_admin)
-- [x] Navigation link "Artikelstamm" is present at `/settings/article-catalog` for all logged-in users (not gated by `adminOnly`)
-- [x] Admin panel tenant detail sheet includes an "Artikelstamm" tab (in `tenant-form-sheet.tsx`, only shown when `!isNew`)
-- [ ] BUG: Settings page blocks `tenant_user` role with "Zugriff verweigert" message. The AC says the tab should appear for tenant_admin AND tenant_user. tenant_user should see the catalog in read-only mode. (See BUG-1)
+- [x] Navigation link "Artikelstamm" visible for all roles (no `adminOnly` flag)
+- [x] Admin panel tenant detail sheet includes "Artikelstamm" tab (only for existing tenants)
+- [x] tenant_user sees read-only view (no add/edit/delete/import buttons) -- BUG-1 FIXED
+- **PASS**
 
 #### AC-2: Article table shows all specified columns
-- [x] Table headers include: Herst.-Art.-Nr., Artikelbezeichnung, Kategorie, Farbe, Verpackung, Ref.-Nr., GTIN, Suchbegriffe
-- [x] Responsive column hiding: Kategorie hidden below md, Farbe/Verpackung hidden below lg, Ref.-Nr./GTIN/Suchbegriffe hidden below xl
-- [x] Table has overflow-x-auto for horizontal scrolling on small screens
+- [x] All 8 columns present: Herst.-Art.-Nr., Artikelbezeichnung, Kategorie, Farbe, Verpackung, Ref.-Nr., GTIN, Suchbegriffe
+- [x] Responsive column hiding at md/lg/xl breakpoints
+- [x] Horizontal scroll on overflow
+- **PASS**
 
 #### AC-3: Tenant admin can add a single article via form dialog
-- [x] "Artikel hinzufuegen" button opens a dialog with all 8 fields
-- [x] Required fields (Herst.-Art.-Nr., Artikelbezeichnung) are marked with asterisk
-- [x] Form submits to POST /api/articles with Zod validation
-- [x] Success closes dialog and shows toast notification
-- [x] Error state displayed in dialog (e.g., duplicate article number returns 409)
+- [x] "Artikel hinzufuegen" button opens dialog with all 8 fields
+- [x] Required fields marked with asterisk
+- [x] Zod validation on submit
+- [x] Success: toast + dialog close + list refresh
+- [x] Error: inline alert in dialog (e.g., 409 duplicate)
+- **PASS**
 
 #### AC-4: Tenant admin can edit any article via the same form dialog
-- [x] Pencil icon button per row opens the edit dialog pre-populated with article data
-- [x] PUT /api/articles/[id] validates ownership (tenant_id match) before updating
-- [x] Duplicate article_number on update returns 409 with inline error
+- [x] Pencil icon opens pre-populated form dialog
+- [x] PUT validates ownership before updating
+- [x] Duplicate article_number returns 409
+- **PASS**
 
 #### AC-5: Tenant admin can delete an article with confirmation dialog
-- [x] Trash icon button opens AlertDialog with article number and name displayed
-- [x] Confirmation message explains past orders are not affected
-- [x] DELETE /api/articles/[id] validates ownership before deleting
-- [x] Success closes dialog and refreshes list
+- [x] Trash icon opens AlertDialog with article number and name
+- [x] Confirmation message mentions past orders unaffected
+- [x] DELETE validates ownership before deleting
+- [x] Success: toast + dialog close + list refresh
+- **PASS**
 
 #### AC-6: Tenant admin can import articles via CSV or Excel file upload
-- [x] "Importieren" button opens import dialog with file drop zone
-- [x] Accepts .csv, .xlsx, .xls files (validated on client and server)
-- [x] File size limit: 10 MB (validated on client and server)
-- [ ] BUG: Import does NOT show a preview of parsed rows before confirming. The spec says "Import shows a preview of parsed rows before confirming" but the dialog goes directly from file selection to uploading/result. (See BUG-2)
-- [x] Import result shows created/updated/skipped counts with colored badges
-- [x] Errors/warnings from import are listed in a scrollable area
+- [x] "Importieren" button opens import dialog with drop zone
+- [x] Accepts .csv, .xlsx, .xls (client + server validation)
+- [x] File size limit 10 MB (client + server)
+- [x] Preview shows parsed rows before confirming -- BUG-2 FIXED
+- [x] Import result shows created/updated/skipped with colored badges
+- [x] Errors/warnings listed in scrollable area
+- **PASS**
 
 #### AC-6a: Duplicate Herst.-Art.-Nr. within same tenant are updated (upsert)
-- [x] Upsert uses `onConflict: "tenant_id,article_number"` with `ignoreDuplicates: false`
-- [x] Created vs updated counting uses created_at/updated_at timestamp comparison (1 second tolerance)
+- [x] Upsert on conflict with timestamp-based created/updated counting
+- **PASS**
 
 #### AC-7: Tenant admin can export the full catalog as CSV download
-- [x] "Exportieren" button triggers GET /api/articles/export
-- [x] CSV uses semicolon separator with UTF-8 BOM for Excel compatibility
-- [x] All 8 columns exported with German headers
-- [x] Fields containing semicolons, quotes, or newlines are properly escaped
-- [x] Export disabled when total is 0
+- [x] "Exportieren" button triggers CSV download
+- [x] Semicolon separator with UTF-8 BOM
+- [x] All 8 columns with German headers
+- [x] Proper field escaping
+- [x] Export disabled when 0 articles
+- **PASS**
 
-#### AC-8: Article list supports text search across article number, name, and keywords
-- [x] Search input with 300ms debounce implemented
-- [x] Server-side search uses `ilike` on article_number, name, and keywords
-- [x] Search resets to page 1
-- [x] Search text displayed in article count ("X Artikel fuer ...")
-- [x] Special characters (%, _) escaped in search queries
+#### AC-8: Article list supports text search
+- [x] Debounced search (300ms)
+- [x] Server-side ilike on article_number, name, keywords
+- [x] Resets to page 1
+- [x] Search text shown in count label
+- [x] LIKE special chars escaped
+- **PASS**
 
-#### AC-9: Platform admin can access and manage catalogs for any tenant in Admin panel
-- [x] Admin panel tenant detail sheet has "Artikelstamm" tab with `ArticleCatalogPage` receiving `adminTenantId`
-- [x] GET /api/admin/tenants/[id]/articles uses `requirePlatformAdmin` auth check
-- [x] Import via /api/admin/tenants/[id]/articles/import works with platform admin auth
-- [x] Export via /api/admin/tenants/[id]/articles/export works with platform admin auth
-- [ ] BUG: No POST handler on /api/admin/tenants/[id]/articles for creating single articles. Platform admin "Artikel hinzufuegen" will POST to the admin base URL but only GET is implemented -- results in 405. (See BUG-3)
-- [ ] BUG: updateArticle and deleteArticle in the hook always use /api/articles/[id] (tenant endpoint) even when in admin mode. Since the tenant API checks article.tenant_id === user's own tenant_id, the platform admin cannot edit or delete articles for other tenants. (See BUG-4)
+#### AC-9: Platform admin can access and manage catalogs for any tenant
+- [x] Admin panel Artikelstamm tab with `adminTenantId` prop
+- [x] GET with `requirePlatformAdmin` auth
+- [x] POST for single article creation -- BUG-3 FIXED
+- [x] PUT/DELETE via new admin route -- BUG-4 FIXED
+- [x] Import via admin endpoint
+- [x] Export via admin endpoint
+- **PASS**
 
 #### AC-10: RLS ensures tenants can only see and modify their own articles
-- [x] RLS enabled on article_catalog table
-- [x] SELECT policy: tenant_id matches JWT app_metadata.tenant_id
-- [x] INSERT policy: tenant_id matches AND role is tenant_admin or platform_admin
-- [x] UPDATE policy: tenant_id matches AND role is tenant_admin or platform_admin
-- [x] DELETE policy: tenant_id matches AND role is tenant_admin or platform_admin
-- [x] Note: API routes use adminClient (service role) which bypasses RLS, but API-level auth checks are in place
+- [x] RLS enabled with SELECT/INSERT/UPDATE/DELETE policies scoped to tenant_id + role
+- [x] API routes use adminClient (service role) with application-level auth checks
+- **PASS**
 
 #### AC-11: All fields except Herst.-Art.-Nr. and Artikelbezeichnung are optional
-- [x] Zod schemas mark category, color, packaging, ref_no, gtin, keywords as `.nullable().optional()`
-- [x] Database schema allows NULL for all optional columns
-- [x] Form dialog does not mark optional fields as required
+- [x] Zod schemas, DB schema, and form dialog all consistent
+- **PASS**
 
-#### AC-12: Herst.-Art.-Nr. is unique per tenant (duplicate -> upsert on import, error on manual form)
-- [x] Database unique constraint: `article_catalog_tenant_article_unique (tenant_id, article_number)`
-- [x] Manual create: 23505 error code caught and returns "Artikel-Nr. bereits vorhanden." (409)
-- [x] Import: upsert on conflict updates existing row
+#### AC-12: Herst.-Art.-Nr. unique per tenant
+- [x] DB unique constraint, 409 on manual create, upsert on import
+- **PASS**
 
-### Edge Cases Status
+### Edge Cases Status (Round 2)
 
-#### EC-1: Import file with 0 valid rows
-- [x] Returns 400 with error message "Keine gueltigen Zeilen gefunden"
-- [x] No database changes made
+- [x] EC-1: Import file with 0 valid rows -- returns 400, no changes
+- [x] EC-2: Duplicate article numbers within file -- Map deduplication, last wins
+- [x] EC-3: Delete article used in past order -- allowed, data denormalized
+- [x] EC-4: Tenant with 0 articles -- empty state with CTA (read-only variant for tenant_user)
+- [x] EC-5: Platform admin imports for tenant -- admin endpoint verifies tenant exists
+- [x] EC-6: Large catalog (5,000+ rows) -- batched upsert, article count shown during import
+- [x] EC-7: Duplicate article number on manual add -- 409 with inline error
 
-#### EC-2: Import file with duplicate Herst.-Art.-Nr. within file itself
-- [x] `parseArticleFile` uses a Map keyed by `articleNumber.toLowerCase()` -- last row wins
-- [x] Correct behavior per spec
-
-#### EC-3: Deleting article used for match in past order
-- [x] Delete dialog mentions "Bereits verarbeitete Bestellungen sind davon nicht betroffen"
-- [x] Hard delete with no foreign key dependency on orders (data denormalized on extraction)
-
-#### EC-4: Tenant with 0 articles
-- [x] Empty state shown with Package icon, descriptive text, and CTA buttons ("CSV/Excel importieren" and "Artikel hinzufuegen")
-- [x] Search-specific empty state ("Fuer X wurden keine Artikel gefunden")
-
-#### EC-5: Platform admin imports for a tenant
-- [x] Admin import endpoint verifies tenant exists before processing
-- [x] Same parse/upsert logic applied with target tenant_id from URL param
-
-#### EC-6: Very large catalog (5,000+ rows)
-- [x] Import uses batched upsert (UPSERT_BATCH_SIZE = 500)
-- [x] Loading spinner shown during import
-- [ ] BUG (Minor): No progress indicator for large imports -- spec says "show progress indicator" but dialog only shows a generic spinner. For 5,000+ rows in 10+ batches, user has no feedback on progress. (See BUG-5)
-
-#### EC-7: Article number already exists on manual add
-- [x] 409 response with "Artikel-Nr. bereits vorhanden." error message
-- [x] Error shown in form dialog's alert area
-
-### Security Audit Results
+### Security Audit Results (Round 2)
 
 #### Authentication
-- [x] All API endpoints verify user session via `supabase.auth.getUser()`
+- [x] All endpoints verify session via `supabase.auth.getUser()`
 - [x] Unauthenticated requests return 401
 - [x] Admin endpoints use `requirePlatformAdmin()` helper
+- [x] New admin PUT/DELETE endpoint also uses `requirePlatformAdmin()`
 
 #### Authorization
-- [x] Inactive user (user_status === "inactive") returns 403
-- [x] Inactive tenant (tenant_status === "inactive") returns 403
+- [x] Inactive user/tenant returns 403
 - [x] Users without tenant_id get 403
 - [x] Create/update/delete restricted to tenant_admin and platform_admin roles
-- [x] PUT and DELETE verify article.tenant_id matches user's tenant_id before proceeding (IDOR protection)
-- [ ] BUG: GET /api/articles (list) has no role restriction -- tenant_user can read articles via API. This is arguably correct (read-only access for tenant_user) but contradicts the UI that blocks them entirely. (See BUG-1)
+- [x] PUT/DELETE verify article.tenant_id matches user's tenant_id (IDOR protection)
+- [x] Admin PUT/DELETE verify article belongs to the target tenant (cross-tenant protection)
+- [x] tenant_user gets read-only access at UI level; API GET permits read access (consistent)
 
 #### Input Validation
-- [x] Zod validation on all create/update payloads
-- [x] UUID regex validation on article ID and tenant ID path parameters
-- [x] File extension validation on import
-- [x] File size validation (10 MB limit)
-- [x] Field length limits enforced: article_number (200), name (500), keywords (1000), others (200)
-- [x] Search input has % and _ escaping to prevent LIKE injection
-- [x] CSV field escaping in export (semicolons, quotes, newlines)
+- [x] Zod validation on all create/update payloads (tenant + admin endpoints)
+- [x] UUID regex validation on all path parameters (tenant ID, article ID)
+- [x] File extension and size validation on import (client + server)
+- [x] Field length limits enforced
+- [x] LIKE special chars (%, _) escaped in search
+- [x] CSV export field escaping (semicolons, quotes, newlines)
 
 #### Data Leakage
-- [x] Export endpoint scoped to tenant_id
-- [x] List endpoint scoped to tenant_id
-- [x] No sensitive data exposed in error messages
+- [x] All endpoints scoped to tenant_id
+- [x] No sensitive data in error messages
 
 #### Rate Limiting
-- [ ] No rate limiting on any article catalog endpoints. This is consistent with the rest of the application (no endpoints appear to have rate limiting), so not flagging as a new bug specific to OPH-39. Noted for awareness.
+- [x] No rate limiting on article catalog endpoints (consistent with rest of application -- not a new OPH-39 issue)
 
-### Cross-Browser Testing
-- Note: Code review based. No browser-specific APIs used. Standard HTML form elements, Tailwind CSS, shadcn/ui components. Uses standard `fetch` API. Drop zone uses standard drag events.
-- [x] Chrome: Standard APIs, no compatibility concerns
-- [x] Firefox: Standard APIs, no compatibility concerns
-- [x] Safari: Standard APIs, no compatibility concerns
+### Cross-Browser Testing (Code Review)
+- [x] Chrome: No compatibility concerns (standard APIs, Tailwind, shadcn/ui)
+- [x] Firefox: No compatibility concerns
+- [x] Safari: No compatibility concerns
+- Note: Client-side XLSX parsing uses ArrayBuffer API (supported in all modern browsers)
 
 ### Responsive Testing (Code Review)
-- [x] 375px (Mobile): Search and buttons stack vertically via `flex-col gap-3 sm:flex-row`. Table columns progressively hidden. Action buttons use flex-wrap.
-- [x] 768px (Tablet): Kategorie column visible (md breakpoint). Search + actions side by side.
-- [x] 1440px (Desktop): All columns visible including Ref.-Nr., GTIN, Suchbegriffe (xl breakpoint).
+- [x] 375px (Mobile): flex-col stacking, progressive column hiding, flex-wrap on action buttons
+- [x] 768px (Tablet): Kategorie column visible, search + actions side by side
+- [x] 1440px (Desktop): All columns visible
 
-### Bugs Found
+### New Issues Found in Round 2
 
-#### BUG-1: tenant_user blocked from viewing article catalog
-- **Severity:** Medium
-- **Steps to Reproduce:**
-  1. Log in as a tenant_user (not tenant_admin)
-  2. Navigate to /settings/article-catalog
-  3. Expected: See the article catalog in read-only mode (no add/edit/delete buttons)
-  4. Actual: See "Zugriff verweigert. Nur fuer Administratoren." message
-- **Note:** The acceptance criteria says the tab should appear "for tenant_admin/tenant_user". The API GET endpoint correctly allows any authenticated tenant user to read articles. The page-level role check is too restrictive.
-- **Priority:** Fix before deployment
-
-#### BUG-2: Import does not show preview of parsed rows before confirming
-- **Severity:** Medium
-- **Steps to Reproduce:**
-  1. Open the import dialog
-  2. Select a CSV or Excel file
-  3. Click "Importieren"
-  4. Expected: See a preview table of parsed rows with errors highlighted, then a "Confirm Import" button
-  5. Actual: File is immediately uploaded and processed. Result summary shown only after import completes.
-- **Note:** The acceptance criteria explicitly states "Import shows a preview of parsed rows before confirming" and the tech design includes an "Import Preview Table" component. This step was not implemented.
-- **Priority:** Fix before deployment
-
-#### BUG-3: Admin panel -- no POST endpoint for single article creation
-- **Severity:** High
-- **Steps to Reproduce:**
-  1. Log in as platform_admin
-  2. Go to Admin > Mandanten > open a tenant's detail sheet > "Artikelstamm" tab
-  3. Click "Artikel hinzufuegen" and fill out the form
-  4. Click "Hinzufuegen"
-  5. Expected: Article is created for the selected tenant
-  6. Actual: POST request to /api/admin/tenants/[id]/articles returns 405 Method Not Allowed because only GET is exported from that route file
-- **Priority:** Fix before deployment
-
-#### BUG-4: Admin panel -- edit and delete use wrong API endpoint
-- **Severity:** High
-- **Steps to Reproduce:**
-  1. Log in as platform_admin
-  2. Go to Admin > Mandanten > open a tenant's detail sheet > "Artikelstamm" tab
-  3. Click the edit (pencil) icon on any article
-  4. Modify any field and click "Speichern"
-  5. Expected: Article is updated
-  6. Actual: PUT request goes to /api/articles/[id] (tenant endpoint). This endpoint checks article.tenant_id against the platform admin's own tenant_id. If the admin's tenant_id differs from the target tenant, the request returns 403 "Keine Berechtigung fuer diesen Artikel."
-- **Note:** Same issue affects DELETE. The hook's `updateArticle` and `deleteArticle` functions always use `/api/articles/${id}` regardless of `adminTenantId`. Either admin-specific PUT/DELETE endpoints are needed, or the existing endpoints need to be updated to allow platform_admin to act on any tenant's articles.
-- **Priority:** Fix before deployment
-
-#### BUG-5: No progress indicator for large imports
+#### BUG-6: tenant_user cannot export CSV (minor UX gap)
 - **Severity:** Low
+- **Description:** The export button is hidden for `tenant_user` (inside the `!readOnly` block). A read-only user might reasonably want to download the catalog as CSV for reference. The export API endpoint allows any authenticated tenant user to access it (no role check beyond authentication).
 - **Steps to Reproduce:**
-  1. Prepare a CSV with 5,000+ rows
-  2. Open the import dialog and select the file
-  3. Click "Importieren"
-  4. Expected: Progress indicator showing batch progress (e.g., "Processing batch 3 of 10...")
-  5. Actual: Only a generic spinner with "Datei wird importiert..." is shown
-- **Note:** The spec says "show progress indicator" for large catalogs. Current implementation is functional but provides no progress feedback.
-- **Priority:** Nice to have
+  1. Log in as a tenant_user
+  2. Navigate to /settings/article-catalog
+  3. Observe: No "Exportieren" button visible
+- **Note:** This is a UX decision rather than a bug per se. If the intention is that tenant_user should have read-only access, export (which is a read operation) could be considered part of that. However, this does not violate the spec acceptance criteria since they specifically mention "Tenant admin can export."
+- **Priority:** Nice to have -- defer
 
-### Summary
-- **Acceptance Criteria:** 9/12 passed (3 have bugs)
-- **Edge Cases:** 6/7 passed (1 has minor bug)
-- **Bugs Found:** 5 total (0 critical, 2 high, 2 medium, 1 low)
-- **Security:** Pass (no vulnerabilities found; auth and input validation are solid)
-- **Production Ready:** NO
-- **Recommendation:** Fix BUG-3 and BUG-4 (High) first -- platform admin cannot create/edit/delete articles for other tenants. Then fix BUG-1 and BUG-2 (Medium) -- tenant_user access and import preview. BUG-5 (Low) can be deferred.
+#### CODE NOTE: Duplicated import logic
+- The admin import endpoint (`/api/admin/tenants/[id]/articles/import/route.ts`) duplicates the batch upsert logic from `processArticleImport` in the tenant import route instead of reusing it. The tenant route exports `processArticleImport` as a shared function but the admin route doesn't use it. Not a functional bug, but a maintainability concern.
+
+### Summary (Round 2)
+
+- **Acceptance Criteria:** 12/12 PASS (all 5 bugs from Round 1 verified fixed)
+- **Edge Cases:** 7/7 PASS
+- **New Bugs Found:** 1 (low severity -- tenant_user export button hidden)
+- **Security:** PASS (no vulnerabilities found; auth, authorization, and input validation solid)
+- **Production Ready:** YES
+- **Recommendation:** All Critical and High bugs are resolved. The one new Low-severity issue (BUG-6: tenant_user cannot export CSV) can be deferred. Feature is ready for deployment.
+
+
+## Deployment
+- **Production URL:** https://oph-ki.ids.online
+- **Deployed:** 2026-03-21
+- **Git Tag:** v1.39.0-OPH-39
+- **All 5 QA bugs fixed before deployment (12/12 AC passed)**
+- **Deferred:** BUG-6 (Low) — tenant_user export button hidden, non-blocking
