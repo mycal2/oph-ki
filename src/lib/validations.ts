@@ -55,6 +55,15 @@ export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type InviteUserInput = z.infer<typeof inviteUserSchema>;
 export type ToggleUserStatusInput = z.infer<typeof toggleUserStatusSchema>;
 
+/** OPH-41: Change tenant user role. */
+export const changeUserRoleSchema = z.object({
+  role: z.enum(["tenant_user", "tenant_admin"], {
+    message: "Ungültige Rolle. Erlaubt: tenant_user, tenant_admin",
+  }),
+});
+
+export type ChangeUserRoleInput = z.infer<typeof changeUserRoleSchema>;
+
 /**
  * OPH-2: Upload validation schemas.
  */
