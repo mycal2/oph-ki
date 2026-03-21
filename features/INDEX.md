@@ -52,7 +52,8 @@
 | OPH-38 | Admin: Resend Invite & Trigger Password Reset for Tenant Users | Deployed | [OPH-38-admin-resend-invite-password-reset.md](OPH-38-admin-resend-invite-password-reset.md) | 2026-03-20 |
 | OPH-39 | Manufacturer Article Catalog | Deployed | [OPH-39-manufacturer-article-catalog.md](OPH-39-manufacturer-article-catalog.md) | 2026-03-20 |
 | OPH-40 | AI Article Number Matching during Extraction | Deployed | [OPH-40-article-number-matching.md](OPH-40-article-number-matching.md) | 2026-03-20 |
+| OPH-41 | Change Tenant User Role | Planned | [OPH-41-change-user-role.md](OPH-41-change-user-role.md) | 2026-03-21 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-41
+## Next Available ID: OPH-42
