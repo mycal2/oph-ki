@@ -50,3 +50,71 @@ A minimum confidence threshold prevents low-quality guesses from being auto-fill
 - EC-5: User manually edits a pre-filled suggestion → treated identically to manual entry; badge removed on save
 - EC-6: Re-extraction of an order (if supported) → matching runs again and may update suggestions
 - EC-7: Very large catalog (5,000+ articles) → matching must complete within acceptable time (< 3s per order)
+
+## Tech Design (Solution Architect)
+
+### Flow
+
+```
+Claude AI Extraction (existing)
+  → line items extracted, article_number often empty
+       ↓
+Article Matching (NEW — server-side, post-extraction)
+  → loads tenant's article_catalog from database
+  → for each line item with empty article_number:
+     1. GTIN exact match
+     2. Dealer article number vs. catalog keywords
+     3. Fuzzy name match vs. catalog name + keywords
+     4. Packaging tie-breaker
+  → pre-fills confident matches with source + reason metadata
+       ↓
+Order saved to database (atomically with extraction result)
+       ↓
+User reviews in Order Review UI
+  → "KI-Vorschlag" badge on pre-filled fields
+  → Tooltip shows match reason
+  → Accept (no action) / edit / clear → badge gone on save
+```
+
+### UI Changes (no new pages)
+
+```
+Order Review Page (existing)
++-- OrderEditForm (existing)
+    +-- Line Item Row
+        +-- Herst.-Art.-Nr. field
+            +-- [NEW] "KI-Vorschlag" badge (when source = "catalog_match")
+            +-- [NEW] Tooltip: e.g. "Gefunden über Alias: 'Tetric A1'"
+            +-- Badge clears when user edits or saves a different value
+
+ExtractionResultPreview (existing, read-only)
++-- Line Items Table
+    +-- [NEW] Small indicator icon on catalog-matched values
+```
+
+### Data Model Changes
+
+Two new optional fields added to `CanonicalLineItem` (stored in existing order JSON — **no schema migration needed**):
+
+| Field | Values | Meaning |
+|---|---|---|
+| `article_number_source` | `"extracted"` / `"catalog_match"` / `"manual"` | How the value got there |
+| `article_number_match_reason` | string or null | e.g. `"Alias-Übereinstimmung: 'Tetric A1 Shade A1'"` |
+
+### New / Modified Files
+
+| File | Change |
+|---|---|
+| `src/lib/article-matching.ts` | NEW — matching utility (loads catalog, runs algorithm, returns enriched line items) |
+| `src/lib/types.ts` | Add `article_number_source` and `article_number_match_reason` to `CanonicalLineItem` |
+| `src/app/api/orders/[orderId]/extract/route.ts` | Call matching after extraction, before saving |
+| `src/components/orders/review/order-edit-form.tsx` | Show KI-Vorschlag badge + tooltip |
+| `src/components/orders/extraction-result-preview.tsx` | Show indicator on matched values |
+
+### Tech Decisions
+
+- **Server-side matching** — catalog can have 5,000+ rows; downloading to browser for every review is wasteful
+- **No Claude API for matching** — text similarity against a known list is fast, deterministic, and free; Claude already extracted the product name
+- **Post-extraction, pre-save** — atomic with extraction result; no race condition between extraction and matching
+- **No new database table** — match metadata is order-scoped and ephemeral; lives in the existing order JSON
+- **No new packages** — text similarity via standard string operations (no external library needed)
