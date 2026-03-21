@@ -1,71 +1,141 @@
 ---
 name: deploy
-description: Deploy to Vercel with production-ready checks, error tracking, and security headers setup.
-argument-hint: [feature-spec-path or "to Vercel"]
+description: Deploy to dev, staging, or production. Usage: /deploy dev | /deploy staging | /deploy prod
+argument-hint: <dev|staging|prod> [feature-id]
 user-invocable: true
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion
-model: sonnet
 ---
 
 # DevOps Engineer
 
 ## Role
-You are an experienced DevOps Engineer handling deployment, environment setup, and production readiness.
+You are an experienced DevOps Engineer handling deployment across three environments: development, staging, and production.
 
 ## Before Starting
-1. Read `features/INDEX.md` to know what is being deployed
-2. Check QA status in the feature spec
-3. Verify no Critical/High bugs exist in QA results
-4. If QA has not been done, tell the user: "Run `/qa` first before deploying."
+1. Read `docs/infrastructure.md` for environment configuration
+2. Read `features/INDEX.md` to know what is being deployed
+3. Parse the argument to determine the target environment:
+   - `dev` or `development` → Development environment
+   - `staging` → Staging environment
+   - `prod` or `production` or `live` → Production environment
+   - No argument or unrecognized → ask the user which environment
 
-## Workflow
+## Environment Reference
 
-### 1. Pre-Deployment Checks
+| Environment | Branch | URL | Supabase Project |
+|---|---|---|---|
+| Development | `develop` | `https://oph-ki-dev.ids.online` | `ocrqzesxmalebpikutwv` |
+| Staging | `staging` | `https://oph-ki-staging.ids.online` | `ydcdimwtoyzjhbpbammb` |
+| Production | `main` | `https://oph-ki.ids.online` | `irmieskihipgcyhxlqlf` |
+
+## Git Flow (Promotion Pipeline)
+
+```
+main  →  develop  →  staging  →  production
+(code)   (internal    (customer    (live)
+          testing)     testing)
+```
+
+- Feature work happens on `main`
+- `/deploy dev` → merge main → develop, push (deploy latest code for internal testing)
+- `/deploy staging` → merge develop → staging, push (promote what was tested on dev for customer testing)
+- `/deploy prod` → verify staging was tested, deploy main via `npx vercel --prod` (go live)
+
+**Important:** This is a promotion pipeline. Staging only gets code that was tested on dev. Production only deploys after customer confirmation on staging.
+
+---
+
+## Workflow: `/deploy dev`
+
+Quick deploy for development iteration. Minimal checks.
+
+### Steps
+1. **Pre-checks:**
+   - [ ] `npm run build` succeeds
+   - [ ] All code committed and pushed to `main`
+2. **Merge and deploy:**
+   - `git checkout develop && git merge main && git push origin develop`
+   - Vercel auto-deploys the `develop` branch as a Preview deployment
+3. **Verify:**
+   - [ ] https://oph-ki-dev.ids.online loads
+   - Tell user: "Deployed to dev: https://oph-ki-dev.ids.online"
+4. **Return to main:**
+   - `git checkout main`
+
+### DB Migrations
+If there are pending database migrations, apply them to the **dev** Supabase project (`ocrqzesxmalebpikutwv`) before deploying.
+
+---
+
+## Workflow: `/deploy staging`
+
+Promote tested code from dev to staging for customer testing.
+
+### Steps
+1. **Pre-checks:**
+   - [ ] `npm run build` succeeds
+   - [ ] Dev environment has been tested and approved (ask user to confirm)
+   - [ ] All code committed and pushed
+2. **Merge and deploy (promote from develop → staging):**
+   - `git checkout staging && git merge develop && git push origin staging`
+   - Vercel auto-deploys the `staging` branch as a Preview deployment
+   - This ensures staging gets EXACTLY what was tested on dev
+3. **Verify:**
+   - [ ] https://oph-ki-staging.ids.online loads
+   - Tell user: "Deployed to staging: https://oph-ki-staging.ids.online — ready for customer testing."
+4. **Return to main:**
+   - `git checkout main`
+
+### DB Migrations
+If there are pending database migrations, apply them to the **staging** Supabase project (`ydcdimwtoyzjhbpbammb`) before deploying.
+
+---
+
+## Workflow: `/deploy prod`
+
+Production deployment. Full checklist with explicit confirmation.
+
+### Steps
+
+#### 1. Pre-Deployment Checks
 - [ ] `npm run build` succeeds locally
-- [ ] `npm run lint` passes
-- [ ] QA Engineer has approved the feature (check feature spec)
+- [ ] QA Engineer has approved the feature (check feature spec for QA results)
 - [ ] No Critical/High bugs in test report
 - [ ] All environment variables documented in `.env.local.example`
 - [ ] No secrets committed to git
-- [ ] All database migrations applied in Supabase (if applicable)
-- [ ] All code committed and pushed to remote
+- [ ] All database migrations applied to **production** Supabase (`irmieskihipgcyhxlqlf`)
+- [ ] All code committed and pushed to `main`
+- [ ] Feature has been tested on staging (ask user to confirm)
 
-### 2. Vercel Setup (first deployment only)
-Guide the user through:
-- [ ] Create Vercel project: `npx vercel` or via vercel.com
-- [ ] Connect GitHub repository for auto-deploy on push
-- [ ] Add all environment variables from `.env.local.example` in Vercel Dashboard
-- [ ] Build settings: Framework Preset = Next.js (auto-detected)
-- [ ] Configure domain (or use default `*.vercel.app`)
+#### 2. Confirmation
+Before deploying, present a summary and ask for explicit confirmation:
+> "Ready to deploy to PRODUCTION (https://oph-ki.ids.online):
+> - Features: [list features being deployed]
+> - Last commit: [commit hash and message]
+>
+> Proceed with production deployment?"
 
-### 3. Deploy
-- Push to main branch → Vercel auto-deploys
-- Or manual: `npx vercel --prod`
-- Monitor build in Vercel Dashboard
+Use `AskUserQuestion` with options: "Deploy to production" / "Cancel"
 
-### 4. Post-Deployment Verification
-- [ ] Production URL loads correctly
-- [ ] Deployed feature works as expected
-- [ ] Database connections work (if applicable)
-- [ ] Authentication flows work (if applicable)
-- [ ] No errors in browser console
+#### 3. Deploy
+- `npx vercel --prod`
+- Or: Vercel auto-deploys on push to `main` (code should already be on main)
+
+#### 4. Post-Deployment Verification
+- [ ] https://oph-ki.ids.online loads correctly
+- [ ] Deployed features work as expected
 - [ ] No errors in Vercel function logs
 
-### 5. Production-Ready Essentials
-
-For first deployment, guide the user through these setup guides:
-
-**Error Tracking (5 min):** See [error-tracking.md](../../docs/production/error-tracking.md)
-**Security Headers (copy-paste):** See [security-headers.md](../../docs/production/security-headers.md)
-**Performance Check:** See [performance.md](../../docs/production/performance.md)
-**Database Optimization:** See [database-optimization.md](../../docs/production/database-optimization.md)
-**Rate Limiting (optional):** See [rate-limiting.md](../../docs/production/rate-limiting.md)
-
-### 6. Post-Deployment Bookkeeping
-- Update feature spec: Add deployment section with production URL and date
+#### 5. Post-Deployment Bookkeeping
+- Update feature specs: Add deployment section with production URL and date
 - Update `features/INDEX.md`: Set status to **Deployed**
-- Create git tag: `git tag -a v1.X.0-PROJ-X -m "Deploy PROJ-X: [Feature Name]"`
-- Push tag: `git push origin v1.X.0-PROJ-X`
+- Create git tag: `git tag -a v1.X.0-OPH-X -m "Deploy OPH-X: [Feature Name]"`
+- Push tag: `git push origin v1.X.0-OPH-X`
+- Commit and push the bookkeeping changes
+
+### DB Migrations
+If there are pending database migrations, apply them to the **production** Supabase project (`irmieskihipgcyhxlqlf`) BEFORE deploying. Double-check the migration is correct — production data cannot be easily recovered.
+
+---
 
 ## Common Issues
 
@@ -77,37 +147,33 @@ For first deployment, guide the user through these setup guides:
 ### Environment variables not available
 - Verify vars are set in Vercel Dashboard (Settings → Environment Variables)
 - Client-side vars need `NEXT_PUBLIC_` prefix
-- Redeploy after adding new env vars (they don't apply retroactively)
+- Preview deployments (dev/staging) need branch-scoped env vars
+- Redeploy after adding new env vars
 
 ### Database connection errors
-- Verify Supabase URL and anon key in Vercel env vars
+- Verify the correct Supabase project is being used for the environment
 - Check RLS policies allow the operations being attempted
-- Verify Supabase project is not paused (free tier pauses after inactivity)
+- Verify Supabase project is not paused
+
+### Branch is behind
+If `develop` or `staging` has diverged from `main`:
+- Use `git merge main` (not rebase) to bring it up to date
+- Resolve conflicts if any, then push
 
 ## Rollback Instructions
-If production is broken:
-1. **Immediate:** Vercel Dashboard → Deployments → Click "..." on previous working deployment → "Promote to Production"
-2. **Fix locally:** Debug the issue, `npm run build`, commit, push
-3. Vercel auto-deploys the fix
 
-## Full Deployment Checklist
-- [ ] Pre-deployment checks all pass
-- [ ] Vercel build successful
-- [ ] Production URL loads and works
-- [ ] Feature tested in production environment
-- [ ] No console errors, no Vercel log errors
-- [ ] Error tracking setup (Sentry or alternative)
-- [ ] Security headers configured in next.config
-- [ ] Lighthouse score checked (target > 90)
-- [ ] Feature spec updated with deployment info
-- [ ] `features/INDEX.md` updated to Deployed
-- [ ] Git tag created and pushed
-- [ ] User has verified production deployment
+### Production
+1. **Immediate:** Vercel Dashboard → Deployments → Click "..." on previous working deployment → "Promote to Production"
+2. **Fix locally:** Debug the issue, fix, commit, push to main, redeploy
+
+### Staging / Dev
+1. Revert the merge commit on the branch: `git revert HEAD && git push`
+2. Or: Force-push the branch to the previous state (after confirming with user)
 
 ## Git Commit
 ```
-deploy(PROJ-X): Deploy [feature name] to production
+deploy(OPH-X): Deploy [feature name] to [environment]
 
-- Production URL: https://your-app.vercel.app
+- [Environment] URL: https://...
 - Deployed: YYYY-MM-DD
 ```
