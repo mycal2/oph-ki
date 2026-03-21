@@ -102,7 +102,8 @@ export async function matchArticleNumbers(
   const { data: catalog, error } = await adminClient
     .from("article_catalog")
     .select("article_number, name, gtin, keywords, packaging")
-    .eq("tenant_id", tenantId);
+    .eq("tenant_id", tenantId)
+    .limit(10000);
 
   if (error) {
     console.error("Error loading article catalog for matching:", error.message);
@@ -154,7 +155,7 @@ export async function matchArticleNumbers(
           candidates.push({
             catalogEntry: entry,
             score: 1.0,
-            reason: `GTIN-Ubereinstimmung: '${itemGtin}' = Katalog-GTIN`,
+            reason: `GTIN-Übereinstimmung: '${itemGtin}' = Katalog-GTIN`,
           });
           continue;
         }
@@ -167,7 +168,7 @@ export async function matchArticleNumbers(
           candidates.push({
             catalogEntry: entry,
             score: 0.95,
-            reason: `Alias-Ubereinstimmung: Händler-Art.-Nr. '${item.dealer_article_number}' gefunden in Suchbegriffen`,
+            reason: `Alias-Übereinstimmung: Händler-Art.-Nr. '${item.dealer_article_number}' gefunden in Suchbegriffen`,
           });
           continue;
         }
@@ -176,12 +177,12 @@ export async function matchArticleNumbers(
       // 3. Description vs catalog keywords (exact keyword match)
       if (item.description && entryKeywords.length > 0) {
         const descLower = normalizeText(item.description);
-        const keywordMatch = entryKeywords.find((kw) => descLower === kw || descLower.includes(kw) && kw.length >= 4);
+        const keywordMatch = entryKeywords.find((kw) => descLower === kw || (descLower.includes(kw) && kw.length >= 4));
         if (keywordMatch) {
           candidates.push({
             catalogEntry: entry,
             score: 0.9,
-            reason: `Keyword-Ubereinstimmung: Beschreibung enthält '${keywordMatch}'`,
+            reason: `Keyword-Übereinstimmung: Beschreibung enthält '${keywordMatch}'`,
           });
           continue;
         }
@@ -208,7 +209,7 @@ export async function matchArticleNumbers(
           candidates.push({
             catalogEntry: entry,
             score: bestScore,
-            reason: `Namens-Ubereinstimmung (${Math.round(bestScore * 100)}%): '${item.description}' ~ '${matchedAgainst}'`,
+            reason: `Namens-Übereinstimmung (${Math.round(bestScore * 100)}%): '${item.description}' ~ '${matchedAgainst}'`,
           });
         }
       }
@@ -236,7 +237,7 @@ export async function matchArticleNumbers(
           ...item,
           article_number: packagingMatch.catalogEntry.article_number,
           article_number_source: "catalog_match" as const,
-          article_number_match_reason: packagingMatch.reason + " (Verpackung bestatigt)",
+          article_number_match_reason: packagingMatch.reason + " (Verpackung bestätigt)",
         };
       }
 
