@@ -725,9 +725,8 @@ export const outputFormatFileTypeSchema = z.enum(["csv", "xlsx", "xml", "json"],
 export const createArticleSchema = z.object({
   article_number: z
     .string()
-    .min(1, "Herst.-Art.-Nr. ist erforderlich.")
-    .max(200, "Herst.-Art.-Nr. darf maximal 200 Zeichen lang sein.")
-    .trim(),
+    .transform((v) => v.replace(/\s+/g, ""))
+    .pipe(z.string().min(1, "Herst.-Art.-Nr. ist erforderlich.").max(200, "Herst.-Art.-Nr. darf maximal 200 Zeichen lang sein.")),
   name: z
     .string()
     .min(1, "Artikelbezeichnung ist erforderlich.")
@@ -786,9 +785,8 @@ export const createArticleSchema = z.object({
 export const updateArticleSchema = z.object({
   article_number: z
     .string()
-    .min(1, "Herst.-Art.-Nr. ist erforderlich.")
-    .max(200, "Herst.-Art.-Nr. darf maximal 200 Zeichen lang sein.")
-    .trim()
+    .transform((v) => v.replace(/\s+/g, ""))
+    .pipe(z.string().min(1, "Herst.-Art.-Nr. ist erforderlich.").max(200, "Herst.-Art.-Nr. darf maximal 200 Zeichen lang sein."))
     .optional(),
   name: z
     .string()
