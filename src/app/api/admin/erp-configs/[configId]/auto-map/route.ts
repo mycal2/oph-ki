@@ -129,7 +129,7 @@ ${targetColumns.map((col, i) => `${i + 1}. "${col}"`).join("\n")}
 
 1. Match each target column to the most semantically appropriate canonical field.
 2. Target columns may be in German, English, or abbreviated. Use your understanding of both languages and common ERP terminology to find the best match.
-3. Each canonical field can be used at most once. If two target columns could map to the same canonical field, pick the better match and leave the other as null.
+3. The same canonical field MAY be mapped to multiple target columns if semantically appropriate (e.g., two columns that both represent the article number).
 4. Set confidence between 0.0 and 1.0:
    - 0.9-1.0: Very confident match (e.g. "Bestellnummer" -> order.order_number)
    - 0.7-0.89: Likely match (e.g. "BestNr" -> order.order_number)
@@ -254,11 +254,14 @@ export async function POST(
 
     let responseText: string;
     try {
-      const message = await anthropic.messages.create({
-        model,
-        max_tokens: 4096,
-        messages: [{ role: "user", content: prompt }],
-      });
+      const message = await anthropic.messages.create(
+        {
+          model,
+          max_tokens: 4096,
+          messages: [{ role: "user", content: prompt }],
+        },
+        { signal: AbortSignal.timeout(30_000) }
+      );
 
       // Extract text from response
       const textBlock = message.content.find((b) => b.type === "text");

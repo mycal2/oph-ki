@@ -268,10 +268,10 @@ export function AutoMappingPanel({
   // ---------------------------------------------------------------------------
 
   const handleFieldChange = useCallback(
-    (targetColumn: string, newField: string | null) => {
+    (rowIndex: number, newField: string | null) => {
       setRows((prev) =>
-        prev.map((r) =>
-          r.target_column === targetColumn
+        prev.map((r, i) =>
+          i === rowIndex
             ? { ...r, selected_field: newField, confirmed: true }
             : r
         )
@@ -280,10 +280,10 @@ export function AutoMappingPanel({
     []
   );
 
-  const handleConfirmRow = useCallback((targetColumn: string) => {
+  const handleConfirmRow = useCallback((rowIndex: number) => {
     setRows((prev) =>
-      prev.map((r) =>
-        r.target_column === targetColumn ? { ...r, confirmed: true } : r
+      prev.map((r, i) =>
+        i === rowIndex ? { ...r, confirmed: true } : r
       )
     );
   }, []);
@@ -482,13 +482,13 @@ export function AutoMappingPanel({
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((row) => {
+                  {rows.map((row, rowIndex) => {
                     const level = getConfidenceLevel(row.confidence);
                     const isHighlighted = level === "red" && !row.confirmed;
 
                     return (
                       <tr
-                        key={row.target_column}
+                        key={`${rowIndex}-${row.target_column}`}
                         className={`border-t transition-colors ${
                           row.confirmed
                             ? "bg-green-50/30 dark:bg-green-950/10"
@@ -515,7 +515,7 @@ export function AutoMappingPanel({
                             value={row.selected_field ?? "__unmapped__"}
                             onValueChange={(val) =>
                               handleFieldChange(
-                                row.target_column,
+                                rowIndex,
                                 val === "__unmapped__" ? null : val
                               )
                             }
@@ -564,7 +564,7 @@ export function AutoMappingPanel({
                               variant="ghost"
                               className="h-7 px-2 text-xs"
                               onClick={() =>
-                                handleConfirmRow(row.target_column)
+                                handleConfirmRow(rowIndex)
                               }
                             >
                               <Check className="mr-1 h-3 w-3" />
