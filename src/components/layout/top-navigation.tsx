@@ -27,6 +27,7 @@ const allNavLinks: NavLink[] = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/orders", label: "Bestellungen" },
   { href: "/settings/dealer-mappings", label: "Zuordnungen" },
+  { href: "/settings/article-catalog", label: "Artikelstamm" },
   { href: "/settings/inbound-email", label: "Eingangs-E-Mail" },
   { href: "/settings/data-protection", label: "Datenschutz" },
   { href: "/admin/dealers", label: "Händler-Profile", adminOnly: true },

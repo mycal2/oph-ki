@@ -55,6 +55,15 @@ export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type InviteUserInput = z.infer<typeof inviteUserSchema>;
 export type ToggleUserStatusInput = z.infer<typeof toggleUserStatusSchema>;
 
+/** OPH-41: Change tenant user role. */
+export const changeUserRoleSchema = z.object({
+  role: z.enum(["tenant_user", "tenant_admin"], {
+    message: "Ungültige Rolle. Erlaubt: tenant_user, tenant_admin",
+  }),
+});
+
+export type ChangeUserRoleInput = z.infer<typeof changeUserRoleSchema>;
+
 /**
  * OPH-2: Upload validation schemas.
  */
@@ -143,6 +152,10 @@ const canonicalLineItemSchema = z.object({
   unit_price: z.number().nullable(),
   total_price: z.number().nullable(),
   currency: z.string().nullable(),
+  /** OPH-40: How the article_number was determined. */
+  article_number_source: z.enum(["extracted", "catalog_match", "manual"]).nullable().optional(),
+  /** OPH-40: Human-readable reason for catalog match. */
+  article_number_match_reason: z.string().nullable().optional(),
 });
 
 /** Sender sub-schema for extraction/review data. */
@@ -704,3 +717,134 @@ export type UpdateNotificationEmailsInput = z.infer<typeof updateNotificationEma
 export const outputFormatFileTypeSchema = z.enum(["csv", "xlsx", "xml", "json"], {
   message: "Erlaubte Dateitypen: CSV, Excel (.xlsx), XML, JSON",
 });
+
+/**
+ * OPH-39: Manufacturer Article Catalog validation schemas.
+ */
+
+export const createArticleSchema = z.object({
+  article_number: z
+    .string()
+    .min(1, "Herst.-Art.-Nr. ist erforderlich.")
+    .max(200, "Herst.-Art.-Nr. darf maximal 200 Zeichen lang sein.")
+    .trim(),
+  name: z
+    .string()
+    .min(1, "Artikelbezeichnung ist erforderlich.")
+    .max(500, "Artikelbezeichnung darf maximal 500 Zeichen lang sein.")
+    .trim(),
+  category: z
+    .string()
+    .max(200, "Kategorie darf maximal 200 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+  color: z
+    .string()
+    .max(200, "Farbe darf maximal 200 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+  packaging: z
+    .string()
+    .max(200, "Verpackungseinheit darf maximal 200 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+  size1: z
+    .string()
+    .max(200, "Groesse 1 darf maximal 200 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+  size2: z
+    .string()
+    .max(200, "Groesse 2 darf maximal 200 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+  ref_no: z
+    .string()
+    .max(200, "Ref.-Nr. darf maximal 200 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+  gtin: z
+    .string()
+    .max(50, "GTIN darf maximal 50 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+  keywords: z
+    .string()
+    .max(1000, "Suchbegriffe dürfen maximal 1000 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+});
+
+export const updateArticleSchema = z.object({
+  article_number: z
+    .string()
+    .min(1, "Herst.-Art.-Nr. ist erforderlich.")
+    .max(200, "Herst.-Art.-Nr. darf maximal 200 Zeichen lang sein.")
+    .trim()
+    .optional(),
+  name: z
+    .string()
+    .min(1, "Artikelbezeichnung ist erforderlich.")
+    .max(500, "Artikelbezeichnung darf maximal 500 Zeichen lang sein.")
+    .trim()
+    .optional(),
+  category: z
+    .string()
+    .max(200, "Kategorie darf maximal 200 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+  color: z
+    .string()
+    .max(200, "Farbe darf maximal 200 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+  packaging: z
+    .string()
+    .max(200, "Verpackungseinheit darf maximal 200 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+  size1: z
+    .string()
+    .max(200, "Groesse 1 darf maximal 200 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+  size2: z
+    .string()
+    .max(200, "Groesse 2 darf maximal 200 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+  ref_no: z
+    .string()
+    .max(200, "Ref.-Nr. darf maximal 200 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+  gtin: z
+    .string()
+    .max(50, "GTIN darf maximal 50 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+  keywords: z
+    .string()
+    .max(1000, "Suchbegriffe dürfen maximal 1000 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+});
+
+export type CreateArticleInput = z.infer<typeof createArticleSchema>;
+export type UpdateArticleInput = z.infer<typeof updateArticleSchema>;

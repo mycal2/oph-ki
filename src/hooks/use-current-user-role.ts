@@ -10,6 +10,7 @@ import type { UserRole } from "@/lib/types";
  */
 export function useCurrentUserRole() {
   const [role, setRole] = useState<UserRole | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -21,6 +22,7 @@ export function useCurrentUserRole() {
         } = await supabase.auth.getUser();
 
         if (user) {
+          setUserId(user.id);
           const { data: profile } = await supabase
             .from("user_profiles")
             .select("role")
@@ -43,5 +45,5 @@ export function useCurrentUserRole() {
     load();
   }, []);
 
-  return { role, isLoading, isPlatformAdmin: role === "platform_admin" };
+  return { role, userId, isLoading, isPlatformAdmin: role === "platform_admin" };
 }

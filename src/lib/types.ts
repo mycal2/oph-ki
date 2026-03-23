@@ -251,6 +251,10 @@ export interface CanonicalLineItem {
   unit_price: number | null;
   total_price: number | null;
   currency: string | null;
+  /** OPH-40: How the article_number was determined. */
+  article_number_source?: "extracted" | "catalog_match" | "manual" | null;
+  /** OPH-40: Human-readable reason for catalog match (German). */
+  article_number_match_reason?: string | null;
 }
 
 export interface CanonicalSender {
@@ -873,4 +877,42 @@ export interface ConfidenceScoreData {
   filled_required: number;
   /** True if ERP field mapping is not yet configured. */
   mapping_not_configured: boolean;
+}
+
+/**
+ * OPH-39: Manufacturer Article Catalog types.
+ */
+
+/** A single article in the manufacturer's catalog (Artikelstamm). */
+export interface ArticleCatalogItem {
+  id: string;
+  tenant_id: string;
+  article_number: string;
+  name: string;
+  category: string | null;
+  color: string | null;
+  packaging: string | null;
+  size1: string | null;
+  size2: string | null;
+  ref_no: string | null;
+  gtin: string | null;
+  keywords: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Result summary from a bulk article import (CSV/Excel). */
+export interface ArticleImportResult {
+  created: number;
+  updated: number;
+  skipped: number;
+  errors: string[];
+}
+
+/** Paginated response for article catalog list. */
+export interface ArticleCatalogPageResponse {
+  articles: ArticleCatalogItem[];
+  total: number;
+  page: number;
+  pageSize: number;
 }

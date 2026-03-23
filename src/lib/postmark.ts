@@ -340,8 +340,8 @@ export async function sendTrialResultEmail(params: {
       <thead>
         <tr style="background:#f9fafb">
           <th style="padding:8px 10px;text-align:center;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Pos</th>
-          <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Artikelnr.</th>${trialHasDealerArticle ? `
-          <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Lief.-Art.-Nr.</th>` : ""}
+          <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Herst.-Art.-Nr.</th>${trialHasDealerArticle ? `
+          <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Händler-Art.-Nr.</th>` : ""}
           <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Bezeichnung</th>
           <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Menge</th>
           <th style="padding:8px 10px;text-align:center;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Einheit</th>
@@ -623,8 +623,8 @@ export async function sendOrderResultEmail(params: {
       <thead>
         <tr style="background:#f9fafb">
           <th style="padding:8px 10px;text-align:center;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Pos</th>
-          <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Artikelnr.</th>${hasDealerArticle ? `
-          <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Lief.-Art.-Nr.</th>` : ""}
+          <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Herst.-Art.-Nr.</th>${hasDealerArticle ? `
+          <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Händler-Art.-Nr.</th>` : ""}
           <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Bezeichnung</th>
           <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Menge</th>
           <th style="padding:8px 10px;text-align:center;border-bottom:2px solid #e5e7eb;font-weight:600;color:#374151">Einheit</th>

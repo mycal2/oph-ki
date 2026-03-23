@@ -17,6 +17,7 @@ import {
   Mail,
   Phone,
   User,
+  Sparkles,
 } from "lucide-react";
 import {
   Card,
@@ -436,10 +437,10 @@ export function ExtractionResultPreview({
                         #
                       </th>
                       <th className="px-3 py-2 text-left font-medium text-muted-foreground hidden sm:table-cell">
-                        Art.-Nr.
+                        Herst.-Art.-Nr.
                       </th>
                       <th className="px-3 py-2 text-left font-medium text-muted-foreground hidden lg:table-cell">
-                        Lief.-Art.-Nr.
+                        Händler-Art.-Nr.
                       </th>
                       <th className="px-3 py-2 text-left font-medium text-muted-foreground">
                         Beschreibung
@@ -462,7 +463,25 @@ export function ExtractionResultPreview({
                           {item.position}
                         </td>
                         <td className="px-3 py-2 hidden sm:table-cell font-mono text-xs">
-                          {item.article_number ?? (
+                          {item.article_number ? (
+                            <span className="inline-flex items-center gap-1">
+                              {item.article_number}
+                              {item.article_number_source === "catalog_match" && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Sparkles className="h-3 w-3 text-violet-500 shrink-0 cursor-help" />
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-xs">
+                                      <p className="text-xs">
+                                        {item.article_number_match_reason ?? "Automatisch aus dem Artikelkatalog zugeordnet."}
+                                      </p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                            </span>
+                          ) : (
                             <span className="text-muted-foreground italic">-</span>
                           )}
                         </td>
