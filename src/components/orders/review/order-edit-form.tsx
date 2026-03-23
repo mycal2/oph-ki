@@ -214,16 +214,39 @@ export function OrderEditForm({ data, onChange }: OrderEditFormProps) {
           <h3 className="text-sm font-medium mb-3">Absender</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="review-customer-number">
+              <Label htmlFor="review-customer-number" className="flex items-center gap-1">
                 Kundennummer{" "}
                 <span className="text-muted-foreground font-normal">(Kd.-Nr.)</span>
+                {order.sender?.customer_number_source?.startsWith("catalog_") && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] px-1.5 py-0 h-4 border-violet-300 text-violet-600 cursor-help"
+                        >
+                          KI-Vorschlag
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs">
+                        <p className="text-xs">
+                          {order.sender?.customer_number_match_reason ?? "Automatisch aus dem Kundenkatalog zugeordnet."}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
               </Label>
               <Input
                 id="review-customer-number"
                 value={order.sender?.customer_number ?? ""}
                 onChange={(e) => {
                   const value = e.target.value || null;
-                  updateSender({ customer_number: value });
+                  updateSender({
+                    customer_number: value,
+                    customer_number_source: "extracted",
+                    customer_number_match_reason: null,
+                  });
                 }}
                 placeholder="z.B. 12345 oder KD-12345-DE"
                 maxLength={100}
