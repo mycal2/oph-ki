@@ -24,6 +24,7 @@ import { useAdminTenants } from "@/hooks/use-admin-tenants";
 import { TenantProfileForm, TenantProfileFormSkeleton } from "@/components/admin/tenant-profile-form";
 import { TenantUsersTab } from "@/components/admin/tenant-users-tab";
 import { ArticleCatalogPage } from "@/components/article-catalog/article-catalog-page";
+import { CustomerCatalogPage } from "@/components/customer-catalog/customer-catalog-page";
 import type { Tenant, TenantStatus } from "@/lib/types";
 import type { UpdateTenantInput } from "@/lib/validations";
 
@@ -33,7 +34,7 @@ const STATUS_BADGES: Record<TenantStatus, { label: string; className: string }> 
   trial: { label: "Testphase", className: "bg-yellow-100 text-yellow-800" },
 };
 
-const VALID_TABS = ["profile", "users", "articles"] as const;
+const VALID_TABS = ["profile", "users", "articles", "customers"] as const;
 type TabValue = (typeof VALID_TABS)[number];
 
 interface PageProps {
@@ -351,6 +352,7 @@ export default function AdminTenantDetailPage({ params }: PageProps) {
           <TabsTrigger value="profile">Profil</TabsTrigger>
           <TabsTrigger value="users">Benutzer</TabsTrigger>
           <TabsTrigger value="articles">Artikelstamm</TabsTrigger>
+          <TabsTrigger value="customers">Kundenstamm</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile" className="mt-6">
@@ -377,6 +379,10 @@ export default function AdminTenantDetailPage({ params }: PageProps) {
 
         <TabsContent value="articles" className="mt-6">
           <ArticleCatalogPage adminTenantId={tenantId} />
+        </TabsContent>
+
+        <TabsContent value="customers" className="mt-6">
+          <CustomerCatalogPage adminTenantId={tenantId} />
         </TabsContent>
       </Tabs>
 
