@@ -682,10 +682,35 @@ function extractJson(text: string): string {
     return fenceMatch[1].trim();
   }
 
-  // Try to find raw JSON object
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (jsonMatch?.[0]) {
-    return jsonMatch[0];
+  // Find the first '{' and use bracket counting to find its matching '}'
+  const startIdx = text.indexOf("{");
+  if (startIdx !== -1) {
+    let depth = 0;
+    let inString = false;
+    let escape = false;
+    for (let i = startIdx; i < text.length; i++) {
+      const ch = text[i];
+      if (escape) {
+        escape = false;
+        continue;
+      }
+      if (ch === "\\" && inString) {
+        escape = true;
+        continue;
+      }
+      if (ch === '"') {
+        inString = !inString;
+        continue;
+      }
+      if (inString) continue;
+      if (ch === "{") depth++;
+      else if (ch === "}") {
+        depth--;
+        if (depth === 0) {
+          return text.substring(startIdx, i + 1);
+        }
+      }
+    }
   }
 
   // Return as-is and let JSON.parse handle the error
