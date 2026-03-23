@@ -134,7 +134,7 @@ ${CANONICAL_JSON_SCHEMA}
     - If hints specify how to map article numbers (e.g. which column is the dealer article number vs manufacturer article number), follow those mappings exactly.
 17. **Manufacturer article number column recognition (multilingual):**
     - In dealer orders, the manufacturer's article number is typically labeled from the dealer's perspective — the dealer calls the manufacturer their "Lieferant" (supplier). Recognize these column header labels as the \`article_number\` field:
-      * German: Lief.Art.Nr., Lief.-Art.-Nr., Lieferantenartikelnummer, Lieferanten-Art.-Nr., Lieferanten Art Nr, Art.Nr., Art.-Nr., Art-Nr, Artikelnummer, Artikel-Nr., Artikel Nr, Herst.-Art.-Nr., Herstellerartikelnummer, Hersteller-Art.-Nr., Hersteller Art Nr, Bestell-Nr., Bestellnummer
+      * German: Lief.Art.Nr., Lief.-Art.-Nr., Lieferantenartikelnummer, Lieferanten-Art.-Nr., Lieferanten Art Nr, Art.Nr., Art.-Nr., Art-Nr, Artikelnummer, Artikel-Nr., Artikel Nr, Herst.-Art.-Nr., Herstellerartikelnummer, Hersteller-Art.-Nr., Hersteller Art Nr, Bestell-Nr., Bestellnummer, Interne Mat.Nr., Interne Mat.Nr:, Interne Matnr, Interne Materialnummer, Interne Mat.-Nr., Mat.Nr., Materialnummer
       * English: Supplier Art. No., Supplier Article No., Supplier Article Number, Vendor Art. No., Vendor Article No., Vendor Item No., Manufacturer Art. No., Manufacturer Article No., Item No., Item Number, Product Code, Product No., Article No., Article Number, Part No., Part Number, SKU
     - These labels map to \`article_number\` (the manufacturer's article number), NOT to \`dealer_article_number\`.
     - The following labels indicate the dealer's OWN internal article number and map to \`dealer_article_number\`:
