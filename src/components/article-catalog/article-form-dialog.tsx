@@ -90,7 +90,7 @@ export function ArticleFormDialog({
 
     try {
       const data: CreateArticleInput = {
-        article_number: formData.article_number?.trim() ?? "",
+        article_number: formData.article_number?.replace(/\s+/g, "") ?? "",
         name: formData.name?.trim() ?? "",
         category: formData.category?.trim() || null,
         color: formData.color?.trim() || null,
