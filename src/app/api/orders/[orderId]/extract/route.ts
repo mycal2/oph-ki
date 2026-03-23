@@ -9,6 +9,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { extractOrderData } from "@/lib/claude-extraction";
 import { normalizeUnits } from "@/lib/unit-normalization";
 import { matchArticleNumbers } from "@/lib/article-matching";
+import { matchCustomerNumber } from "@/lib/customer-matching";
 import { getMappingsForDealer, applyMappings, formatMappingsForPrompt } from "@/lib/dealer-mappings";
 import { mimeTypeToFormatType, getColumnMappingProfile, formatColumnMappingForPrompt } from "@/lib/column-mappings";
 import { sendTrialResultEmail, sendTrialFailureEmail, sendOrderResultEmail, sendOrderFailureEmail, sendPlatformErrorNotification } from "@/lib/postmark";
@@ -550,6 +551,29 @@ export async function POST(
         } catch (matchError) {
           // Non-critical: log but don't fail extraction
           console.error("Error during article number matching:", matchError);
+        }
+      }
+
+      // --- OPH-47: Customer number matching against tenant customer catalog ---
+      if (tenantId) {
+        try {
+          const matchedSender = await matchCustomerNumber(
+            adminClient,
+            finalExtractedData.order.sender,
+            tenantId
+          );
+          if (matchedSender) {
+            finalExtractedData = {
+              ...finalExtractedData,
+              order: {
+                ...finalExtractedData.order,
+                sender: matchedSender,
+              },
+            };
+          }
+        } catch (customerMatchError) {
+          // Non-critical: log but don't fail extraction
+          console.error("Error during customer number matching:", customerMatchError);
         }
       }
 

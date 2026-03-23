@@ -846,3 +846,120 @@ export const updateArticleSchema = z.object({
 
 export type CreateArticleInput = z.infer<typeof createArticleSchema>;
 export type UpdateArticleInput = z.infer<typeof updateArticleSchema>;
+
+/**
+ * OPH-46: Manufacturer Customer Catalog validation schemas.
+ */
+
+export const createCustomerSchema = z.object({
+  customer_number: z
+    .string()
+    .transform((v) => v.replace(/\s+/g, ""))
+    .pipe(z.string().min(1, "Kundennummer ist erforderlich.").max(200, "Kundennummer darf maximal 200 Zeichen lang sein.")),
+  company_name: z
+    .string()
+    .min(1, "Firma ist erforderlich.")
+    .max(500, "Firma darf maximal 500 Zeichen lang sein.")
+    .trim(),
+  street: z
+    .string()
+    .max(500, "Strasse darf maximal 500 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+  postal_code: z
+    .string()
+    .max(20, "PLZ darf maximal 20 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+  city: z
+    .string()
+    .max(200, "Stadt darf maximal 200 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+  country: z
+    .string()
+    .max(100, "Land darf maximal 100 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+  email: z
+    .string()
+    .max(320, "E-Mail darf maximal 320 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+  phone: z
+    .string()
+    .max(50, "Telefon darf maximal 50 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+  keywords: z
+    .string()
+    .max(1000, "Suchbegriffe duerfen maximal 1000 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+});
+
+export const updateCustomerSchema = z.object({
+  customer_number: z
+    .string()
+    .transform((v) => v.replace(/\s+/g, ""))
+    .pipe(z.string().min(1, "Kundennummer ist erforderlich.").max(200, "Kundennummer darf maximal 200 Zeichen lang sein."))
+    .optional(),
+  company_name: z
+    .string()
+    .min(1, "Firma ist erforderlich.")
+    .max(500, "Firma darf maximal 500 Zeichen lang sein.")
+    .trim()
+    .optional(),
+  street: z
+    .string()
+    .max(500, "Strasse darf maximal 500 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+  postal_code: z
+    .string()
+    .max(20, "PLZ darf maximal 20 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+  city: z
+    .string()
+    .max(200, "Stadt darf maximal 200 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+  country: z
+    .string()
+    .max(100, "Land darf maximal 100 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+  email: z
+    .string()
+    .max(320, "E-Mail darf maximal 320 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+  phone: z
+    .string()
+    .max(50, "Telefon darf maximal 50 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+  keywords: z
+    .string()
+    .max(1000, "Suchbegriffe duerfen maximal 1000 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+});
+
+export type CreateCustomerInput = z.infer<typeof createCustomerSchema>;
+export type UpdateCustomerInput = z.infer<typeof updateCustomerSchema>;
