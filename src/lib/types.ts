@@ -266,6 +266,10 @@ export interface CanonicalSender {
   email: string | null;
   phone: string | null;
   customer_number: string | null;
+  /** OPH-47: How the customer_number was determined. */
+  customer_number_source?: "catalog_email" | "catalog_exact" | "catalog_keyword" | "catalog_fuzzy_name" | "catalog_phone" | "extracted" | null;
+  /** OPH-47: Human-readable reason for the customer number match (German). */
+  customer_number_match_reason?: string | null;
 }
 
 export interface CanonicalOrder {
@@ -915,4 +919,52 @@ export interface ArticleCatalogPageResponse {
   total: number;
   page: number;
   pageSize: number;
+}
+
+/**
+ * OPH-46: Manufacturer Customer Catalog types.
+ */
+
+/** A single customer entry in the manufacturer's customer catalog. */
+export interface CustomerCatalogItem {
+  id: string;
+  tenant_id: string;
+  customer_number: string;
+  company_name: string;
+  street: string | null;
+  postal_code: string | null;
+  city: string | null;
+  country: string | null;
+  email: string | null;
+  phone: string | null;
+  keywords: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Result summary from a bulk customer import (CSV/Excel). */
+export interface CustomerImportResult {
+  created: number;
+  updated: number;
+  skipped: number;
+  errors: string[];
+}
+
+/** Paginated response for customer catalog list. */
+export interface CustomerCatalogPageResponse {
+  customers: CustomerCatalogItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+/**
+ * OPH-45: AI-Assisted ERP Field Mapping types.
+ */
+
+/** A single AI-suggested mapping from a target column to a canonical field. */
+export interface AutoMappingResult {
+  target_column: string;
+  canonical_field: string | null;
+  confidence: number;
 }

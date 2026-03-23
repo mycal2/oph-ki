@@ -294,7 +294,27 @@ export function ExtractionResultPreview({
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground">Kundennummer</p>
               <p className="text-sm font-medium truncate">
-                {order.sender?.customer_number?.trim() || "\u2014"}
+                {order.sender?.customer_number?.trim() ? (
+                  <span className="inline-flex items-center gap-1">
+                    {order.sender.customer_number.trim()}
+                    {order.sender.customer_number_source?.startsWith("catalog_") && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Sparkles className="h-3 w-3 text-violet-500 shrink-0 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs">
+                            <p className="text-xs">
+                              {order.sender.customer_number_match_reason ?? "Automatisch aus dem Kundenkatalog zugeordnet."}
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                  </span>
+                ) : (
+                  "\u2014"
+                )}
               </p>
             </div>
           </div>
