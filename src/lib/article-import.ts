@@ -161,7 +161,7 @@ export function parseArticleFile(buffer: Buffer, filename: string): ParseResult 
 
   for (let i = 1; i < rawData.length; i++) {
     const cols = rawData[i];
-    const articleNumber = String(cols[artNumIdx] ?? "").trim();
+    const articleNumber = String(cols[artNumIdx] ?? "").replace(/\s+/g, "");
     const articleName = String(cols[nameIdx] ?? "").trim();
 
     if (!articleNumber || !articleName) {
