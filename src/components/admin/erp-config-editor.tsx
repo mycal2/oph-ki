@@ -51,6 +51,7 @@ import { ErpConfigTestDialog } from "@/components/admin/erp-config-test-dialog";
 import { OutputFormatTab } from "@/components/admin/output-format-tab";
 import { XmlTemplateSuggestion } from "@/components/admin/xml-template-suggestion";
 import { FieldMapperPanel } from "@/components/admin/field-mapper-panel";
+import { AutoMappingPanel } from "@/components/admin/auto-mapping-panel";
 import { generateXmlTemplate } from "@/lib/xml-template-generator";
 
 interface ErpConfigEditorProps {
@@ -128,6 +129,9 @@ export function ErpConfigEditor({
 
   // OPH-32: Field mapper saving state
   const [isFieldMapperSaving, setIsFieldMapperSaving] = useState(false);
+
+  // OPH-45: Key to force re-mount of FieldMapperPanel after auto-mapping applies
+  const [fieldMapperKey, setFieldMapperKey] = useState(0);
 
   // Test dialog
   const [testOpen, setTestOpen] = useState(false);
@@ -234,6 +238,19 @@ export function ErpConfigEditor({
       }
     },
     [config.id]
+  );
+
+  // OPH-45: Apply auto-mapping results to field mapper
+  const handleAutoMappingApply = useCallback(
+    async (mappings: FieldMapping[]): Promise<boolean> => {
+      const success = await handleSaveFieldMappings(mappings);
+      if (success) {
+        // Increment key to force FieldMapperPanel to re-mount with new mappings
+        setFieldMapperKey((k) => k + 1);
+      }
+      return success;
+    },
+    [handleSaveFieldMappings]
   );
 
   // OPH-32: Accept generated template from field mapper
@@ -505,6 +522,23 @@ export function ErpConfigEditor({
         <OutputFormatTab configId={config.id} onFormatChange={handleOutputFormatChange} />
       </div>
 
+      {/* OPH-45: AI Auto-Mapping Panel — shown when an output format with schema is saved */}
+      {savedOutputFormat &&
+        savedOutputFormat.detected_schema.length > 0 && (
+          <>
+            <Separator />
+            <AutoMappingPanel
+              configId={config.id}
+              outputFormat={savedOutputFormat}
+              hasExistingMappings={
+                (savedOutputFormat.field_mappings ?? []).length > 0
+              }
+              onApplyMappings={handleAutoMappingApply}
+              isSaving={isFieldMapperSaving}
+            />
+          </>
+        )}
+
       {/* OPH-32: Field Mapper Panel — shown when an output format with schema is saved */}
       {savedOutputFormat &&
         savedOutputFormat.detected_schema.length > 0 && (
@@ -516,9 +550,10 @@ export function ErpConfigEditor({
               </h3>
               <p className="text-sm text-muted-foreground">
                 Ordnen Sie die erkannten Felder aus der Beispieldatei den verfügbaren Variablen
-                zu. Klicken Sie danach auf "Generieren", um die Konfiguration automatisch zu befüllen.
+                zu. Klicken Sie danach auf &quot;Generieren&quot;, um die Konfiguration automatisch zu befüllen.
               </p>
               <FieldMapperPanel
+                key={fieldMapperKey}
                 outputFormat={savedOutputFormat}
                 configName={configName}
                 currentTemplate={xmlTemplate}

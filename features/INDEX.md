@@ -56,7 +56,10 @@
 | OPH-42 | Admin Tenant Detail Page (Full-Page Layout) | Deployed | [OPH-42-admin-tenant-detail-page.md](OPH-42-admin-tenant-detail-page.md) | 2026-03-21 |
 | OPH-43 | Sample CSV Download for Article Import | In Review | [OPH-43-article-catalog-sample-download.md](OPH-43-article-catalog-sample-download.md) | 2026-03-21 |
 | OPH-44 | Manufacturer Article Number Label Recognition in Extraction | In Review | [OPH-44-manufacturer-article-number-label-recognition.md](OPH-44-manufacturer-article-number-label-recognition.md) | 2026-03-23 |
+| OPH-45 | AI-Assisted ERP Field Mapping | In Progress | [OPH-45-ai-assisted-erp-field-mapping.md](OPH-45-ai-assisted-erp-field-mapping.md) | 2026-03-23 |
+| OPH-46 | Manufacturer Customer Catalog | In Review | [OPH-46-manufacturer-customer-catalog.md](OPH-46-manufacturer-customer-catalog.md) | 2026-03-23 |
+| OPH-47 | AI Customer Number Matching during Extraction | In Review | [OPH-47-ai-customer-number-matching.md](OPH-47-ai-customer-number-matching.md) | 2026-03-23 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-45
+## Next Available ID: OPH-48
