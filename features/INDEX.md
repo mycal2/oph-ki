@@ -55,7 +55,8 @@
 | OPH-41 | Change Tenant User Role | Deployed | [OPH-41-change-user-role.md](OPH-41-change-user-role.md) | 2026-03-21 |
 | OPH-42 | Admin Tenant Detail Page (Full-Page Layout) | Deployed | [OPH-42-admin-tenant-detail-page.md](OPH-42-admin-tenant-detail-page.md) | 2026-03-21 |
 | OPH-43 | Sample CSV Download for Article Import | In Review | [OPH-43-article-catalog-sample-download.md](OPH-43-article-catalog-sample-download.md) | 2026-03-21 |
+| OPH-44 | Manufacturer Article Number Label Recognition in Extraction | In Review | [OPH-44-manufacturer-article-number-label-recognition.md](OPH-44-manufacturer-article-number-label-recognition.md) | 2026-03-23 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-44
+## Next Available ID: OPH-45

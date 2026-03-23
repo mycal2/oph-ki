@@ -43,7 +43,7 @@ const CANONICAL_JSON_SCHEMA = `{
     "line_items": [
       {
         "position": "integer (1-based)",
-        "article_number": "string | null",
+        "article_number": "string | null (the manufacturer's / supplier's article number — look for column headers like Lief.Art.Nr., Lieferantenartikelnummer, Art.Nr., Artikelnummer, Herst.-Art.-Nr., Supplier Art. No., Item No., Product Code; see rule #17 for full list)",
         "dealer_article_number": "string | null (the dealer's own internal article/product number for this item — only populate if the document clearly contains a separate dealer-specific reference number alongside or instead of the manufacturer's number; if only one article number is present and it appears to be the manufacturer's, leave this null)",
         "description": "string",
         "quantity": "number",
@@ -131,7 +131,18 @@ ${CANONICAL_JSON_SCHEMA}
 16. **Dealer-Specific Extraction Hints (CRITICAL):**
     - If a "Dealer-Specific Extraction Hints" section is provided in the dealer context, you MUST follow those instructions with highest priority.
     - Dealer hints override default extraction behavior. For example, if hints say to skip certain lines, those lines MUST NOT appear in line_items — even if they look like regular order rows.
-    - If hints specify how to map article numbers (e.g. which column is the dealer article number vs manufacturer article number), follow those mappings exactly.`;
+    - If hints specify how to map article numbers (e.g. which column is the dealer article number vs manufacturer article number), follow those mappings exactly.
+17. **Manufacturer article number column recognition (multilingual):**
+    - In dealer orders, the manufacturer's article number is typically labeled from the dealer's perspective — the dealer calls the manufacturer their "Lieferant" (supplier). Recognize these column header labels as the \`article_number\` field:
+      * German: Lief.Art.Nr., Lief.-Art.-Nr., Lieferantenartikelnummer, Lieferanten-Art.-Nr., Lieferanten Art Nr, Art.Nr., Art.-Nr., Art-Nr, Artikelnummer, Artikel-Nr., Artikel Nr, Herst.-Art.-Nr., Herstellerartikelnummer, Hersteller-Art.-Nr., Hersteller Art Nr, Bestell-Nr., Bestellnummer
+      * English: Supplier Art. No., Supplier Article No., Supplier Article Number, Vendor Art. No., Vendor Article No., Vendor Item No., Manufacturer Art. No., Manufacturer Article No., Item No., Item Number, Product Code, Product No., Article No., Article Number, Part No., Part Number, SKU
+    - These labels map to \`article_number\` (the manufacturer's article number), NOT to \`dealer_article_number\`.
+    - The following labels indicate the dealer's OWN internal article number and map to \`dealer_article_number\`:
+      * German: Kd.-Art.Nr., Kd.Art.Nr., Kundenartikelnummer, Kunden-Art.-Nr., Eigene Art.Nr., Eigene Artikelnummer, Unsere Art.Nr., Ihre Art.Nr.
+      * English: Customer Art. No., Customer Article No., Internal Art. No., Our Article No., Your Article No., Buyer Art. No.
+    - When both types of article numbers appear in the same document, extract each into the correct field.
+    - When only one article number column is present and it matches a manufacturer/supplier label above, put it in \`article_number\` and leave \`dealer_article_number\` null.
+    - If the column label does not match any of the above, fall back to context-based inference (existing behavior).`;
 
 export interface ExtractionInput {
   orderId: string;
