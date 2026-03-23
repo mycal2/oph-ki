@@ -171,11 +171,8 @@ export async function matchArticleNumbers(
         }
       }
 
-      // No catalog match found — keep extracted value as-is
-      return {
-        ...item,
-        article_number_source: "extracted" as const,
-      };
+      // No exact catalog match found — fall through to fuzzy matching below
+      // (the extracted article_number might be unrecognized, so try matching by name)
     }
 
     const candidates: MatchCandidate[] = [];
@@ -255,8 +252,11 @@ export async function matchArticleNumbers(
       }
     }
 
-    // No candidates found
+    // No candidates found — keep item as-is (with extracted article_number if any)
     if (candidates.length === 0) {
+      if (item.article_number) {
+        return { ...item, article_number_source: "extracted" as const };
+      }
       return item;
     }
 
@@ -265,6 +265,22 @@ export async function matchArticleNumbers(
 
     const topScore = candidates[0].score;
     const topCandidates = candidates.filter((c) => Math.abs(c.score - topScore) < 0.01);
+
+    // Helper: build a catalog match result, preserving original article_number as dealer_article_number
+    const buildMatch = (candidate: MatchCandidate, reasonSuffix?: string) => {
+      const result: CanonicalLineItem & Record<string, unknown> = {
+        ...item,
+        article_number: candidate.catalogEntry.article_number,
+        article_number_source: "catalog_match" as const,
+        article_number_match_reason: candidate.reason + (reasonSuffix ?? ""),
+      };
+      // If item had an extracted article_number that differs from the catalog match,
+      // preserve it as dealer_article_number
+      if (item.article_number && item.article_number !== candidate.catalogEntry.article_number) {
+        result.dealer_article_number = item.dealer_article_number || item.article_number;
+      }
+      return result as CanonicalLineItem;
+    };
 
     // If multiple candidates with the same top score, try tie-breakers
     if (topCandidates.length > 1) {
@@ -279,12 +295,7 @@ export async function matchArticleNumbers(
           return (s1 && descLower.includes(s1)) || (s2 && descLower.includes(s2));
         });
         if (sizeMatch) {
-          return {
-            ...item,
-            article_number: sizeMatch.catalogEntry.article_number,
-            article_number_source: "catalog_match" as const,
-            article_number_match_reason: sizeMatch.reason + " (Groesse bestätigt)",
-          };
+          return buildMatch(sizeMatch, " (Groesse bestätigt)");
         }
       }
 
@@ -294,30 +305,26 @@ export async function matchArticleNumbers(
           (c) => c.catalogEntry.packaging?.toLowerCase() === unitLower
         );
         if (packagingMatch) {
-          return {
-            ...item,
-            article_number: packagingMatch.catalogEntry.article_number,
-            article_number_source: "catalog_match" as const,
-            article_number_match_reason: packagingMatch.reason + " (Verpackung bestätigt)",
-          };
+          return buildMatch(packagingMatch, " (Verpackung bestätigt)");
         }
       }
 
-      // Tie with no resolution: leave empty (EC-1)
+      // Tie with no resolution: keep item as-is
+      if (item.article_number) {
+        return { ...item, article_number_source: "extracted" as const };
+      }
       return item;
     }
 
     // Single top candidate: use it
     if (topCandidates.length === 1) {
-      return {
-        ...item,
-        article_number: topCandidates[0].catalogEntry.article_number,
-        article_number_source: "catalog_match" as const,
-        article_number_match_reason: topCandidates[0].reason,
-      };
+      return buildMatch(topCandidates[0]);
     }
 
-    // Multiple tied candidates, no unit to break tie: leave empty
+    // Fallback: keep item as-is
+    if (item.article_number) {
+      return { ...item, article_number_source: "extracted" as const };
+    }
     return item;
   });
 }

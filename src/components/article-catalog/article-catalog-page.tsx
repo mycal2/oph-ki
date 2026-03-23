@@ -5,6 +5,7 @@ import {
   Plus,
   Upload,
   Download,
+  FileDown,
   Search,
   Package,
   Pencil,
@@ -144,6 +145,27 @@ export function ArticleCatalogPage({
     toast.success("Artikelstamm wurde als CSV exportiert.");
   }, [exportCsv]);
 
+  const handleDownloadSample = useCallback(() => {
+    const BOM = "\uFEFF";
+    const header =
+      "Herst.-Art.-Nr.;Artikelbezeichnung;Kategorie;Farbe / Shade;Verpackungseinheit;Groesse 1;Groesse 2;Ref.-Nr.;GTIN / EAN;Suchbegriffe / Aliase";
+    const row1 =
+      "12345;Komposit Venus Pearl A2;Komposit;A2;10 Stk.;4g;;VP-A2;4012239123456;Venus, Venus Pearl, Heraeus";
+    const row2 =
+      "67890;Adhaesiv iBOND Universal;Adhaesiv;;;5ml;;IB-UNI;;iBOND, i-Bond, Adhaesiv Universal";
+    const content = BOM + [header, row1, row2].join("\n");
+
+    const blob = new Blob([content], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "artikelstamm-muster.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, []);
+
   // Truncate text with ellipsis for table cells
   const truncate = (text: string | null, maxLen: number) => {
     if (!text) return null;
@@ -191,6 +213,10 @@ export function ArticleCatalogPage({
         {/* Action buttons */}
         {!readOnly && (
           <div className="flex items-center gap-2 flex-wrap">
+            <Button type="button" variant="outline" size="sm" onClick={handleDownloadSample}>
+              <FileDown className="mr-2 h-4 w-4" />
+              Muster herunterladen
+            </Button>
             <Button type="button" variant="outline" size="sm" onClick={() => setImportOpen(true)}>
               <Upload className="mr-2 h-4 w-4" />
               Importieren

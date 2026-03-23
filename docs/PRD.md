@@ -61,6 +61,7 @@ Eine mandantenfähige SaaS-Plattform ("Order Intelligence Platform"), die Dental
 | P1 | OPH-40: AI Article Number Matching during Extraction | Planned |
 | P1 | OPH-41: Change Tenant User Role | Planned |
 | P1 | OPH-42: Admin Tenant Detail Page (Full-Page Layout) | In Progress |
+| P2 | OPH-43: Sample CSV Download for Article Import | Planned |
 
 ## Success Metrics
 - Bearbeitungszeit pro Bestellung: von ~15 Min. manuell auf < 3 Min. mit System

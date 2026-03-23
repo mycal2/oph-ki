@@ -126,6 +126,8 @@ ${CANONICAL_JSON_SCHEMA}
       * Italian: Quantita, Qta
       * Dutch: Aantal, Hoeveelheid
     - Extract the numeric value from that column.
+    - Handle thousands separators correctly: "1,224.00" = 1224, "1.224,00" = 1224, "1 224" = 1224. Always return the plain integer or decimal number without formatting.
+    - Each line item has its OWN quantity from its row. Never sum, average, or share quantities across line items.
 16. **Dealer-Specific Extraction Hints (CRITICAL):**
     - If a "Dealer-Specific Extraction Hints" section is provided in the dealer context, you MUST follow those instructions with highest priority.
     - Dealer hints override default extraction behavior. For example, if hints say to skip certain lines, those lines MUST NOT appear in line_items — even if they look like regular order rows.
@@ -275,7 +277,7 @@ export async function extractOrderData(
         for (const sheetName of workbook.SheetNames) {
           const sheet = workbook.Sheets[sheetName];
           if (!sheet) continue;
-          const csv = XLSX.utils.sheet_to_csv(sheet);
+          const csv = XLSX.utils.sheet_to_csv(sheet, { FS: ";", rawNumbers: true });
           if (allCsv) allCsv += "\n";
           allCsv += csv;
         }
