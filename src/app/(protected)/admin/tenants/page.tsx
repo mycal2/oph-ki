@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,11 +18,12 @@ import {
 import { useCurrentUserRole } from "@/hooks/use-current-user-role";
 import { useAdminTenants } from "@/hooks/use-admin-tenants";
 import { TenantAdminTable } from "@/components/admin/tenant-admin-table";
-import { TenantFormSheet } from "@/components/admin/tenant-form-sheet";
-import type { CreateTenantInput, UpdateTenantInput } from "@/lib/validations";
+import { TenantCreateSheet } from "@/components/admin/tenant-create-sheet";
+import type { CreateTenantInput } from "@/lib/validations";
 import type { TenantStatus } from "@/lib/types";
 
 export default function AdminTenantsPage() {
+  const router = useRouter();
   const { isPlatformAdmin, isLoading: isLoadingRole } = useCurrentUserRole();
   const {
     tenants,
@@ -30,19 +32,12 @@ export default function AdminTenantsPage() {
     refetch,
     createTenant,
     updateTenant,
-    fetchTenant,
-    fetchTenantUsers,
-    inviteUser,
-    toggleUserStatus,
-    resendInvite,
-    resetPassword,
     exportCsv,
     isMutating,
     mutationError,
   } = useAdminTenants();
 
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [editingTenantId, setEditingTenantId] = useState<string | null>(null);
+  const [createSheetOpen, setCreateSheetOpen] = useState(false);
 
   // Confirmation dialog state for tenant deactivation (BUG-7)
   const [confirmDeactivate, setConfirmDeactivate] = useState<{
@@ -53,14 +48,16 @@ export default function AdminTenantsPage() {
   } | null>(null);
 
   const handleCreateNew = useCallback(() => {
-    setEditingTenantId(null);
-    setSheetOpen(true);
+    setCreateSheetOpen(true);
   }, []);
 
-  const handleEdit = useCallback((tenantId: string) => {
-    setEditingTenantId(tenantId);
-    setSheetOpen(true);
-  }, []);
+  // OPH-42: Navigate to detail page instead of opening sheet
+  const handleRowClick = useCallback(
+    (tenantId: string) => {
+      router.push(`/admin/tenants/${tenantId}`);
+    },
+    [router]
+  );
 
   // BUG-7: Show confirmation dialog before toggling status
   const handleToggleStatus = useCallback(
@@ -84,57 +81,22 @@ export default function AdminTenantsPage() {
     if (!confirmDeactivate) return;
 
     const { tenantId, currentStatus } = confirmDeactivate;
-    // When reactivating, always set to "active" (trial state cannot be restored
-    // via the toggle action -- admin can manually set it back to "trial" via edit).
     const newStatus = currentStatus === "inactive" ? "active" : "inactive";
     await updateTenant(tenantId, { status: newStatus });
     setConfirmDeactivate(null);
   }, [confirmDeactivate, updateTenant]);
 
-  const handleSave = useCallback(
-    async (data: CreateTenantInput | UpdateTenantInput, isNew: boolean) => {
-      if (isNew) {
-        return createTenant(data as CreateTenantInput);
-      } else if (editingTenantId) {
-        return updateTenant(editingTenantId, data as UpdateTenantInput);
+  // OPH-42: Create tenant and redirect to detail page
+  const handleCreateSave = useCallback(
+    async (data: CreateTenantInput) => {
+      const result = await createTenant(data);
+      if (result) {
+        // Redirect to the newly created tenant's detail page
+        router.push(`/admin/tenants/${result.id}`);
       }
-      return null;
+      return result;
     },
-    [createTenant, updateTenant, editingTenantId]
-  );
-
-  const handleInviteUser = useCallback(
-    async (email: string, role: "tenant_user" | "tenant_admin") => {
-      if (!editingTenantId) return { ok: false, error: "Kein Mandant ausgewählt." };
-      return inviteUser(editingTenantId, { email, role });
-    },
-    [editingTenantId, inviteUser]
-  );
-
-  const handleToggleUserStatus = useCallback(
-    async (userId: string, status: "active" | "inactive") => {
-      if (!editingTenantId) return false;
-      return toggleUserStatus(editingTenantId, userId, status);
-    },
-    [editingTenantId, toggleUserStatus]
-  );
-
-  // OPH-38: Resend invite for unconfirmed user
-  const handleResendInvite = useCallback(
-    async (userId: string) => {
-      if (!editingTenantId) return { ok: false, error: "Kein Mandant ausgewählt." };
-      return resendInvite(editingTenantId, userId);
-    },
-    [editingTenantId, resendInvite]
-  );
-
-  // OPH-38: Trigger password reset
-  const handleResetPassword = useCallback(
-    async (userId: string) => {
-      if (!editingTenantId) return { ok: false, error: "Kein Mandant ausgewählt." };
-      return resetPassword(editingTenantId, userId);
-    },
-    [editingTenantId, resetPassword]
+    [createTenant, router]
   );
 
   // Loading state
@@ -192,23 +154,16 @@ export default function AdminTenantsPage() {
         tenants={tenants}
         isLoading={isLoading}
         onCreateNew={handleCreateNew}
-        onEdit={handleEdit}
+        onEdit={handleRowClick}
         onToggleStatus={handleToggleStatus}
         onExportCsv={exportCsv}
       />
 
-      {/* Form sheet */}
-      <TenantFormSheet
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-        tenantId={editingTenantId}
-        onSave={handleSave}
-        onFetchTenant={fetchTenant}
-        onFetchUsers={fetchTenantUsers}
-        onInviteUser={handleInviteUser}
-        onToggleUserStatus={handleToggleUserStatus}
-        onResendInvite={handleResendInvite}
-        onResetPassword={handleResetPassword}
+      {/* OPH-42: Create-only sheet */}
+      <TenantCreateSheet
+        open={createSheetOpen}
+        onOpenChange={setCreateSheetOpen}
+        onSave={handleCreateSave}
         isMutating={isMutating}
       />
 

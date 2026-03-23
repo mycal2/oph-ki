@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { extractOrderData } from "@/lib/claude-extraction";
 import { normalizeUnits } from "@/lib/unit-normalization";
+import { matchArticleNumbers } from "@/lib/article-matching";
 import { getMappingsForDealer, applyMappings, formatMappingsForPrompt } from "@/lib/dealer-mappings";
 import { mimeTypeToFormatType, getColumnMappingProfile, formatColumnMappingForPrompt } from "@/lib/column-mappings";
 import { sendTrialResultEmail, sendTrialFailureEmail, sendOrderResultEmail, sendOrderFailureEmail, sendPlatformErrorNotification } from "@/lib/postmark";
@@ -530,6 +531,27 @@ export async function POST(
       // Ensures all units are German standard terms even if Claude returned
       // unexpected abbreviations. Also marks truly unknown units with "(unbekannt)".
       finalExtractedData = normalizeUnits(finalExtractedData);
+
+      // --- OPH-40: Article number matching against tenant catalog ---
+      if (tenantId) {
+        try {
+          const matchedItems = await matchArticleNumbers(
+            adminClient,
+            finalExtractedData.order.line_items,
+            tenantId
+          );
+          finalExtractedData = {
+            ...finalExtractedData,
+            order: {
+              ...finalExtractedData.order,
+              line_items: matchedItems,
+            },
+          };
+        } catch (matchError) {
+          // Non-critical: log but don't fail extraction
+          console.error("Error during article number matching:", matchError);
+        }
+      }
 
       // --- OPH-25: Persist parsed EML subject if order doesn't already have one ---
       const emlSubjectUpdate: Record<string, unknown> = {};

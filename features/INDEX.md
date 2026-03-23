@@ -50,7 +50,13 @@
 | OPH-36 | Sticky PDF Preview on Order Review Page | In Review | [OPH-36-sticky-pdf-preview.md](OPH-36-sticky-pdf-preview.md) | 2026-03-13 |
 | OPH-37 | Dealer Article Number (Lieferantenartikelnummer) | In Review | [OPH-37-dealer-article-number.md](OPH-37-dealer-article-number.md) | 2026-03-13 |
 | OPH-38 | Admin: Resend Invite & Trigger Password Reset for Tenant Users | Deployed | [OPH-38-admin-resend-invite-password-reset.md](OPH-38-admin-resend-invite-password-reset.md) | 2026-03-20 |
+| OPH-39 | Manufacturer Article Catalog | Deployed | [OPH-39-manufacturer-article-catalog.md](OPH-39-manufacturer-article-catalog.md) | 2026-03-20 |
+| OPH-40 | AI Article Number Matching during Extraction | Deployed | [OPH-40-article-number-matching.md](OPH-40-article-number-matching.md) | 2026-03-20 |
+| OPH-41 | Change Tenant User Role | Deployed | [OPH-41-change-user-role.md](OPH-41-change-user-role.md) | 2026-03-21 |
+| OPH-42 | Admin Tenant Detail Page (Full-Page Layout) | Deployed | [OPH-42-admin-tenant-detail-page.md](OPH-42-admin-tenant-detail-page.md) | 2026-03-21 |
+| OPH-43 | Sample CSV Download for Article Import | In Review | [OPH-43-article-catalog-sample-download.md](OPH-43-article-catalog-sample-download.md) | 2026-03-21 |
+| OPH-44 | Manufacturer Article Number Label Recognition in Extraction | In Review | [OPH-44-manufacturer-article-number-label-recognition.md](OPH-44-manufacturer-article-number-label-recognition.md) | 2026-03-23 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-39
+## Next Available ID: OPH-45

@@ -12,8 +12,36 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { RoleChangeConfirmDialog } from "@/components/admin/role-change-confirm-dialog";
+import type { RoleChangeRequest } from "@/components/admin/role-change-confirm-dialog";
 import type { TeamMember, UserRole, ApiResponse } from "@/lib/types";
-import { Loader2, UserX, UserCheck, Users } from "lucide-react";
+import {
+  Loader2,
+  UserX,
+  UserCheck,
+  Users,
+  MoreHorizontal,
+  Shield,
+  ShieldOff,
+} from "lucide-react";
+import { toast } from "sonner";
+import { createClient } from "@/lib/supabase/client";
 
 function getRoleLabel(role: UserRole): string {
   switch (role) {
@@ -62,6 +90,36 @@ export function UsersTable({ refreshKey }: UsersTableProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [togglingUserId, setTogglingUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // OPH-41: Current user info for role change guards
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserRole, setCurrentUserRole] = useState<UserRole | null>(null);
+
+  // OPH-41: Confirmation dialog state for role change
+  const [confirmRoleChange, setConfirmRoleChange] = useState<RoleChangeRequest | null>(null);
+
+  // OPH-41: Load current user info
+  useEffect(() => {
+    async function loadCurrentUser() {
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (user) {
+          setCurrentUserId(user.id);
+          const role =
+            (user.app_metadata?.role as UserRole) ?? "tenant_user";
+          setCurrentUserRole(role);
+        }
+      } catch {
+        // Ignore — role change UI just won't show
+      }
+    }
+
+    loadCurrentUser();
+  }, []);
 
   const loadUsers = useCallback(async () => {
     setIsLoading(true);
@@ -116,6 +174,39 @@ export function UsersTable({ refreshKey }: UsersTableProps) {
     }
   }
 
+  // OPH-41: Confirm role change
+  async function confirmRoleChangeHandler() {
+    if (!confirmRoleChange) return;
+    const { userId, newRole } = confirmRoleChange;
+
+    try {
+      const response = await fetch(`/api/team/${userId}/role`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: newRole }),
+      });
+
+      const result: ApiResponse = await response.json();
+
+      if (result.success) {
+        toast.success(
+          "Rolle erfolgreich geändert. Der Benutzer muss sich neu anmelden."
+        );
+        loadUsers();
+      } else {
+        toast.error(result.error ?? "Rolle konnte nicht geändert werden.");
+      }
+    } catch {
+      toast.error("Rolle konnte nicht geändert werden.");
+    }
+
+    setConfirmRoleChange(null);
+  }
+
+  // OPH-41: Whether the current user can change roles
+  const canChangeRoles =
+    currentUserRole === "tenant_admin" || currentUserRole === "platform_admin";
+
   if (isLoading) {
     return (
       <div className="space-y-3">
@@ -158,103 +249,155 @@ export function UsersTable({ refreshKey }: UsersTableProps) {
   }
 
   return (
-    <div className="space-y-4">
-      {error && (
-        <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-          {error}
-        </div>
-      )}
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead className="hidden sm:table-cell">E-Mail</TableHead>
-              <TableHead>Rolle</TableHead>
-              <TableHead className="hidden md:table-cell">
-                Letzter Login
-              </TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Aktionen</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {users.map((user) => {
-              const displayName =
-                user.first_name && user.last_name
-                  ? `${user.first_name} ${user.last_name}`
-                  : user.email;
+    <>
+      <div className="space-y-4">
+        {error && (
+          <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            {error}
+          </div>
+        )}
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead className="hidden sm:table-cell">E-Mail</TableHead>
+                <TableHead>Rolle</TableHead>
+                <TableHead className="hidden md:table-cell">
+                  Letzter Login
+                </TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Aktionen</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {users.map((user) => {
+                const displayName =
+                  user.first_name && user.last_name
+                    ? `${user.first_name} ${user.last_name}`
+                    : user.email;
 
-              return (
-                <TableRow key={user.id}>
-                  <TableCell>
-                    <div>
-                      <p className="font-semibold">{displayName}</p>
-                      <p className="text-xs text-muted-foreground sm:hidden">
-                        {user.email}
-                      </p>
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell">
-                    {user.email}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={getRoleBadgeVariant(user.role)}>
-                      {getRoleLabel(user.role)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
-                    {formatDate(user.last_sign_in_at)}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={user.status === "active" ? "secondary" : "outline"}
-                      className={
-                        user.status === "active"
-                          ? "bg-green-100 text-green-700 border-green-200"
-                          : "bg-red-50 text-red-600 border-red-200"
-                      }
-                    >
-                      {user.status === "active" ? "Aktiv" : "Inaktiv"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleToggleStatus(user)}
-                      disabled={togglingUserId === user.id}
-                      aria-label={
-                        user.status === "active"
-                          ? `${displayName} deaktivieren`
-                          : `${displayName} reaktivieren`
-                      }
-                    >
-                      {togglingUserId === user.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : user.status === "active" ? (
-                        <>
-                          <UserX className="h-4 w-4 text-destructive" />
-                          <span className="hidden lg:inline text-destructive">
-                            Deaktivieren
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <UserCheck className="h-4 w-4 text-green-600" />
-                          <span className="hidden lg:inline text-green-600">
-                            Reaktivieren
-                          </span>
-                        </>
-                      )}
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+                // OPH-41: Can this user's role be changed?
+                const canChangeThisUserRole =
+                  canChangeRoles &&
+                  user.status === "active" &&
+                  user.role !== "platform_admin" &&
+                  user.id !== currentUserId;
+
+                return (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      <div>
+                        <p className="font-semibold">{displayName}</p>
+                        <p className="text-xs text-muted-foreground sm:hidden">
+                          {user.email}
+                        </p>
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                      {user.email}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={getRoleBadgeVariant(user.role)}>
+                        {getRoleLabel(user.role)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
+                      {formatDate(user.last_sign_in_at)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={user.status === "active" ? "secondary" : "outline"}
+                        className={
+                          user.status === "active"
+                            ? "bg-green-100 text-green-700 border-green-200"
+                            : "bg-red-50 text-red-600 border-red-200"
+                        }
+                      >
+                        {user.status === "active" ? "Aktiv" : "Inaktiv"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            type="button"
+                            disabled={togglingUserId === user.id}
+                          >
+                            {togglingUserId === user.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <MoreHorizontal className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {/* OPH-41: Role change option */}
+                          {canChangeThisUserRole && (
+                            <DropdownMenuItem
+                              onClick={() =>
+                                setConfirmRoleChange({
+                                  userId: user.id,
+                                  userName: displayName,
+                                  currentRole: user.role,
+                                  newRole:
+                                    user.role === "tenant_user"
+                                      ? "tenant_admin"
+                                      : "tenant_user",
+                                })
+                              }
+                            >
+                              {user.role === "tenant_user" ? (
+                                <>
+                                  <Shield className="mr-2 h-4 w-4" />
+                                  Zu Administrator machen
+                                </>
+                              ) : (
+                                <>
+                                  <ShieldOff className="mr-2 h-4 w-4" />
+                                  Zu Benutzer machen
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                          )}
+                          {user.status === "active" ? (
+                            <DropdownMenuItem
+                              onClick={() => handleToggleStatus(user)}
+                              className="text-destructive"
+                            >
+                              <UserX className="mr-2 h-4 w-4" />
+                              Deaktivieren
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem
+                              onClick={() => handleToggleStatus(user)}
+                            >
+                              <UserCheck className="mr-2 h-4 w-4" />
+                              Reaktivieren
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
       </div>
-    </div>
+
+      {/* OPH-41: Confirmation dialog for role change */}
+      <RoleChangeConfirmDialog
+        request={confirmRoleChange}
+        onOpenChange={(open) => {
+          if (!open) setConfirmRoleChange(null);
+        }}
+        onConfirm={confirmRoleChangeHandler}
+      />
+    </>
   );
 }

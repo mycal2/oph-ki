@@ -48,10 +48,10 @@ export function LineItemsTable({ lineItems, totalAmount, currency }: LineItemsTa
                   #
                 </th>
                 <th className="hidden px-3 py-2 text-left font-medium text-muted-foreground sm:table-cell">
-                  Art.-Nr.
+                  Herst.-Art.-Nr.
                 </th>
                 <th className="hidden px-3 py-2 text-left font-medium text-muted-foreground lg:table-cell">
-                  Lief.-Art.-Nr.
+                  Händler-Art.-Nr.
                 </th>
                 <th className="px-3 py-2 text-left font-medium text-muted-foreground">
                   Beschreibung
