@@ -84,7 +84,7 @@ export async function POST(
         type: "invite",
         email,
         options: {
-          redirectTo: `${siteUrl}/invite/accept`,
+          redirectTo: `${siteUrl}/auth/callback?next=/invite/accept`,
           data: {
             tenant_id: tenantId,
             role,
