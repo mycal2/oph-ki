@@ -82,7 +82,7 @@ export async function POST(
           tenant_id: tenantId,
           role: role,
         },
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/auth/callback?next=/dashboard`,
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/invite/accept`,
       });
 
     if (inviteError) {
