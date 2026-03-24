@@ -65,7 +65,7 @@
 | OPH-51 | Tenant Company Logo | Deployed | [OPH-51-tenant-logo.md](OPH-51-tenant-logo.md) | 2026-03-24 |
 | OPH-52 | Tenant Billing Model Configuration | In Review | [OPH-52-tenant-billing-model.md](OPH-52-tenant-billing-model.md) | 2026-03-24 |
 | OPH-53 | Platform Admin KPI Dashboard | In Progress | [OPH-53-platform-admin-dashboard.md](OPH-53-platform-admin-dashboard.md) | 2026-03-24 |
-| OPH-54 | Platform Admin Billing Report | In Progress | [OPH-54-platform-billing-report.md](OPH-54-platform-billing-report.md) | 2026-03-24 |
+| OPH-54 | Platform Admin Billing Report | In Review | [OPH-54-platform-billing-report.md](OPH-54-platform-billing-report.md) | 2026-03-24 |
 
 <!-- Add features above this line -->
 

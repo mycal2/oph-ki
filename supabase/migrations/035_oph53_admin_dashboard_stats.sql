@@ -134,6 +134,5 @@ BEGIN
 END;
 $$;
 
--- Grant execute to authenticated (RPC is SECURITY DEFINER; API layer enforces admin role)
-GRANT EXECUTE ON FUNCTION public.get_admin_dashboard_stats(TIMESTAMPTZ, TIMESTAMPTZ, TIMESTAMPTZ, TIMESTAMPTZ, TIMESTAMPTZ, TIMESTAMPTZ) TO authenticated;
+-- Grant execute to service_role only (API uses adminClient; never expose to authenticated)
 GRANT EXECUTE ON FUNCTION public.get_admin_dashboard_stats(TIMESTAMPTZ, TIMESTAMPTZ, TIMESTAMPTZ, TIMESTAMPTZ, TIMESTAMPTZ, TIMESTAMPTZ) TO service_role;
