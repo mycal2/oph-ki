@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Image from "next/image";
 import { Search, Plus, Building2, MoreHorizontal, Power, PowerOff, Download, Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -177,15 +178,35 @@ export function TenantAdminTable({
                     onClick={() => onEdit(tenant.id)}
                   >
                     <TableCell>
-                      <span className="font-medium">{tenant.name}</span>
-                      <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">
-                        {tenant.contact_email}
-                      </p>
-                      {tenant.allowed_email_domains.length > 0 && (
-                        <p className="mt-0.5 text-[11px] text-muted-foreground/70 font-mono line-clamp-1">
-                          {tenant.allowed_email_domains.join(", ")}
-                        </p>
-                      )}
+                      <div className="flex items-center gap-3">
+                        {/* OPH-51: Tenant logo thumbnail */}
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded border bg-muted/50">
+                          {tenant.logo_url ? (
+                            <Image
+                              src={tenant.logo_url}
+                              alt={tenant.name}
+                              width={28}
+                              height={28}
+                              className="h-7 w-7 object-contain"
+                              unoptimized
+                              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                            />
+                          ) : (
+                            <Building2 className="h-4 w-4 text-muted-foreground/50" />
+                          )}
+                        </div>
+                        <div>
+                          <span className="font-medium">{tenant.name}</span>
+                          <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">
+                            {tenant.contact_email}
+                          </p>
+                          {tenant.allowed_email_domains.length > 0 && (
+                            <p className="mt-0.5 text-[11px] text-muted-foreground/70 font-mono line-clamp-1">
+                              {tenant.allowed_email_domains.join(", ")}
+                            </p>
+                          )}
+                        </div>
+                      </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-sm text-muted-foreground font-mono">
                       {tenant.slug}

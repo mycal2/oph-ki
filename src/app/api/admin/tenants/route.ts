@@ -19,7 +19,7 @@ export async function GET(): Promise<NextResponse> {
     // Fetch all tenants (OPH-16: trial dates, OPH-29: erp_config_id)
     const { data: tenants, error: tenantsError } = await adminClient
       .from("tenants")
-      .select("id, name, slug, status, erp_type, contact_email, created_at, trial_started_at, trial_expires_at, allowed_email_domains, erp_config_id")
+      .select("id, name, slug, status, erp_type, contact_email, created_at, trial_started_at, trial_expires_at, allowed_email_domains, erp_config_id, logo_url")
       .order("name", { ascending: true })
       .limit(1000);
 
@@ -89,6 +89,8 @@ export async function GET(): Promise<NextResponse> {
         erp_config_name: erpConfigId ? (configNameMap.get(erpConfigId) ?? null) : null,
         // OPH-50: Dealer count
         dealer_count: stats?.dealerCount ?? 0,
+        // OPH-51: Tenant logo
+        logo_url: (t.logo_url as string | null) ?? null,
       };
     });
 
