@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { logoutAction } from "@/lib/auth-actions";
 import { createClient } from "@/lib/supabase/client";
 import type { UserRole } from "@/lib/types";
-import { LogOut, Settings, User } from "lucide-react";
+import { Building2, LogOut, Settings, User } from "lucide-react";
 
 interface UserData {
   firstName: string;
@@ -126,12 +126,20 @@ export function UserMenu() {
         </DropdownMenuItem>
         {(userData.role === "tenant_admin" ||
           userData.role === "platform_admin") && (
-          <DropdownMenuItem asChild>
-            <Link href="/settings/team" className="cursor-pointer">
-              <Settings className="h-4 w-4" />
-              Teamverwaltung
-            </Link>
-          </DropdownMenuItem>
+          <>
+            <DropdownMenuItem asChild>
+              <Link href="/settings/profile" className="cursor-pointer">
+                <Building2 className="h-4 w-4" />
+                Firmenprofil
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/settings/team" className="cursor-pointer">
+                <Settings className="h-4 w-4" />
+                Teamverwaltung
+              </Link>
+            </DropdownMenuItem>
+          </>
         )}
         <DropdownMenuSeparator />
         <DropdownMenuItem

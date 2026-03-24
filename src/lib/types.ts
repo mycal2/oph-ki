@@ -32,6 +32,8 @@ export interface Tenant {
   data_retention_days: number;
   /** OPH-29: Assigned ERP configuration ID (nullable). */
   erp_config_id: string | null;
+  /** OPH-51: Public URL to tenant company logo in Supabase Storage. */
+  logo_url: string | null;
 }
 
 export interface UserProfile {

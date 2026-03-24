@@ -494,6 +494,8 @@ export const updateTenantSchema = z.object({
   email_postprocess_enabled: z.boolean().optional(),
   /** OPH-29: Assign an ERP config to this tenant. */
   erp_config_id: z.string().uuid("Ungültige ERP-Konfigurations-ID.").nullable().optional(),
+  /** OPH-51: Public URL to tenant company logo. */
+  logo_url: z.string().url("Ungültige Logo-URL.").nullable().optional(),
 });
 
 /** Invite user on behalf of a specific tenant (platform admin). */
