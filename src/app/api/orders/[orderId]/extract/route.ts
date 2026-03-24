@@ -565,10 +565,22 @@ export async function POST(
           // Check if this dealer already has a customer_catalog entry for this tenant
           const { data: existingEntry } = await adminClient
             .from("customer_catalog")
-            .select("id")
+            .select("id, customer_number")
             .eq("tenant_id", tenantId)
             .eq("dealer_id", resolvedDealerId)
             .maybeSingle();
+
+          // If entry exists but has no customer_number, try to fill it from extraction
+          if (existingEntry && !existingEntry.customer_number) {
+            const extractedNum =
+              ((finalExtractedData.order as unknown as Record<string, unknown>).customer_number as string | null) || null;
+            if (extractedNum) {
+              await adminClient
+                .from("customer_catalog")
+                .update({ customer_number: extractedNum })
+                .eq("id", existingEntry.id);
+            }
+          }
 
           if (!existingEntry) {
             // Fetch dealer data for populating the entry
