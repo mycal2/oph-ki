@@ -33,6 +33,7 @@ const allNavLinks: NavLink[] = [
   { href: "/settings/inbound-email", label: "Eingangs-E-Mail" },
   { href: "/settings/data-protection", label: "Datenschutz" },
   { href: "/admin/dashboard", label: "Dashboard", adminOnly: true },
+  { href: "/admin/reports", label: "Abrechnung", adminOnly: true },
   { href: "/admin/dealers", label: "Händler-Profile", adminOnly: true },
   { href: "/admin/tenants", label: "Mandanten", adminOnly: true },
   { href: "/admin/erp-configs", label: "ERP-Mapping", adminOnly: true },

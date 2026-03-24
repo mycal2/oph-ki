@@ -996,3 +996,27 @@ export const updateCustomerSchema = z.object({
 
 export type CreateCustomerInput = z.infer<typeof createCustomerSchema>;
 export type UpdateCustomerInput = z.infer<typeof updateCustomerSchema>;
+
+// ---------------------------------------------------------------------------
+// OPH-54: Billing Report
+// ---------------------------------------------------------------------------
+
+/** Validation schema for POST /api/admin/reports/billing request body. */
+export const billingReportSchema = z.object({
+  from: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Datum muss im Format YYYY-MM-DD sein."),
+  to: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Datum muss im Format YYYY-MM-DD sein."),
+  tenantIds: z
+    .array(z.string().uuid("Ungueltige Mandanten-ID."))
+    .min(1, "Mindestens ein Mandant muss ausgewaehlt sein.")
+    .max(200, "Maximal 200 Mandanten gleichzeitig."),
+  includePrices: z.boolean().default(false),
+}).refine(
+  (data) => new Date(data.from) <= new Date(data.to),
+  { message: "Das Startdatum muss vor oder gleich dem Enddatum liegen.", path: ["from"] }
+);
+
+export type BillingReportInput = z.infer<typeof billingReportSchema>;
