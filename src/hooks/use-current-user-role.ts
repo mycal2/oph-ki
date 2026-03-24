@@ -45,5 +45,8 @@ export function useCurrentUserRole() {
     load();
   }, []);
 
-  return { role, userId, isLoading, isPlatformAdmin: role === "platform_admin" };
+  const isPlatformAdmin = role === "platform_admin";
+  const isPlatformAdminOrViewer = isPlatformAdmin || role === "platform_viewer";
+
+  return { role, userId, isLoading, isPlatformAdmin, isPlatformAdminOrViewer };
 }

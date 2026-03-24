@@ -496,6 +496,16 @@ export const updateTenantSchema = z.object({
   erp_config_id: z.string().uuid("Ungültige ERP-Konfigurations-ID.").nullable().optional(),
   /** OPH-51: Public URL to tenant company logo. */
   logo_url: z.string().url("Ungültige Logo-URL.").nullable().optional(),
+  /** OPH-52: Billing model. */
+  billing_model: z.enum(["pay-per-use", "license-based", "flat-rate"], {
+    message: "Ungültiges Abrechnungsmodell.",
+  }).nullable().optional(),
+  /** OPH-52: One-time setup fee in EUR. */
+  setup_fee: z.number().min(0, "Setup-Gebühr darf nicht negativ sein.").nullable().optional(),
+  /** OPH-52: Recurring monthly fee in EUR. */
+  monthly_fee: z.number().min(0, "Monatliche Gebühr darf nicht negativ sein.").nullable().optional(),
+  /** OPH-52: Cost per processed order in EUR. */
+  cost_per_order: z.number().min(0, "Kosten pro Bestellung dürfen nicht negativ sein.").nullable().optional(),
 });
 
 /** Invite user on behalf of a specific tenant (platform admin). */

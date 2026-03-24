@@ -19,7 +19,7 @@ export async function GET(): Promise<NextResponse> {
     // Fetch all tenants (OPH-16: trial dates, OPH-29: erp_config_id)
     const { data: tenants, error: tenantsError } = await adminClient
       .from("tenants")
-      .select("id, name, slug, status, erp_type, contact_email, created_at, trial_started_at, trial_expires_at, allowed_email_domains, erp_config_id, logo_url")
+      .select("id, name, slug, status, erp_type, contact_email, created_at, trial_started_at, trial_expires_at, allowed_email_domains, erp_config_id, logo_url, billing_model, setup_fee, monthly_fee, cost_per_order")
       .order("name", { ascending: true })
       .limit(1000);
 
@@ -91,6 +91,11 @@ export async function GET(): Promise<NextResponse> {
         dealer_count: stats?.dealerCount ?? 0,
         // OPH-51: Tenant logo
         logo_url: (t.logo_url as string | null) ?? null,
+        // OPH-52: Billing model
+        billing_model: (t.billing_model as TenantAdminListItem["billing_model"]) ?? null,
+        setup_fee: (t.setup_fee as number | null) ?? null,
+        monthly_fee: (t.monthly_fee as number | null) ?? null,
+        cost_per_order: (t.cost_per_order as number | null) ?? null,
       };
     });
 
