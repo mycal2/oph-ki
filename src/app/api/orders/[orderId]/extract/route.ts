@@ -593,11 +593,14 @@ export async function POST(
                 const addresses = dealer.known_sender_addresses as string[] | null;
                 const dealerEmail = addresses && addresses.length > 0 ? addresses[0] : null;
 
-                // customer_number left null — tenant admin assigns the real number manually
+                // Use AI-extracted customer_number if available, otherwise leave null for manual assignment
+                const extractedCustomerNumber =
+                  ((finalExtractedData.order as unknown as Record<string, unknown>).customer_number as string | null) || null;
+
                 await adminClient.from("customer_catalog").insert({
                   tenant_id: tenantId,
                   dealer_id: resolvedDealerId,
-                  customer_number: null,
+                  customer_number: extractedCustomerNumber,
                   company_name: dealerName,
                   street: (dealer.street as string) ?? null,
                   postal_code: (dealer.postal_code as string) ?? null,
