@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -66,7 +66,6 @@ export function TenantInviteDialog({
     const result = await onInvite(email.trim(), role);
     if (result.ok) {
       setSuccess(true);
-      setEmail("");
     } else {
       setError(result.error ?? "Einladung konnte nicht gesendet werden.");
     }
@@ -82,61 +81,70 @@ export function TenantInviteDialog({
           </p>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          {success && (
-            <Alert>
-              <AlertDescription>
-                Einladung wurde erfolgreich gesendet.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="invite-email">E-Mail-Adresse *</Label>
-            <Input
-              id="invite-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="benutzer@beispiel.de"
-              required
-            />
+        {success ? (
+          <div className="flex flex-col items-center gap-3 py-6">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
+              <CheckCircle2 className="h-7 w-7 text-green-600" />
+            </div>
+            <p className="text-center font-semibold text-green-700">
+              Einladung wurde erfolgreich gesendet.
+            </p>
+            <p className="text-center text-sm text-muted-foreground">{email}</p>
+            <DialogFooter className="mt-2 w-full">
+              <Button className="w-full" onClick={() => handleOpenChange(false)}>
+                Schließen
+              </Button>
+            </DialogFooter>
           </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
 
-          <div className="space-y-2">
-            <Label htmlFor="invite-role">Rolle *</Label>
-            <Select value={role} onValueChange={(v) => setRole(v as "tenant_user" | "tenant_admin")}>
-              <SelectTrigger id="invite-role">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="tenant_user">Benutzer</SelectItem>
-                <SelectItem value="tenant_admin">Administrator</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="invite-email">E-Mail-Adresse *</Label>
+              <Input
+                id="invite-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="benutzer@beispiel.de"
+                required
+              />
+            </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => handleOpenChange(false)}
-              disabled={isMutating}
-            >
-              Abbrechen
-            </Button>
-            <Button type="submit" disabled={isMutating || !email.trim()}>
-              {isMutating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Einladung senden
-            </Button>
-          </DialogFooter>
-        </form>
+            <div className="space-y-2">
+              <Label htmlFor="invite-role">Rolle *</Label>
+              <Select value={role} onValueChange={(v) => setRole(v as "tenant_user" | "tenant_admin")}>
+                <SelectTrigger id="invite-role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="tenant_user">Benutzer</SelectItem>
+                  <SelectItem value="tenant_admin">Administrator</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleOpenChange(false)}
+                disabled={isMutating}
+              >
+                Abbrechen
+              </Button>
+              <Button type="submit" disabled={isMutating || !email.trim()}>
+                {isMutating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Einladung senden
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   );
