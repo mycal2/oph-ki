@@ -39,6 +39,8 @@ import {
   MoreHorizontal,
   Shield,
   ShieldOff,
+  Mail,
+  KeyRound,
 } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -51,6 +53,8 @@ function getRoleLabel(role: UserRole): string {
       return "Mitarbeiter";
     case "platform_admin":
       return "Plattform-Admin";
+    case "platform_viewer":
+      return "Plattform-Viewer";
     default:
       return role;
   }
@@ -64,9 +68,16 @@ function getRoleBadgeVariant(
       return "default";
     case "platform_admin":
       return "default";
+    case "platform_viewer":
+      return "secondary";
     default:
       return "secondary";
   }
+}
+
+/** OPH-48: Whether a user is a platform team member. */
+function isPlatformRole(role: UserRole): boolean {
+  return role === "platform_admin" || role === "platform_viewer";
 }
 
 function formatDate(dateString: string | null): string {
@@ -97,6 +108,11 @@ export function UsersTable({ refreshKey }: UsersTableProps) {
 
   // OPH-41: Confirmation dialog state for role change
   const [confirmRoleChange, setConfirmRoleChange] = useState<RoleChangeRequest | null>(null);
+
+  // OPH-48: Confirmation dialog states for resend invite and reset password
+  const [confirmResendInvite, setConfirmResendInvite] = useState<{ userId: string; userName: string } | null>(null);
+  const [confirmResetPassword, setConfirmResetPassword] = useState<{ userId: string; userName: string } | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   // OPH-41: Load current user info
   useEffect(() => {
@@ -203,6 +219,48 @@ export function UsersTable({ refreshKey }: UsersTableProps) {
     setConfirmRoleChange(null);
   }
 
+  // OPH-48: Resend invite handler
+  async function handleResendInvite() {
+    if (!confirmResendInvite) return;
+    setActionLoading(confirmResendInvite.userId);
+    try {
+      const response = await fetch(`/api/team/${confirmResendInvite.userId}/resend-invite`, {
+        method: "POST",
+      });
+      const result: ApiResponse = await response.json();
+      if (result.success) {
+        toast.success("Einladung wurde erneut gesendet.");
+      } else {
+        toast.error(result.error ?? "Einladung konnte nicht gesendet werden.");
+      }
+    } catch {
+      toast.error("Einladung konnte nicht gesendet werden.");
+    }
+    setActionLoading(null);
+    setConfirmResendInvite(null);
+  }
+
+  // OPH-48: Reset password handler
+  async function handleResetPassword() {
+    if (!confirmResetPassword) return;
+    setActionLoading(confirmResetPassword.userId);
+    try {
+      const response = await fetch(`/api/team/${confirmResetPassword.userId}/reset-password`, {
+        method: "POST",
+      });
+      const result: ApiResponse = await response.json();
+      if (result.success) {
+        toast.success("Passwort-Reset-E-Mail wurde gesendet.");
+      } else {
+        toast.error(result.error ?? "Passwort-Reset konnte nicht ausgelöst werden.");
+      }
+    } catch {
+      toast.error("Passwort-Reset konnte nicht ausgelöst werden.");
+    }
+    setActionLoading(null);
+    setConfirmResetPassword(null);
+  }
+
   // OPH-41: Whether the current user can change roles
   const canChangeRoles =
     currentUserRole === "tenant_admin" || currentUserRole === "platform_admin";
@@ -277,12 +335,24 @@ export function UsersTable({ refreshKey }: UsersTableProps) {
                     ? `${user.first_name} ${user.last_name}`
                     : user.email;
 
-                // OPH-41: Can this user's role be changed?
+                // OPH-41/48: Can this user's role be changed?
+                const isSelf = user.id === currentUserId;
+                const isTargetPlatform = isPlatformRole(user.role);
                 const canChangeThisUserRole =
                   canChangeRoles &&
                   user.status === "active" &&
-                  user.role !== "platform_admin" &&
-                  user.id !== currentUserId;
+                  !isSelf &&
+                  // Platform users: only platform_admin can change
+                  (isTargetPlatform ? currentUserRole === "platform_admin" : !isPlatformRole(user.role));
+
+                // OPH-48: Pending user = never signed in (proxy for unconfirmed)
+                const isPending = user.last_sign_in_at === null;
+                // OPH-48: Can resend invite (platform_admin, not self, pending, active)
+                const canResendInvite =
+                  currentUserRole === "platform_admin" && !isSelf && isPending && user.status === "active";
+                // OPH-48: Can reset password (platform_admin, not self, active, confirmed)
+                const canResetPassword =
+                  currentUserRole === "platform_admin" && !isSelf && !isPending && user.status === "active";
 
                 return (
                   <TableRow key={user.id}>
@@ -335,30 +405,48 @@ export function UsersTable({ refreshKey }: UsersTableProps) {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          {/* OPH-41: Role change option */}
+                          {/* OPH-48: Resend invite (pending users only) */}
+                          {canResendInvite && (
+                            <DropdownMenuItem
+                              onClick={() => setConfirmResendInvite({ userId: user.id, userName: displayName })}
+                            >
+                              <Mail className="mr-2 h-4 w-4" />
+                              Einladung erneut senden
+                            </DropdownMenuItem>
+                          )}
+                          {/* OPH-48: Reset password (confirmed, active users) */}
+                          {canResetPassword && (
+                            <DropdownMenuItem
+                              onClick={() => setConfirmResetPassword({ userId: user.id, userName: displayName })}
+                            >
+                              <KeyRound className="mr-2 h-4 w-4" />
+                              Passwort zurücksetzen
+                            </DropdownMenuItem>
+                          )}
+                          {/* OPH-41/48: Role change option */}
                           {canChangeThisUserRole && (
                             <DropdownMenuItem
-                              onClick={() =>
+                              onClick={() => {
+                                const newRole = isTargetPlatform
+                                  ? (user.role === "platform_admin" ? "platform_viewer" : "platform_admin")
+                                  : (user.role === "tenant_user" ? "tenant_admin" : "tenant_user");
                                 setConfirmRoleChange({
                                   userId: user.id,
                                   userName: displayName,
                                   currentRole: user.role,
-                                  newRole:
-                                    user.role === "tenant_user"
-                                      ? "tenant_admin"
-                                      : "tenant_user",
-                                })
-                              }
+                                  newRole,
+                                });
+                              }}
                             >
-                              {user.role === "tenant_user" ? (
+                              {(user.role === "tenant_user" || user.role === "platform_viewer") ? (
                                 <>
                                   <Shield className="mr-2 h-4 w-4" />
-                                  Zu Administrator machen
+                                  {isTargetPlatform ? "Zu Plattform-Admin machen" : "Zu Administrator machen"}
                                 </>
                               ) : (
                                 <>
                                   <ShieldOff className="mr-2 h-4 w-4" />
-                                  Zu Benutzer machen
+                                  {isTargetPlatform ? "Zu Plattform-Viewer machen" : "Zu Benutzer machen"}
                                 </>
                               )}
                             </DropdownMenuItem>
@@ -398,6 +486,54 @@ export function UsersTable({ refreshKey }: UsersTableProps) {
         }}
         onConfirm={confirmRoleChangeHandler}
       />
+
+      {/* OPH-48: Confirmation dialog for resend invite */}
+      <AlertDialog
+        open={!!confirmResendInvite}
+        onOpenChange={(open) => { if (!open) setConfirmResendInvite(null); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Einladung erneut senden?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Eine neue Einladungs-E-Mail wird an{" "}
+              <span className="font-semibold">{confirmResendInvite?.userName}</span>{" "}
+              gesendet. Der vorherige Einladungslink wird ungültig.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={!!actionLoading}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={handleResendInvite} disabled={!!actionLoading}>
+              {actionLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Einladung senden
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* OPH-48: Confirmation dialog for reset password */}
+      <AlertDialog
+        open={!!confirmResetPassword}
+        onOpenChange={(open) => { if (!open) setConfirmResetPassword(null); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Passwort zurücksetzen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Eine Passwort-Reset-E-Mail wird an{" "}
+              <span className="font-semibold">{confirmResetPassword?.userName}</span>{" "}
+              gesendet. Der Benutzer kann dann ein neues Passwort festlegen.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={!!actionLoading}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={handleResetPassword} disabled={!!actionLoading}>
+              {actionLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Passwort zurücksetzen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

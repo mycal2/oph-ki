@@ -15,7 +15,7 @@ export interface RoleChangeRequest {
   userId: string;
   userName: string;
   currentRole: string;
-  newRole: "tenant_user" | "tenant_admin";
+  newRole: "tenant_user" | "tenant_admin" | "platform_admin" | "platform_viewer";
 }
 
 interface RoleChangeConfirmDialogProps {
@@ -29,8 +29,13 @@ export function RoleChangeConfirmDialog({
   onOpenChange,
   onConfirm,
 }: RoleChangeConfirmDialogProps) {
-  const newRoleLabel =
-    request?.newRole === "tenant_admin" ? "Administrator" : "Benutzer";
+  const ROLE_LABELS: Record<string, string> = {
+    tenant_admin: "Administrator",
+    tenant_user: "Benutzer",
+    platform_admin: "Plattform-Admin",
+    platform_viewer: "Plattform-Viewer",
+  };
+  const newRoleLabel = ROLE_LABELS[request?.newRole ?? ""] ?? request?.newRole;
 
   return (
     <AlertDialog
@@ -43,21 +48,10 @@ export function RoleChangeConfirmDialog({
             Rolle von {request?.userName} zu {newRoleLabel} ändern?
           </AlertDialogTitle>
           <AlertDialogDescription>
-            {request?.newRole === "tenant_admin" ? (
-              <>
-                <span className="font-semibold">{request?.userName}</span>{" "}
-                erhält Administrator-Rechte und kann Teammitglieder verwalten.
-                Der Benutzer muss sich neu anmelden, damit die Änderung wirksam
-                wird.
-              </>
-            ) : (
-              <>
-                <span className="font-semibold">{request?.userName}</span>{" "}
-                verliert Administrator-Rechte und kann keine Teammitglieder mehr
-                verwalten. Der Benutzer muss sich neu anmelden, damit die
-                Änderung wirksam wird.
-              </>
-            )}
+            <span className="font-semibold">{request?.userName}</span>{" "}
+            wird von {ROLE_LABELS[request?.currentRole ?? ""] ?? request?.currentRole}{" "}
+            zu {newRoleLabel} geändert. Der Benutzer muss sich neu anmelden,
+            damit die Änderung wirksam wird.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
