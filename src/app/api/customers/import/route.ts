@@ -155,6 +155,7 @@ export async function processCustomerImport(
       email: row.email,
       phone: row.phone,
       keywords: row.keywords,
+      notes: row.notes,
     }));
 
     // Use upsert with the unique constraint to handle duplicates

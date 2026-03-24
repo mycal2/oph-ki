@@ -24,6 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -310,20 +311,36 @@ export function CustomerCatalogPage({
                       {customer.customer_number}
                     </TableCell>
                     <TableCell>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="line-clamp-1">
-                              {customer.company_name}
-                            </span>
-                          </TooltipTrigger>
-                          {customer.company_name.length > 40 && (
-                            <TooltipContent>
-                              <p className="max-w-xs">{customer.company_name}</p>
-                            </TooltipContent>
-                          )}
-                        </Tooltip>
-                      </TooltipProvider>
+                      <div className="flex items-center gap-2">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="line-clamp-1">
+                                {customer.company_name}
+                              </span>
+                            </TooltipTrigger>
+                            {customer.company_name.length > 40 && (
+                              <TooltipContent>
+                                <p className="max-w-xs">{customer.company_name}</p>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        </TooltipProvider>
+                        {customer.dealer_id && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="secondary" className="shrink-0 text-xs">
+                                  Händler
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Automatisch aus globalem Händlerprofil erstellt</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       {customer.postal_code ?? <span className="text-muted-foreground">-</span>}
