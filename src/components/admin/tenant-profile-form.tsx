@@ -16,6 +16,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { TagInput } from "@/components/admin/tag-input";
+import { TenantLogoUpload } from "@/components/tenant-logo-upload";
 import type { Tenant, TenantStatus, ErpType } from "@/lib/types";
 import type { UpdateTenantInput } from "@/lib/validations";
 
@@ -150,8 +151,27 @@ export function TenantProfileForm({
     return null;
   }, [contactEmail, allowedEmailDomains]);
 
+  // OPH-51: Save logo URL independently (without submitting the whole form)
+  const handleLogoSave = useCallback(
+    async (logoUrl: string | null): Promise<boolean> => {
+      const result = await onSave({ logo_url: logoUrl });
+      return !!result;
+    },
+    [onSave]
+  );
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* OPH-51: Logo upload section */}
+      <div className="rounded-lg border p-4">
+        <TenantLogoUpload
+          logoUrl={tenant.logo_url}
+          tenantId={tenant.id}
+          onSave={handleLogoSave}
+          disabled={isMutating}
+        />
+      </div>
+
       <div className="grid gap-6 md:grid-cols-2">
         {/* Left column: Core fields */}
         <div className="space-y-4">
