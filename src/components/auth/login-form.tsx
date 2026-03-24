@@ -38,13 +38,19 @@ export function LoginForm() {
   const [isTrialTenant, setIsTrialTenant] = useState(false);
   const searchParams = useSearchParams();
 
-  // If user lands on /login with a hash fragment containing type=invite,
-  // redirect to /invite/accept (handles already-sent invite emails with old redirectTo)
+  // If user lands on /login with a hash fragment from Supabase auth emails,
+  // redirect to the correct page (handles already-sent emails with old redirectTo)
   useEffect(() => {
     const hash = window.location.hash;
-    if (hash && hash.includes("type=invite")) {
-      window.location.href = `/invite/accept${hash}`;
-      return;
+    if (hash && hash.includes("access_token")) {
+      if (hash.includes("type=invite")) {
+        window.location.href = `/invite/accept${hash}`;
+        return;
+      }
+      if (hash.includes("type=recovery")) {
+        window.location.href = `/reset-password${hash}`;
+        return;
+      }
     }
   }, []);
 
