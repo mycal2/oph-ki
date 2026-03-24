@@ -1,6 +1,6 @@
 # OPH-52: Tenant Billing Model Configuration
 
-## Status: Planned
+## Status: In Review
 **Created:** 2026-03-24
 **Last Updated:** 2026-03-24
 
@@ -46,7 +46,65 @@
 ---
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Layers affected
+
+| Layer | What changes |
+|---|---|
+| Database | 4 new nullable columns on `tenants` table |
+| TypeScript types | `Tenant` interface extended with billing fields |
+| Validation | `updateTenantSchema` extended with billing fields |
+| UI | New "Abrechnung" section added to `TenantProfileForm` |
+| API | No structural change — existing `PATCH /api/admin/tenants/[id]` passes through new fields automatically once schema is updated |
+
+### Component structure
+
+```
+/admin/tenants/[id] (existing page — no changes to tabs or layout)
++-- Profile Tab
+    +-- TenantProfileForm (existing — extended)
+        +-- [existing fields: name, email, ERP type, status, ...]
+        +-- ── Abrechnung ── (NEW card section)
+            +-- Billing Model dropdown
+            |     Options: Pay-per-use | License-based | Flat-rate | Nicht gesetzt
+            +-- Setup Fee (€) — numeric input, pre-filled on model select
+            +-- Monthly Fee (€) — numeric input, pre-filled on model select
+            +-- Cost per Order (€) — numeric input, pre-filled on model select
+            +-- [Saved together with the rest of the form on "Speichern"]
+        +-- Confirmation Dialog (appears when switching model
+                                 after prices were manually edited)
+```
+
+### Data model
+
+4 new nullable columns on `tenants`:
+
+| Column | Type | Notes |
+|---|---|---|
+| `billing_model` | text, nullable | `pay-per-use` \| `license-based` \| `flat-rate` \| null |
+| `setup_fee` | numeric(10,2), nullable | null = not configured; 0.00 stored explicitly |
+| `monthly_fee` | numeric(10,2), nullable | null = not configured |
+| `cost_per_order` | numeric(10,2), nullable | null = not configured |
+
+Default values are hardcoded in the frontend (3-row lookup — no DB table needed):
+
+| Model | Setup Fee | Monthly Fee | Cost per Order |
+|---|---|---|---|
+| pay-per-use | 799.00 | 0.00 | 1.00 |
+| license-based | 6999.00 | 290.00 | 0.35 |
+| flat-rate | 9999.00 | 390.00 | 0.00 |
+
+### Key decisions
+
+- **Billing section in existing profile form, not a new tab** — 4 fields don't warrant a separate tab; contract details belong alongside tenant identity.
+- **Default values hardcoded in frontend** — business constants, not user data; no need for a lookup table.
+- **Confirmation only when values were manually changed** — avoids interrupting the admin when selecting a model for the first time; only warns before overwriting deliberate customization.
+- **Nulls, not zeros, for unconfigured tenants** — lets OPH-53/54 distinguish "not set up" from "zero-priced deal"; tenants with null billing are excluded from revenue KPIs.
+- **No new RLS policy** — existing admin-only policy on the `tenants` table already restricts access to platform admins.
+
+### New packages required
+
+None — `Select`, `Input`, `AlertDialog` are already installed.
 
 ## QA Test Results
 _To be added by /qa_

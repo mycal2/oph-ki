@@ -1,7 +1,7 @@
 # OPH-49: Dealer-Linked Kundenstamm
 
 ## Overview
-**Status:** Planned
+**Status:** Deployed
 **Created:** 2026-03-24
 **Priority:** P1
 
@@ -122,3 +122,132 @@ Runs after OPH-47 customer number matching so it doesn't affect the current orde
 - Requires: OPH-46 (Manufacturer Customer Catalog) — Kundenstamm data model and UI
 - Related: OPH-47 (AI Customer Number Matching) — dealer-linked entries feed into matching
 - Related: OPH-4 (AI Extraction) — order processing triggers auto-create
+
+---
+
+## QA Test Results
+
+### Round 1 (Initial)
+**Tested:** 2026-03-24
+**Tester:** QA Engineer (AI)
+**Build Status:** PASS
+**Result:** 5 bugs found (1 medium, 4 low). NOT production-ready due to BUG-3.
+
+### Round 2 (Re-test after fixes)
+**Tested:** 2026-03-24
+**Tester:** QA Engineer (AI)
+**Build Status:** PASS (production build succeeds with no errors)
+**Commits verified:** 698f858 fix(OPH-49): Fix 5 QA bugs, 2c71422 fix(OPH-49): Fix customer number matching order, ac98044 fix(OPH-49): Use AI-extracted customer number, 3e42b88 fix(OPH-49): Update existing entry with extracted customer number, 584187f fix(OPH-49): Read customer_number from sender object
+
+### Acceptance Criteria Status
+
+#### AC-1: Auto-Create on First Order
+- [x] When an order is processed and the sender matches a known dealer (by `dealer_id`), the extraction route checks if that dealer already exists in the tenant's `customer_catalog` (extract/route.ts line 566-571)
+- [x] If not present, auto-creates a `customer_catalog` entry populated from the global dealer data (name, email via `known_sender_addresses[0]`, street, postal_code, city, country) (lines 612-623)
+- [x] The entry has `dealer_id` set to link it to the global dealer profile (line 614)
+- [x] If the entry already exists (checked via `maybeSingle()` on tenant_id + dealer_id), it does NOT overwrite it -- but it DOES fill in a missing customer_number from extraction (lines 574-582, good improvement)
+- [x] Auto-creation is silent -- no notification or toast to the tenant admin (wrapped in try/catch, errors only logged server-side)
+
+#### AC-2: Notes Field
+- [x] The `customer_catalog` table gains a `notes` field (TEXT, nullable) via migration 030 (line 7)
+- [x] The Kundenstamm create/edit form shows a "Notizen" textarea field at the bottom (customer-form-dialog.tsx lines 163-176)
+- [x] Notes are populated when editing an existing customer (`notes: customer.notes ?? ""`)
+- [x] Notes are included in create and update Zod schemas with max 5000 chars validation
+
+#### AC-3: Dealer Badge in Kundenstamm
+- [x] Kundenstamm entries linked to a global dealer show a "Haendler" badge in the table (customer-catalog-page.tsx lines 329-342)
+- [x] Badge text is now proper German umlaut: "Haendler" -- FIXED. Tooltip text: "Automatisch aus globalem Haendlerprofil erstellt" -- FIXED. (Verified at lines 334 and 338: source uses proper UTF-8 umlauts.)
+- [x] Manually-created entries (dealer_id is null) have no badge -- conditional rendering on `customer.dealer_id` (line 329)
+
+#### AC-4: Tenant Editing is Isolated
+- [x] A tenant admin can edit all fields of a dealer-linked Kundenstamm entry (the form includes customer_number, company_name, street, postal_code, city, country, email, phone, keywords, notes)
+- [x] Edits are saved only to the tenant's `customer_catalog` row -- the PUT /api/customers/[id] route verifies `existing.tenant_id !== tenantId` (line 100)
+- [x] The global `dealers` table is NOT modified -- the update route only touches `customer_catalog` via `.update(updateData).eq("id", id)` (lines 128-131)
+- [x] The `dealer_id` reference is preserved after editing -- `dealer_id` is not in the `updateCustomerSchema` Zod schema, so it is never included in `updateData` and cannot be changed via API
+
+#### AC-5: Platform Admin View Unchanged
+- [x] Platform admins see global dealer profiles in the admin dealer management area -- dealer admin routes query the `dealers` table directly, not `customer_catalog`
+- [ ] **KNOWN GAP (Low):** No UI for platform admins to see which tenants have a Kundenstamm entry linked to a given dealer. AC-5 says "informational, no action required" -- the data is queryable in the DB but not exposed in UI. Acceptable for initial deployment.
+
+#### AC-6: Customer Number Matching Integration
+- [x] Dealer-linked Kundenstamm entries are stored in the same `customer_catalog` table and have the same structure as manual entries
+- [x] The OPH-47 AI customer number matching queries `customer_catalog` by `tenant_id` without filtering on `dealer_id`, so dealer-linked entries participate in matching equally
+- [x] If a dealer-linked entry has a `customer_number` (either AI-extracted at creation time or manually set by tenant), it participates in the matching cascade
+
+### Edge Cases Status
+
+#### EC-1: Manual entry with same company_name exists
+- [x] PASS -- the extraction route performs a case-insensitive check via `.ilike("company_name", dealerName)` before auto-creating (lines 597-602). If a match exists, no duplicate is created.
+
+#### EC-2: Auto-created entry has no customer_number from dealer
+- [x] PASS -- IMPROVED since Round 1. The auto-created entry now uses the AI-extracted customer_number from the order's sender data if available (line 609-610). If no customer_number is extracted, the entry is created with `customer_number: null` (migration 033 made customer_number nullable). No more H- placeholder values.
+
+#### EC-3: Global dealer profile updated after tenant has linked entry
+- [x] PASS -- tenant's copy is a snapshot at creation time. No sync mechanism. Copy-on-create approach ensures tenant data independence.
+
+#### EC-4: Tenant deletes dealer-linked entry, dealer sends another order
+- [x] PASS -- the unique partial index `uq_customer_catalog_tenant_dealer` on `(tenant_id, dealer_id)` is cleared on deletion. Next extraction auto-creates a new entry.
+
+#### EC-5: Low confidence dealer match
+- [x] PASS -- FIXED. The auto-creation logic now checks `effectiveConfidence >= 80` (line 563). The effective confidence is calculated from either the AI content match confidence or the original metadata recognition confidence (lines 560-562). Low-confidence matches (word-overlap at 55, auto-created dealers at 70) are correctly excluded from auto-creation.
+
+#### EC-6: Pre-existing entries not retroactively linked
+- [x] PASS -- migration 030 only adds columns (`dealer_id` defaults to NULL, `notes` defaults to NULL). No data backfill. Existing entries remain untouched.
+
+### Security Audit Results
+
+- [x] **Authentication:** All customer API routes (GET, POST, PUT, DELETE) verify user session via `supabase.auth.getUser()` before processing. Returns 401 if not authenticated.
+- [x] **Authorization (tenant isolation):** PUT and DELETE routes verify `existing.tenant_id !== tenantId` before allowing modification. RLS policies on `customer_catalog` enforce tenant_id matching at the database level as a second line of defense (migration 029, lines 38-83).
+- [x] **Authorization (role check):** POST, PUT, DELETE require `tenant_admin` or `platform_admin` role. `tenant_user` can only read (GET).
+- [x] **dealer_id not user-controllable:** The `dealer_id` field is NOT included in `createCustomerSchema` or `updateCustomerSchema` Zod schemas (confirmed in validations.ts). It cannot be set or modified through any customer API endpoint. Only the extraction pipeline (server-side) can set it. An attacker sending `{"dealer_id": "..."}` in a PUT/POST request would have it silently stripped by Zod parsing.
+- [x] **Input validation:** All user input validated server-side via Zod schemas. Notes field has max 5000 char limit. Customer number has max 200 chars with whitespace stripping. UUID params validated via regex before DB queries.
+- [x] **SQL injection:** Not applicable -- Supabase client uses parameterized queries throughout.
+- [x] **XSS:** React auto-escapes rendered content. Badge and tooltip text are static strings. Notes field is rendered as text content, not dangerouslySetInnerHTML.
+- [x] **Cross-tenant data access:** The unique partial index `uq_customer_catalog_tenant_dealer` is scoped to `(tenant_id, dealer_id)`, preventing cross-tenant conflicts. RLS policies enforce tenant isolation at the DB level for all four operations (SELECT, INSERT, UPDATE, DELETE).
+- [x] **Inactive user/tenant checks:** All customer routes check `user_status === "inactive"` and `tenant_status === "inactive"` returning 403.
+- [x] **ON DELETE SET NULL on dealer FK:** If a global dealer is deleted, the `dealer_id` on customer_catalog entries is set to NULL rather than cascading delete. This preserves tenant data even if a dealer is removed globally.
+- [x] **No secrets exposed:** No API keys, tokens, or credentials in client-side code or API responses. dealer_id is a UUID reference, not sensitive data.
+- [x] **Rate limiting consideration:** Customer API routes do not have explicit rate limiting, but this is consistent with all other API routes in the project and is an infrastructure-level concern (handled by Vercel/Supabase).
+
+### Cross-Browser & Responsive (Code Review)
+
+- [x] **Badge component:** Uses shadcn/ui Badge with `variant="secondary"` and `shrink-0` -- renders correctly across browsers.
+- [x] **Tooltip component:** Uses shadcn/ui Tooltip with TooltipProvider -- standard component, cross-browser compatible.
+- [x] **Textarea component:** Uses shadcn/ui Textarea -- standard component.
+- [x] **Mobile (375px):** The "Firma" column (where the badge appears) uses `flex items-center gap-2` which wraps naturally. Badge has `shrink-0` to prevent text truncation.
+- [x] **Tablet (768px):** Table uses `overflow-x-auto` for horizontal scrolling if needed.
+- [x] **Desktop (1440px):** Full table layout with all columns visible.
+- [x] **Form dialog:** Uses `max-h-[90vh] overflow-y-auto` to handle the additional notes field on smaller screens.
+
+### Regression Check
+
+- [x] **OPH-46 (Customer Catalog):** Existing CRUD operations unaffected. Zod schemas extended with optional `notes` field (backward compatible). Migration 033 made customer_number nullable with a partial unique index -- existing entries with non-null customer numbers retain their uniqueness constraint.
+- [x] **OPH-47 (AI Customer Number Matching):** The matching logic queries all `customer_catalog` entries for the tenant regardless of `dealer_id`. OPH-49 auto-creation now runs BEFORE OPH-47 matching (line 557-631 before line 633+), so newly created entries with extracted customer numbers are immediately available for matching. No regression.
+- [x] **OPH-4 (AI Extraction):** The auto-create block is wrapped in try/catch and logs errors without failing extraction. Non-critical path. No regression to extraction flow.
+- [x] **Build:** Production build succeeds with no TypeScript errors.
+
+### Bug Fix Verification (from Round 1)
+
+| Bug | Status | Verification |
+|-----|--------|-------------|
+| BUG-1 (Umlaut text) | FIXED | Badge now shows "Haendler" with proper UTF-8 umlaut at line 334 |
+| BUG-2 (Admin view) | DEFERRED | Accepted as low-priority gap -- AC-5 says "informational, no action required" |
+| BUG-3 (Confidence threshold) | FIXED | Line 563: `effectiveConfidence >= 80` check now prevents low-confidence auto-creation |
+| BUG-4 (CSV export notes) | FIXED | Export route (line 83, 105, 117) now includes notes column as "Notizen" |
+| BUG-5 (CSV import notes) | FIXED | Import route (line 158) now processes notes field from CSV |
+
+### Remaining Known Gaps
+
+#### GAP-1: No platform admin view showing which tenants have entries linked to a dealer
+- **Severity:** Low
+- **Context:** AC-5 second bullet says "informational, no action required." The data exists in the database (joinable via customer_catalog.dealer_id) but no UI or API endpoint exposes it yet.
+- **Priority:** Nice to have (next sprint). Not blocking for deployment.
+
+### Summary
+- **Acceptance Criteria:** 16/17 sub-criteria passed (1 low-priority informational gap in AC-5)
+- **Edge Cases:** 6/6 passed (all edge cases handled correctly)
+- **Bugs from Round 1:** 4/5 fixed, 1 deferred (low priority)
+- **New Bugs Found:** 0
+- **Security:** PASS -- no vulnerabilities found. dealer_id is not user-controllable, tenant isolation enforced at API and RLS level, all inputs validated server-side.
+- **Production Ready:** YES
+- **Recommendation:** Feature is ready for deployment. GAP-1 (admin informational view) can be addressed in a future sprint as a separate enhancement.

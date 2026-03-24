@@ -70,7 +70,7 @@ Eine mandantenfähige SaaS-Plattform ("Order Intelligence Platform"), die Dental
 | P1 | OPH-49: Dealer-Linked Kundenstamm | Deployed |
 | P1 | OPH-50: Dealer Count per Tenant on Admin Mandanten-Verwaltung | Deployed |
 | P2 | OPH-51: Tenant Company Logo | Planned |
-| P1 | OPH-52: Tenant Billing Model Configuration | Planned |
+| P1 | OPH-52: Tenant Billing Model Configuration | In Review |
 | P1 | OPH-53: Platform Admin KPI Dashboard | Planned |
 | P1 | OPH-54: Platform Admin Billing Report | Planned |
 

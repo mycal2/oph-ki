@@ -32,6 +32,7 @@ const allNavLinks: NavLink[] = [
   { href: "/settings/customer-catalog", label: "Kundenstamm" },
   { href: "/settings/inbound-email", label: "Eingangs-E-Mail" },
   { href: "/settings/data-protection", label: "Datenschutz" },
+  { href: "/admin/dashboard", label: "Dashboard", adminOnly: true },
   { href: "/admin/dealers", label: "Händler-Profile", adminOnly: true },
   { href: "/admin/tenants", label: "Mandanten", adminOnly: true },
   { href: "/admin/erp-configs", label: "ERP-Mapping", adminOnly: true },
@@ -43,11 +44,11 @@ const allNavLinks: NavLink[] = [
 export function TopNavigation() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { isPlatformAdmin } = useCurrentUserRole();
+  const { isPlatformAdmin, isPlatformAdminOrViewer } = useCurrentUserRole();
 
   const navLinks = useMemo(
-    () => allNavLinks.filter((link) => !link.adminOnly || isPlatformAdmin),
-    [isPlatformAdmin]
+    () => allNavLinks.filter((link) => !link.adminOnly || isPlatformAdminOrViewer),
+    [isPlatformAdminOrViewer]
   );
 
   return (

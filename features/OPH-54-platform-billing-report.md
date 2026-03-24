@@ -1,6 +1,6 @@
 # OPH-54: Platform Admin Billing Report
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-03-24
 **Last Updated:** 2026-03-24
 
@@ -79,7 +79,96 @@
 ---
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Layers affected
+
+| Layer | What changes |
+|---|---|
+| API | New `POST /api/admin/reports/billing` endpoint |
+| UI | New page `/admin/reports` + 3 new components + 3 export utilities |
+| Packages | `jspdf`, `jspdf-autotable`, shadcn `calendar` (+ `react-day-picker`) |
+
+### Component structure
+
+```
+/admin/reports (NEW page)
++-- Page Header ("Abrechnungsbericht")
++-- Filter Panel (Card)
+|   +-- DateRangePicker (NEW)
+|   |     Popover → dual-month Calendar (shadcn)
+|   |     Click 1 = start, click 2 = end; range highlighted
+|   |     Default: 1st of current month → today
+|   +-- TenantMultiSelect (NEW)
+|   |     Popover → Command list with checkboxes per tenant
+|   |     "Alle Mandanten auswählen" shortcut
+|   |     Trigger shows count: "3 Mandanten ausgewählt"
+|   +-- "Preise anzeigen" Switch
+|   +-- "Bericht anzeigen" Button (disabled until date + ≥1 tenant)
++-- [Skeleton — while loading]
++-- [Empty state — "Keine Bestellungen im Zeitraum"]
++-- BillingReportTable (NEW)
+|   +-- Dynamic column headers (always: Mandant/Datum | Bestellungen | Bestellpositionen;
+|   |     + Preis/Bestellung | Bestellungen×Preis | Grundgebühr if prices on)
+|   +-- Data rows (tenants in multi-mode; days in single-mode)
+|   +-- "Gesamt" summary row (always last, bold)
++-- Export Row (shown when table has data)
+    +-- "Export CSV" | "Export XLS" | "Export PDF"
+```
+
+### API response shape
+
+`POST /api/admin/reports/billing` — body: `{ from, to, tenantIds, includePrices }`
+
+```
+{
+  mode: "multi-tenant" | "single-tenant",
+  from, to,
+  monthCount,          ← distinct (partial) months in range; used for monthly fee ×
+  rows: [
+    // Multi-tenant: { tenantId, tenantName, orderCount, lineItemCount,
+    //                 costPerOrder?, transactionTotal?, monthlyFee? }
+    // Single-tenant: { date, orderCount, lineItemCount, transactionTotal? }
+  ],
+  totals: { orderCount, lineItemCount, transactionTotal?, monthlyFeeTotal? }
+}
+```
+
+Server pre-calculates all totals — the frontend does zero arithmetic.
+
+### Export approach (all client-side)
+
+| Format | Library | Notes |
+|---|---|---|
+| CSV | None | Plain string building + Blob download |
+| XLS | `xlsx` (already installed) | Build worksheet from table data |
+| PDF | `jspdf` + `jspdf-autotable` (new) | Formatted table, landscape for wide columns |
+
+All exports prepend a header: report title, date range, tenant selection, generation timestamp.
+
+### Multi-month fee calculation
+
+Monthly fee is multiplied by `monthCount` (partial months count as full):
+- March 15 → April 10 = 2 months → monthly_fee × 2
+- `monthCount` is computed server-side and returned in the response so the UI can annotate (e.g. "€290 × 2 Monate")
+
+### Key decisions
+
+| Decision | Why |
+|---|---|
+| Client-side exports | Data already in browser; no round-trip. `jspdf` is ~300KB — acceptable. |
+| `jspdf` + `jspdf-autotable` for PDF | Lightest table-to-PDF option; no headless Chrome; handles landscape + pagination. |
+| CSV without a library | CSV is comma-separated text — a library would be over-engineering. |
+| shadcn Calendar + Popover | Consistent with existing UI; `date-fns` already installed for range logic. |
+| Command + Popover for multi-select | Standard shadcn pattern; no third-party library needed. |
+| Server pre-calculates totals | Billing math belongs on the server — keeps the frontend dumb and correct. |
+
+### New packages to install
+
+| Package | Purpose |
+|---|---|
+| `jspdf` | Client-side PDF generation |
+| `jspdf-autotable` | Table plugin for jsPDF |
+| shadcn `calendar` | Date picker (via `npx shadcn@latest add calendar`, brings `react-day-picker`) |
 
 ## QA Test Results
 _To be added by /qa_

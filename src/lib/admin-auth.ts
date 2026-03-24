@@ -52,6 +52,46 @@ export async function requirePlatformAdmin(): Promise<
 }
 
 /**
+ * Verifies that the current user is authenticated and has the platform_admin
+ * or platform_viewer role. Use for read-only endpoints that viewers may access.
+ * Returns the user + admin client on success, or an error response on failure.
+ */
+export async function requirePlatformAdminOrViewer(): Promise<
+  AdminAuthResult | NextResponse<ApiResponse>
+> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return NextResponse.json(
+      { success: false, error: "Nicht authentifiziert." },
+      { status: 401 }
+    );
+  }
+
+  const appMetadata = user.app_metadata as AppMetadata | undefined;
+
+  if (appMetadata?.user_status === "inactive") {
+    return NextResponse.json(
+      { success: false, error: "Ihr Konto ist deaktiviert." },
+      { status: 403 }
+    );
+  }
+
+  if (appMetadata?.role !== "platform_admin" && appMetadata?.role !== "platform_viewer") {
+    return NextResponse.json(
+      { success: false, error: "Nur für Platform-Administratoren und -Viewer." },
+      { status: 403 }
+    );
+  }
+
+  return { user, adminClient: createAdminClient() };
+}
+
+/**
  * Type guard to check if the result is an error response.
  */
 export function isErrorResponse(
