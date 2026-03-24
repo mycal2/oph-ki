@@ -216,7 +216,7 @@ function wrapHtmlEmail(siteUrl: string, bodyHtml: string): string {
     ${bodyHtml}
   </div>
   <div style="text-align:center;padding:16px 0;font-size:12px;color:#9ca3af">
-    <p style="margin:0">Order Intelligence Platform &mdash; <a href="https://www.ids.online" style="color:#9ca3af;text-decoration:none">ids.online</a></p>
+    <p style="margin:0">Order-Process Hub (OPH) &mdash; <a href="https://www.ids.online" style="color:#9ca3af;text-decoration:none">ids.online</a></p>
   </div>
 </div>
 </body></html>`;
@@ -872,7 +872,7 @@ export async function sendPlatformErrorNotification(params: {
       truncatedError,
       "",
       ...(orderUrl ? [`Bestellung ansehen: ${orderUrl}`, ""] : []),
-      "— Order Intelligence Platform",
+      "— Order-Process Hub (OPH)",
     ].join("\n");
 
     const htmlBody = wrapHtmlEmail(siteUrl, `
@@ -947,7 +947,7 @@ export async function sendPasswordResetEmail(params: {
   await postmarkFetchWithRetry(serverApiToken, {
     From: fromAddress,
     To: toEmail,
-    Subject: "Passwort zurücksetzen — Order Intelligence Platform",
+    Subject: "Passwort zurücksetzen — Order-Process Hub (OPH)",
     HtmlBody: htmlBody,
     TextBody: textBody,
   }, "Admin-triggered password reset email");
@@ -973,7 +973,7 @@ export async function sendResendInviteEmail(params: {
   const textBody = [
     `Hallo,`,
     "",
-    "Sie wurden erneut eingeladen, die Order Intelligence Platform zu nutzen.",
+    "Sie wurden erneut eingeladen, die Order-Process Hub (OPH) zu nutzen.",
     "",
     "Klicken Sie auf den folgenden Link, um Ihr Konto zu aktivieren:",
     inviteLink,
@@ -983,15 +983,15 @@ export async function sendResendInviteEmail(params: {
   ].join("\n");
 
   const htmlBody = wrapHtmlEmail(siteUrl, `
-    <h2 style="margin:0 0 8px;font-size:18px;color:#111827">Einladung zur Order Intelligence Platform</h2>
-    <p style="margin:0 0 20px;color:#6b7280;font-size:14px">Sie wurden erneut eingeladen, die Order Intelligence Platform zu nutzen. Klicken Sie auf den Button, um Ihr Konto zu aktivieren und ein Passwort festzulegen.</p>
+    <h2 style="margin:0 0 8px;font-size:18px;color:#111827">Einladung zur Order-Process Hub (OPH)</h2>
+    <p style="margin:0 0 20px;color:#6b7280;font-size:14px">Sie wurden erneut eingeladen, die Order-Process Hub (OPH) zu nutzen. Klicken Sie auf den Button, um Ihr Konto zu aktivieren und ein Passwort festzulegen.</p>
     <a href="${esc(inviteLink)}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500">Konto aktivieren</a>
   `);
 
   await postmarkFetchWithRetry(serverApiToken, {
     From: fromAddress,
     To: toEmail,
-    Subject: "Einladung — Order Intelligence Platform",
+    Subject: "Einladung — Order-Process Hub (OPH)",
     HtmlBody: htmlBody,
     TextBody: textBody,
   }, "Admin-triggered resend invite email");
