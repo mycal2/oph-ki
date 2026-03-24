@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { requirePlatformAdmin, isErrorResponse, checkAdminRateLimit } from "@/lib/admin-auth";
 import { adminInviteUserSchema } from "@/lib/validations";
+import { sendInviteEmail } from "@/lib/postmark";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -9,8 +10,7 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
  * POST /api/admin/tenants/[id]/users/invite
  *
  * Invites a user on behalf of a specific tenant.
- * The platform admin can invite into any tenant, not just their own.
- * Uses Supabase inviteUserByEmail() with the target tenant_id.
+ * Uses generateLink (no Supabase email) + Postmark for reliable delivery.
  */
 export async function POST(
   request: NextRequest,
@@ -49,7 +49,7 @@ export async function POST(
     // Verify tenant exists and is active/trial
     const { data: tenant, error: tenantError } = await adminClient
       .from("tenants")
-      .select("id, status")
+      .select("id, name, status")
       .eq("id", tenantId)
       .single();
 
@@ -75,14 +75,21 @@ export async function POST(
       );
     }
 
-    // Invite user via Supabase Auth, setting the target tenant_id in metadata
-    const { data: inviteData, error: inviteError } =
-      await adminClient.auth.admin.inviteUserByEmail(email, {
-        data: {
-          tenant_id: tenantId,
-          role: role,
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
+    // Generate invite link without sending Supabase's built-in email.
+    // generateLink creates the user + token but does NOT send email.
+    const { data: linkData, error: inviteError } =
+      await adminClient.auth.admin.generateLink({
+        type: "invite",
+        email,
+        options: {
+          redirectTo: `${siteUrl}/invite/accept`,
+          data: {
+            tenant_id: tenantId,
+            role,
+          },
         },
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/invite/accept`,
       });
 
     if (inviteError) {
@@ -100,20 +107,61 @@ export async function POST(
       );
     }
 
+    const invitedUserId = linkData?.user?.id;
+    if (!invitedUserId) {
+      return NextResponse.json(
+        { success: false, error: "Benutzer konnte nicht erstellt werden." },
+        { status: 500 }
+      );
+    }
+
     // Set app_metadata so getUser() returns tenant_id and role
-    // (inviteUserByEmail `data` only sets user_metadata, not app_metadata)
-    await adminClient.auth.admin.updateUserById(inviteData.user.id, {
+    // (generateLink `data` only sets user_metadata, not app_metadata)
+    await adminClient.auth.admin.updateUserById(invitedUserId, {
       app_metadata: {
         tenant_id: tenantId,
-        role: role,
+        role,
         user_status: "active",
       },
+    });
+
+    // Send invite email via Postmark
+    const actionLink = linkData?.properties?.action_link;
+    if (!actionLink) {
+      console.error("Invite: No action_link returned from generateLink.");
+      return NextResponse.json(
+        { success: false, error: "Einladungslink konnte nicht generiert werden." },
+        { status: 500 }
+      );
+    }
+
+    const postmarkToken = process.env.POSTMARK_SERVER_API_TOKEN;
+    if (!postmarkToken) {
+      console.error("Invite: POSTMARK_SERVER_API_TOKEN not configured.");
+      // User was created but email couldn't be sent — still return success
+      // so the admin can use "Resend Invite" later
+      return NextResponse.json(
+        {
+          success: true,
+          data: { userId: invitedUserId, email },
+          warning: "Benutzer erstellt, aber E-Mail konnte nicht gesendet werden. Nutzen Sie 'Erneut einladen'.",
+        },
+        { status: 201 }
+      );
+    }
+
+    await sendInviteEmail({
+      serverApiToken: postmarkToken,
+      toEmail: email,
+      inviteLink: actionLink,
+      tenantName: tenant.name as string,
+      siteUrl,
     });
 
     return NextResponse.json(
       {
         success: true,
-        data: { userId: inviteData.user.id, email },
+        data: { userId: invitedUserId, email },
       },
       { status: 201 }
     );

@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { inviteUserSchema } from "@/lib/validations";
+import { sendInviteEmail } from "@/lib/postmark";
 import type { AppMetadata, ApiResponse } from "@/lib/types";
 
 /**
  * POST /api/team/invite
  * Invite a new user to the current tenant.
  * Requires tenant_admin or platform_admin role.
- * Uses the service role key to call supabase.auth.admin.inviteUserByEmail().
+ * Uses generateLink (no Supabase email) + Postmark for reliable delivery.
  */
 export async function POST(
   request: Request
@@ -82,21 +83,26 @@ export async function POST(
     }
 
     const { email, role } = parsed.data;
+    const tenantId = appMetadata.tenant_id;
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
-    // 5. Use service role to invite the user
+    // 5. Use service role to generate invite link (does NOT send Supabase email)
     const adminClient = createAdminClient();
 
-    const { data: inviteData, error: inviteError } =
-      await adminClient.auth.admin.inviteUserByEmail(email, {
-        data: {
-          tenant_id: appMetadata.tenant_id,
-          role: role,
+    const { data: linkData, error: inviteError } =
+      await adminClient.auth.admin.generateLink({
+        type: "invite",
+        email,
+        options: {
+          redirectTo: `${siteUrl}/invite/accept`,
+          data: {
+            tenant_id: tenantId,
+            role,
+          },
         },
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/invite/accept`,
       });
 
     if (inviteError) {
-      // Handle duplicate user
       if (inviteError.message?.includes("already been registered")) {
         return NextResponse.json(
           {
@@ -117,20 +123,59 @@ export async function POST(
       );
     }
 
+    const invitedUserId = linkData?.user?.id;
+    if (!invitedUserId) {
+      return NextResponse.json(
+        { success: false, error: "Benutzer konnte nicht erstellt werden." },
+        { status: 500 }
+      );
+    }
+
     // Set app_metadata so getUser() returns tenant_id and role
-    // (inviteUserByEmail `data` only sets user_metadata, not app_metadata)
-    await adminClient.auth.admin.updateUserById(inviteData.user.id, {
+    await adminClient.auth.admin.updateUserById(invitedUserId, {
       app_metadata: {
-        tenant_id: appMetadata.tenant_id,
-        role: role,
+        tenant_id: tenantId,
+        role,
         user_status: "active",
       },
     });
 
+    // Send invite email via Postmark
+    const actionLink = linkData?.properties?.action_link;
+    if (!actionLink) {
+      console.error("Invite: No action_link returned from generateLink.");
+      return NextResponse.json(
+        { success: false, error: "Einladungslink konnte nicht generiert werden." },
+        { status: 500 }
+      );
+    }
+
+    // Fetch tenant name for the email
+    const { data: tenant } = await adminClient
+      .from("tenants")
+      .select("name")
+      .eq("id", tenantId)
+      .single();
+
+    const tenantName = (tenant?.name as string) ?? "Ihr Unternehmen";
+
+    const postmarkToken = process.env.POSTMARK_SERVER_API_TOKEN;
+    if (postmarkToken) {
+      await sendInviteEmail({
+        serverApiToken: postmarkToken,
+        toEmail: email,
+        inviteLink: actionLink,
+        tenantName,
+        siteUrl,
+      });
+    } else {
+      console.warn("POSTMARK_SERVER_API_TOKEN not configured — invite email not sent.");
+    }
+
     return NextResponse.json(
       {
         success: true,
-        data: { userId: inviteData.user.id, email },
+        data: { userId: invitedUserId, email },
       },
       { status: 201 }
     );
