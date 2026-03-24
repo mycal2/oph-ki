@@ -573,7 +573,7 @@ export async function POST(
           // If entry exists but has no customer_number, try to fill it from extraction
           if (existingEntry && !existingEntry.customer_number) {
             const extractedNum =
-              ((finalExtractedData.order as unknown as Record<string, unknown>).customer_number as string | null) || null;
+              ((finalExtractedData.order.sender as unknown as Record<string, unknown>)?.customer_number as string | null) || null;
             if (extractedNum) {
               await adminClient
                 .from("customer_catalog")
@@ -607,7 +607,7 @@ export async function POST(
 
                 // Use AI-extracted customer_number if available, otherwise leave null for manual assignment
                 const extractedCustomerNumber =
-                  ((finalExtractedData.order as unknown as Record<string, unknown>).customer_number as string | null) || null;
+                  ((finalExtractedData.order.sender as unknown as Record<string, unknown>)?.customer_number as string | null) || null;
 
                 await adminClient.from("customer_catalog").insert({
                   tenant_id: tenantId,
