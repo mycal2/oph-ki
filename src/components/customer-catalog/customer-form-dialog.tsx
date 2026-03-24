@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -75,6 +76,7 @@ export function CustomerFormDialog({
         email: customer.email ?? "",
         phone: customer.phone ?? "",
         keywords: customer.keywords ?? "",
+        notes: customer.notes ?? "",
       });
     } else {
       setFormData({});
@@ -97,6 +99,7 @@ export function CustomerFormDialog({
         email: formData.email?.trim() || null,
         phone: formData.phone?.trim() || null,
         keywords: formData.keywords?.trim() || null,
+        notes: formData.notes?.trim() || null,
       };
 
       const result = await onSave(data, isNew, customer?.id);
@@ -156,6 +159,21 @@ export function CustomerFormDialog({
               />
             </div>
           ))}
+
+          {/* Notes textarea */}
+          <div className="space-y-1.5">
+            <Label htmlFor="customer-notes">Notizen</Label>
+            <Textarea
+              id="customer-notes"
+              value={formData.notes ?? ""}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, notes: e.target.value }))
+              }
+              placeholder="Interne Anmerkungen, Ansprechpartner, Sonderhinweise..."
+              disabled={isSaving}
+              rows={3}
+            />
+          </div>
 
           <DialogFooter>
             <Button

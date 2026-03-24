@@ -116,6 +116,7 @@ export async function PUT(
     if (fields.email !== undefined) updateData.email = fields.email;
     if (fields.phone !== undefined) updateData.phone = fields.phone;
     if (fields.keywords !== undefined) updateData.keywords = fields.keywords;
+    if (fields.notes !== undefined) updateData.notes = fields.notes;
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json(

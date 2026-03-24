@@ -48,6 +48,7 @@ const ROLE_LABELS: Record<UserRole, string> = {
   tenant_user: "Benutzer",
   tenant_admin: "Administrator",
   platform_admin: "Platform-Admin",
+  platform_viewer: "Platform-Viewer",
 };
 
 const STATUS_BADGES: Record<
