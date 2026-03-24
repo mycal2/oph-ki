@@ -60,7 +60,7 @@
 | OPH-46 | Manufacturer Customer Catalog | In Review | [OPH-46-manufacturer-customer-catalog.md](OPH-46-manufacturer-customer-catalog.md) | 2026-03-23 |
 | OPH-47 | AI Customer Number Matching during Extraction | In Review | [OPH-47-ai-customer-number-matching.md](OPH-47-ai-customer-number-matching.md) | 2026-03-23 |
 | OPH-48 | Platform Team User Management Actions | Planned | [OPH-48-platform-team-user-management.md](OPH-48-platform-team-user-management.md) | 2026-03-24 |
-| OPH-49 | Dealer-Linked Kundenstamm | Planned | [OPH-49-dealer-linked-kundenstamm.md](OPH-49-dealer-linked-kundenstamm.md) | 2026-03-24 |
+| OPH-49 | Dealer-Linked Kundenstamm | In Progress | [OPH-49-dealer-linked-kundenstamm.md](OPH-49-dealer-linked-kundenstamm.md) | 2026-03-24 |
 
 <!-- Add features above this line -->
 

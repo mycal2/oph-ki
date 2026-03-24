@@ -72,6 +72,50 @@ Platform admins see the global dealer profiles, but tenants have no visibility i
 - **EC-5:** Order sender matches a dealer but the match has low confidence → auto-creation only happens when `dealer_id` is definitively resolved (not fuzzy matches)
 - **EC-6:** Tenant has Kundenstamm entries from before this feature is deployed → existing entries remain as-is with no `dealer_id`; they are NOT retroactively linked
 
+## Tech Design (Solution Architect)
+
+### Component Structure
+```
+/settings/customer-catalog (existing page, extended)
++-- CustomerCatalogPage (existing)
+    +-- Table rows
+    |   +-- [NEW] "Händler" badge (when dealer_id is set)
+    +-- CustomerFormDialog (existing, extended)
+        +-- [NEW] Notes textarea field
+        +-- [UNCHANGED] All existing fields
+
+Extraction pipeline (existing, extended)
++-- POST /api/orders/[orderId]/extract (existing route)
+    +-- [NEW] Auto-create Kundenstamm step (after dealer recognition)
+```
+
+### Data Model
+Two new columns on `customer_catalog`:
+- **`dealer_id`** (UUID, nullable, FK → dealers): Links to global dealer profile. NULL = manually created entry. Set once at auto-create, never overwritten by tenant edits.
+- **`notes`** (text, nullable): Free-text tenant annotation field.
+
+Unique constraint added on `(tenant_id, dealer_id)` to prevent duplicate auto-creation on extraction retry.
+
+### Auto-Create Logic (in existing extraction route)
+```
+Order extracted successfully
+  └─ dealer_id definitively resolved?  → YES
+       └─ (tenant_id + dealer_id) already in customer_catalog?  → NO
+            └─ Auto-create entry from global dealer data
+```
+Runs after OPH-47 customer number matching so it doesn't affect the current order's match result.
+
+### UI Changes
+- **Kundenstamm table**: "Händler" badge on rows where dealer_id is set (existing Badge + Tooltip components)
+- **Customer form dialog**: "Notizen" textarea added at bottom of existing field list (existing Textarea component)
+- **dealer_id**: never shown or editable in UI — managed by the system only
+
+### Tech Decisions
+- **No new API routes** — existing customer CRUD endpoints handle edits; dealer_id is preserved server-side on update
+- **Auto-create in extraction route** — runs in the right context, immediate, no background job complexity
+- **Copy-on-create, no live sync** — tenant owns their copy; global dealer changes do not cascade
+- **No new packages** — Badge, Tooltip, Textarea already installed via shadcn/ui
+
 ## Dependencies
 - Requires: OPH-1 (Multi-Tenant Auth) — tenant_admin role access
 - Requires: OPH-3 (Händler-Erkennung) — global dealer profiles and dealer_id resolution
