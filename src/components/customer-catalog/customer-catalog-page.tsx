@@ -331,11 +331,11 @@ export function CustomerCatalogPage({
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Badge variant="secondary" className="shrink-0 text-xs">
-                                  Haendler
+                                  Händler
                                 </Badge>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>Automatisch aus globalem Haendlerprofil erstellt</p>
+                                <p>Automatisch aus globalem Händlerprofil erstellt</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>

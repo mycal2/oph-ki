@@ -578,7 +578,11 @@ export async function POST(
       }
 
       // --- OPH-49: Auto-create Kundenstamm entry for dealer-linked orders ---
-      if (resolvedDealerId && tenantId) {
+      // EC-5: Only auto-create when dealer_id is definitively resolved (confidence >= 80)
+      const effectiveConfidence = (aiDealerUpdate.recognition_confidence as number)
+        ?? (order.recognition_confidence as number)
+        ?? 0;
+      if (resolvedDealerId && tenantId && effectiveConfidence >= 80) {
         try {
           // Check if this dealer already has a customer_catalog entry for this tenant
           const { data: existingEntry } = await adminClient
