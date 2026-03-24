@@ -119,6 +119,7 @@ export async function updateSession(request: NextRequest) {
     isPublicRoute &&
     url.pathname !== "/reset-password" &&
     url.pathname !== "/auth/callback" &&
+    url.pathname !== "/invite/accept" &&
     !url.pathname.startsWith("/orders/preview")
   ) {
     const redirectUrl = request.nextUrl.clone();
