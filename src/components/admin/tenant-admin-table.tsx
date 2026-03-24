@@ -156,6 +156,7 @@ export function TenantAdminTable({
                 <TableHead className="hidden sm:table-cell">ERP-Typ</TableHead>
                 <TableHead className="hidden lg:table-cell">ERP-Konfiguration</TableHead>
                 <TableHead className="hidden sm:table-cell">Status</TableHead>
+                <TableHead className="text-right hidden sm:table-cell">Händler</TableHead>
                 <TableHead className="text-right">Bestellungen</TableHead>
                 <TableHead className="text-right hidden sm:table-cell">Letzter Monat</TableHead>
                 <TableHead className="hidden lg:table-cell">Letzter Upload</TableHead>
@@ -226,6 +227,9 @@ export function TenantAdminTable({
                           </span>
                         )}
                       </div>
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums hidden sm:table-cell">
+                      {tenant.dealer_count}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {tenant.order_count}
