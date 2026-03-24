@@ -554,30 +554,8 @@ export async function POST(
         }
       }
 
-      // --- OPH-47: Customer number matching against tenant customer catalog ---
-      if (tenantId) {
-        try {
-          const matchedSender = await matchCustomerNumber(
-            adminClient,
-            finalExtractedData.order.sender,
-            tenantId
-          );
-          if (matchedSender) {
-            finalExtractedData = {
-              ...finalExtractedData,
-              order: {
-                ...finalExtractedData.order,
-                sender: matchedSender,
-              },
-            };
-          }
-        } catch (customerMatchError) {
-          // Non-critical: log but don't fail extraction
-          console.error("Error during customer number matching:", customerMatchError);
-        }
-      }
-
       // --- OPH-49: Auto-create Kundenstamm entry for dealer-linked orders ---
+      // Runs BEFORE OPH-47 matching so newly created entries are available for lookup.
       // EC-5: Only auto-create when dealer_id is definitively resolved (confidence >= 80)
       const effectiveConfidence = (aiDealerUpdate.recognition_confidence as number)
         ?? (order.recognition_confidence as number)
@@ -612,14 +590,14 @@ export async function POST(
                 .maybeSingle();
 
               if (!nameMatch) {
-                const dealerIdShort = resolvedDealerId.substring(0, 8);
                 const addresses = dealer.known_sender_addresses as string[] | null;
                 const dealerEmail = addresses && addresses.length > 0 ? addresses[0] : null;
 
+                // customer_number left null — tenant admin assigns the real number manually
                 await adminClient.from("customer_catalog").insert({
                   tenant_id: tenantId,
                   dealer_id: resolvedDealerId,
-                  customer_number: `H-${dealerIdShort}`,
+                  customer_number: null,
                   company_name: dealerName,
                   street: (dealer.street as string) ?? null,
                   postal_code: (dealer.postal_code as string) ?? null,
@@ -634,6 +612,30 @@ export async function POST(
         } catch (autoCreateError) {
           // Non-critical: log but don't fail extraction
           console.error("Error auto-creating customer catalog entry:", autoCreateError);
+        }
+      }
+
+      // --- OPH-47: Customer number matching against tenant customer catalog ---
+      // Runs AFTER OPH-49 so newly auto-created entries (with real customer numbers) are found.
+      if (tenantId) {
+        try {
+          const matchedSender = await matchCustomerNumber(
+            adminClient,
+            finalExtractedData.order.sender,
+            tenantId
+          );
+          if (matchedSender) {
+            finalExtractedData = {
+              ...finalExtractedData,
+              order: {
+                ...finalExtractedData.order,
+                sender: matchedSender,
+              },
+            };
+          }
+        } catch (customerMatchError) {
+          // Non-critical: log but don't fail extraction
+          console.error("Error during customer number matching:", customerMatchError);
         }
       }
 
