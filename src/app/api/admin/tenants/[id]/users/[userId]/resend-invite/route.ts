@@ -91,7 +91,7 @@ export async function POST(
         type: "invite",
         email: authUser.email,
         options: {
-          redirectTo: `${siteUrl}/auth/callback?next=/dashboard`,
+          redirectTo: `${siteUrl}/invite/accept`,
           data: {
             tenant_id: tenantId,
             role: authUser.app_metadata?.role ?? "tenant_user",
