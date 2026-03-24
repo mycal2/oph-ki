@@ -577,6 +577,66 @@ export async function POST(
         }
       }
 
+      // --- OPH-49: Auto-create Kundenstamm entry for dealer-linked orders ---
+      // EC-5: Only auto-create when dealer_id is definitively resolved (confidence >= 80)
+      const effectiveConfidence = (aiDealerUpdate.recognition_confidence as number)
+        ?? (order.recognition_confidence as number)
+        ?? 0;
+      if (resolvedDealerId && tenantId && effectiveConfidence >= 80) {
+        try {
+          // Check if this dealer already has a customer_catalog entry for this tenant
+          const { data: existingEntry } = await adminClient
+            .from("customer_catalog")
+            .select("id")
+            .eq("tenant_id", tenantId)
+            .eq("dealer_id", resolvedDealerId)
+            .maybeSingle();
+
+          if (!existingEntry) {
+            // Fetch dealer data for populating the entry
+            const { data: dealer } = await adminClient
+              .from("dealers")
+              .select("name, known_sender_addresses, street, postal_code, city, country")
+              .eq("id", resolvedDealerId)
+              .single();
+
+            if (dealer) {
+              const dealerName = dealer.name as string;
+
+              // EC-1: Check if a manual entry with the same company_name already exists (case-insensitive)
+              const { data: nameMatch } = await adminClient
+                .from("customer_catalog")
+                .select("id")
+                .eq("tenant_id", tenantId)
+                .ilike("company_name", dealerName)
+                .maybeSingle();
+
+              if (!nameMatch) {
+                const dealerIdShort = resolvedDealerId.substring(0, 8);
+                const addresses = dealer.known_sender_addresses as string[] | null;
+                const dealerEmail = addresses && addresses.length > 0 ? addresses[0] : null;
+
+                await adminClient.from("customer_catalog").insert({
+                  tenant_id: tenantId,
+                  dealer_id: resolvedDealerId,
+                  customer_number: `H-${dealerIdShort}`,
+                  company_name: dealerName,
+                  street: (dealer.street as string) ?? null,
+                  postal_code: (dealer.postal_code as string) ?? null,
+                  city: (dealer.city as string) ?? null,
+                  country: (dealer.country as string) ?? null,
+                  email: dealerEmail,
+                  keywords: dealerName,
+                });
+              }
+            }
+          }
+        } catch (autoCreateError) {
+          // Non-critical: log but don't fail extraction
+          console.error("Error auto-creating customer catalog entry:", autoCreateError);
+        }
+      }
+
       // --- OPH-25: Persist parsed EML subject if order doesn't already have one ---
       const emlSubjectUpdate: Record<string, unknown> = {};
       if (!orderSubject && result.parsedEmailSubject) {

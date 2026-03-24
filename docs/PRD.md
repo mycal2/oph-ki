@@ -66,6 +66,8 @@ Eine mandantenfähige SaaS-Plattform ("Order Intelligence Platform"), die Dental
 | P1 | OPH-45: AI-Assisted ERP Field Mapping | Planned |
 | P1 | OPH-46: Manufacturer Customer Catalog | Planned |
 | P1 | OPH-47: AI Customer Number Matching during Extraction | Planned |
+| P1 | OPH-48: Platform Team User Management Actions | Planned |
+| P1 | OPH-49: Dealer-Linked Kundenstamm | Planned |
 
 ## Success Metrics
 - Bearbeitungszeit pro Bestellung: von ~15 Min. manuell auf < 3 Min. mit System

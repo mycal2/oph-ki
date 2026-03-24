@@ -54,6 +54,11 @@ const COLUMN_MAP: Record<string, string> = {
   "suchbegriffe": "keywords",
   "aliase": "keywords",
   "suchbegriffe / aliase": "keywords",
+  // notes
+  "notes": "notes",
+  "notizen": "notes",
+  "anmerkungen": "notes",
+  "bemerkungen": "notes",
 };
 
 export interface ParsedCustomerRow {
@@ -66,6 +71,7 @@ export interface ParsedCustomerRow {
   email: string | null;
   phone: string | null;
   keywords: string | null;
+  notes: string | null;
 }
 
 export interface CustomerParseResult {
@@ -185,6 +191,7 @@ export function parseCustomerFile(buffer: Buffer, filename: string): CustomerPar
       email: getField("email", 320),
       phone: getField("phone", 50),
       keywords: getField("keywords", 1000),
+      notes: getField("notes", 5000),
     });
   }
 

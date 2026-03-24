@@ -21,28 +21,53 @@ export function AcceptInviteForm() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [tenantName, setTenantName] = useState<string | null>(null);
 
-  // Try to fetch the tenant name from the user's metadata
+  // Process the hash fragment from Supabase invite links to establish a session.
+  // The #access_token is only visible client-side; the server action needs an active session.
   useEffect(() => {
-    async function loadTenantInfo() {
-      try {
-        const supabase = createClient();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+    const supabase = createClient();
+    const hash = window.location.hash;
 
-        if (user?.user_metadata?.tenant_name) {
-          setTenantName(user.user_metadata.tenant_name);
-        }
-      } catch {
-        // Non-critical: we just won't show the company name
+    if (hash && hash.includes("access_token")) {
+      const params = new URLSearchParams(hash.substring(1));
+      const accessToken = params.get("access_token");
+      const refreshToken = params.get("refresh_token");
+
+      if (accessToken && refreshToken) {
+        supabase.auth
+          .setSession({ access_token: accessToken, refresh_token: refreshToken })
+          .then(({ data, error: sessionError }) => {
+            if (!sessionError && data.user) {
+              setSessionReady(true);
+              if (data.user.user_metadata?.tenant_name) {
+                setTenantName(data.user.user_metadata.tenant_name);
+              }
+              window.history.replaceState(null, "", window.location.pathname);
+            } else {
+              console.error("Failed to set session from hash:", sessionError?.message);
+              setError("Sitzung konnte nicht hergestellt werden. Bitte fordern Sie eine neue Einladung an.");
+            }
+          });
+      } else {
+        setError("Ungültiger Einladungslink. Bitte fordern Sie eine neue Einladung an.");
       }
+    } else {
+      // No hash — user may already have a session (e.g., page refresh)
+      supabase.auth.getSession().then(({ data }) => {
+        if (data.session) {
+          setSessionReady(true);
+          if (data.session.user?.user_metadata?.tenant_name) {
+            setTenantName(data.session.user.user_metadata.tenant_name);
+          }
+        } else {
+          setError("Keine gültige Sitzung. Bitte verwenden Sie den Link aus Ihrer Einladungs-E-Mail.");
+        }
+      });
     }
-
-    loadTenantInfo();
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -127,7 +152,7 @@ export function AcceptInviteForm() {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={8}
-              disabled={isLoading}
+              disabled={isLoading || !sessionReady}
               aria-label="Passwort"
             />
           </div>
@@ -141,7 +166,7 @@ export function AcceptInviteForm() {
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
               minLength={8}
-              disabled={isLoading}
+              disabled={isLoading || !sessionReady}
               aria-label="Passwort bestätigen"
             />
           </div>
@@ -150,12 +175,17 @@ export function AcceptInviteForm() {
           <Button
             type="submit"
             className="w-full font-bold"
-            disabled={isLoading}
+            disabled={isLoading || !sessionReady}
           >
             {isLoading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Konto einrichten...
+              </>
+            ) : !sessionReady ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Sitzung wird hergestellt...
               </>
             ) : (
               "Konto einrichten"

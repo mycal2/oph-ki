@@ -198,6 +198,7 @@ export async function POST(
         email: parsed.data.email ?? null,
         phone: parsed.data.phone ?? null,
         keywords: parsed.data.keywords ?? null,
+        notes: parsed.data.notes ?? null,
       })
       .select("id")
       .single();

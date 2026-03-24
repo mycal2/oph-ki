@@ -64,6 +64,15 @@ export const changeUserRoleSchema = z.object({
 
 export type ChangeUserRoleInput = z.infer<typeof changeUserRoleSchema>;
 
+/** OPH-48: Validation for platform role changes. */
+export const changePlatformRoleSchema = z.object({
+  role: z.enum(["platform_admin", "platform_viewer"], {
+    message: "Ungültige Rolle. Erlaubt: platform_admin, platform_viewer",
+  }),
+});
+
+export type ChangePlatformRoleInput = z.infer<typeof changePlatformRoleSchema>;
+
 /**
  * OPH-2: Upload validation schemas.
  */
@@ -903,6 +912,12 @@ export const createCustomerSchema = z.object({
     .trim()
     .nullable()
     .optional(),
+  notes: z
+    .string()
+    .max(5000, "Notizen duerfen maximal 5000 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
 });
 
 export const updateCustomerSchema = z.object({
@@ -956,6 +971,12 @@ export const updateCustomerSchema = z.object({
   keywords: z
     .string()
     .max(1000, "Suchbegriffe duerfen maximal 1000 Zeichen lang sein.")
+    .trim()
+    .nullable()
+    .optional(),
+  notes: z
+    .string()
+    .max(5000, "Notizen duerfen maximal 5000 Zeichen lang sein.")
     .trim()
     .nullable()
     .optional(),

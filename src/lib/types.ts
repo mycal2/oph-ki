@@ -2,7 +2,7 @@
  * Shared TypeScript types for OPH-1: Multi-Tenant Auth & RBAC.
  */
 
-export type UserRole = "tenant_user" | "tenant_admin" | "platform_admin";
+export type UserRole = "tenant_user" | "tenant_admin" | "platform_admin" | "platform_viewer";
 export type UserStatus = "active" | "inactive";
 export type TenantStatus = "active" | "inactive" | "trial";
 export type ErpType = "SAP" | "Dynamics365" | "Sage" | "Custom";
@@ -938,6 +938,10 @@ export interface CustomerCatalogItem {
   email: string | null;
   phone: string | null;
   keywords: string | null;
+  /** OPH-49: Link to global dealer profile. NULL = manually created entry. */
+  dealer_id: string | null;
+  /** OPH-49: Free-text tenant-specific notes. */
+  notes: string | null;
   created_at: string;
   updated_at: string;
 }

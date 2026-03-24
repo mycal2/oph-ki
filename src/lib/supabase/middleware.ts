@@ -157,18 +157,18 @@ export async function updateSession(request: NextRequest) {
     // Route-level role enforcement
     const role = appMetadata?.role;
 
-    // /admin/* -> platform_admin only
+    // /admin/* -> platform_admin or platform_viewer (OPH-48: viewers can see, API enforces write permissions)
     if (url.pathname.startsWith("/admin")) {
-      if (role !== "platform_admin") {
+      if (role !== "platform_admin" && role !== "platform_viewer") {
         const redirectUrl = request.nextUrl.clone();
         redirectUrl.pathname = "/dashboard";
         return NextResponse.redirect(redirectUrl);
       }
     }
 
-    // /settings/team -> tenant_admin or platform_admin
+    // /settings/team -> tenant_admin, platform_admin, or platform_viewer
     if (url.pathname.startsWith("/settings/team")) {
-      if (role !== "tenant_admin" && role !== "platform_admin") {
+      if (role !== "tenant_admin" && role !== "platform_admin" && role !== "platform_viewer") {
         const redirectUrl = request.nextUrl.clone();
         redirectUrl.pathname = "/dashboard";
         return NextResponse.redirect(redirectUrl);

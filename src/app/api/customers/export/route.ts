@@ -80,7 +80,7 @@ export async function generateCustomerExportCsv(
 
   const { data: customers, error: queryError } = await adminClient
     .from("customer_catalog")
-    .select("customer_number, company_name, street, postal_code, city, country, email, phone, keywords")
+    .select("customer_number, company_name, street, postal_code, city, country, email, phone, keywords, notes")
     .eq("tenant_id", tenantId)
     .order("customer_number", { ascending: true })
     .limit(50000);
@@ -102,7 +102,7 @@ export async function generateCustomerExportCsv(
     return val;
   };
 
-  const header = "Kundennummer;Firma;Strasse;PLZ;Stadt;Land;E-Mail;Telefon;Suchbegriffe";
+  const header = "Kundennummer;Firma;Strasse;PLZ;Stadt;Land;E-Mail;Telefon;Suchbegriffe;Notizen";
   const rows = (customers ?? []).map((c) =>
     [
       esc(c.customer_number as string),
@@ -114,6 +114,7 @@ export async function generateCustomerExportCsv(
       esc(c.email as string | null),
       esc(c.phone as string | null),
       esc(c.keywords as string | null),
+      esc(c.notes as string | null),
     ].join(";")
   );
 
