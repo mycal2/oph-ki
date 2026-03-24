@@ -13,7 +13,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { acceptInviteAction } from "@/lib/auth-actions";
 import { createClient } from "@/lib/supabase/client";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 
@@ -75,16 +74,32 @@ export function AcceptInviteForm() {
     setIsLoading(true);
     setError(null);
 
+    if (password !== confirmPassword) {
+      setError("Passwörter stimmen nicht überein.");
+      setIsLoading(false);
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("Passwort muss mindestens 8 Zeichen lang sein.");
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const result = await acceptInviteAction(password, confirmPassword);
-      if (result.success) {
+      // Use client-side Supabase to update password — the session from the hash
+      // fragment is only available client-side and may not have synced to server cookies yet.
+      const supabase = createClient();
+      const { error: updateError } = await supabase.auth.updateUser({ password });
+
+      if (updateError) {
+        console.error("Accept invite error:", updateError.message);
+        setError("Konto konnte nicht eingerichtet werden. Bitte versuchen Sie es erneut.");
+      } else {
         setSuccess(true);
-        // Redirect to dashboard after a short delay
         setTimeout(() => {
           window.location.href = "/dashboard";
         }, 2000);
-      } else {
-        setError(result.error ?? "Ein unbekannter Fehler ist aufgetreten.");
       }
     } catch {
       setError("Verbindungsfehler. Bitte versuchen Sie es erneut.");
