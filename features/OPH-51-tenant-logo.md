@@ -47,7 +47,101 @@
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Component Structure
+
+```
+TopNavigation (existing — src/components/layout/top-navigation.tsx)
++-- IDS Platform Logo (existing, left side)
++-- [NEW] TenantLogoDisplay (new small component)
+|     → shows tenant logo if available, hidden otherwise
+|     → hidden entirely for platform_admin users on /admin/* pages
++-- NavLinks (existing)
++-- UserMenu (existing)
+
+Admin Tenant Detail Page (existing — OPH-42)
++-- TenantProfileForm (existing)
+    +-- [NEW] Logo Upload Section
+          +-- Current logo preview (or "Kein Logo" placeholder)
+          +-- File input (PNG/JPG/SVG/WebP, max 2 MB)
+          +-- "Logo hochladen" button
+          +-- "Logo entfernen" button (only shown when logo exists)
+
+Tenant Settings Page (existing — /settings/*)
++-- [NEW] Logo Upload Section (same as above, tenant_admin only)
+    → Best place: a new card on an existing settings page, or a new
+      /settings/profile page if none exists yet
+```
+
+---
+
+### Data Model
+
+**Tenants table — one new field:**
+```
+logo_url: text (nullable)
+  - Full public URL to the logo image in Supabase Storage
+  - NULL when no logo has been uploaded
+  - Example: https://<project>.supabase.co/storage/v1/object/public/tenant-logos/<tenantId>.png
+```
+
+**Supabase Storage:**
+```
+Bucket: tenant-logos
+  - Public read: yes (logos are not secret)
+  - Write access: platform_admin (service role) or tenant_admin for their own tenant
+  - File naming: <tenantId>.<ext>  (e.g. "abc-123.png")
+  - One file per tenant — uploading replaces the previous file
+```
+
+---
+
+### Data Flow
+
+```
+Upload flow:
+  User selects file in browser
+    → client validates format + size (instant feedback, no server round-trip)
+    → file uploaded directly to Supabase Storage from browser
+    → returned public URL saved to tenants.logo_url via PATCH /api/admin/tenants/[id]
+       (platform_admin) or PATCH /api/settings/profile (tenant_admin)
+    → TopNavigation re-fetches tenant data → logo appears immediately
+
+Display flow:
+  TopNavigation mounts
+    → reads tenant_id from JWT (already available in existing useCurrentUserRole hook)
+    → fetches tenant profile (logo_url included)
+    → renders <img> if logo_url is set; renders nothing if null
+    → onError handler hides image if URL becomes broken
+```
+
+---
+
+### Tech Decisions
+
+**Direct browser-to-Storage upload (not server proxied)**
+File uploads go from the browser directly to Supabase Storage without passing through our Next.js server. This is faster, avoids server memory limits, and is the standard Supabase pattern. Our server only stores the resulting URL.
+
+**Extend existing PATCH `/api/admin/tenants/[id]` for logo_url**
+Rather than adding a new API route, the `logo_url` field is included in the existing tenant update payload. Keeps the API surface minimal.
+
+**Add a new PATCH `/api/settings/profile` route for tenant self-service**
+Tenant admins can't call the admin route. A new lightweight settings route lets them update their own tenant's logo_url.
+
+**Single file per tenant, named by tenant ID**
+Storing one file per tenant (overwriting on re-upload) avoids orphaned files accumulating in storage. No cleanup job needed.
+
+**TenantLogoDisplay as a separate small component**
+Keeps `TopNavigation` clean. The new component handles its own data fetch, loading state, and error fallback independently. Easy to test and maintain.
+
+**No new packages required**
+Supabase JS client (already installed) handles Storage uploads natively. Next.js `<Image>` component handles display.
+
+---
+
+### Build Plan
+1. **Backend:** Add `logo_url` to `tenants` table (migration) + add to tenant API responses + create Storage bucket + add tenant self-service PATCH route
+2. **Frontend:** Build `TenantLogoDisplay` component + add to `TopNavigation` + add logo upload section to `TenantProfileForm` + add logo upload to tenant settings
 
 ## QA Test Results
 _To be added by /qa_
