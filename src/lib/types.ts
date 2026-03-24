@@ -474,6 +474,8 @@ export interface TenantAdminListItem {
   erp_config_name: string | null;
   /** OPH-50: Count of distinct dealers that sent recognized orders to this tenant. */
   dealer_count: number;
+  /** OPH-51: Public URL to tenant company logo. */
+  logo_url: string | null;
 }
 
 /** User belonging to a tenant, shown in the admin user tab. */
