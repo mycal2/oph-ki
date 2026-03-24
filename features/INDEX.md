@@ -61,7 +61,8 @@
 | OPH-47 | AI Customer Number Matching during Extraction | Deployed | [OPH-47-ai-customer-number-matching.md](OPH-47-ai-customer-number-matching.md) | 2026-03-23 |
 | OPH-48 | Platform Team User Management Actions | In Progress | [OPH-48-platform-team-user-management.md](OPH-48-platform-team-user-management.md) | 2026-03-24 |
 | OPH-49 | Dealer-Linked Kundenstamm | Deployed | [OPH-49-dealer-linked-kundenstamm.md](OPH-49-dealer-linked-kundenstamm.md) | 2026-03-24 |
+| OPH-50 | Dealer Count per Tenant on Admin Mandanten-Verwaltung | In Progress | [OPH-50-dealer-count-per-tenant.md](OPH-50-dealer-count-per-tenant.md) | 2026-03-24 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-50
+## Next Available ID: OPH-51

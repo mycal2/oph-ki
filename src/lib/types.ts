@@ -470,6 +470,8 @@ export interface TenantAdminListItem {
   erp_config_id: string | null;
   /** OPH-29: Assigned ERP config name (for display). */
   erp_config_name: string | null;
+  /** OPH-50: Count of distinct dealers that sent recognized orders to this tenant. */
+  dealer_count: number;
 }
 
 /** User belonging to a tenant, shown in the admin user tab. */

@@ -32,16 +32,17 @@ export async function GET(): Promise<NextResponse> {
     }
 
     // Get order stats per tenant via RPC (efficient GROUP BY aggregation)
-    const statsByTenant = new Map<string, { count: number; lastMonth: number; lastUploadAt: string | null }>();
+    const statsByTenant = new Map<string, { count: number; lastMonth: number; lastUploadAt: string | null; dealerCount: number }>();
 
     const { data: rpcStats, error: rpcError } = await adminClient.rpc("get_tenant_order_stats");
 
     if (!rpcError && Array.isArray(rpcStats)) {
-      for (const row of rpcStats as { tenant_id: string; order_count: number; orders_last_month: number; last_upload_at: string | null }[]) {
+      for (const row of rpcStats as { tenant_id: string; order_count: number; orders_last_month: number; last_upload_at: string | null; dealer_count: number }[]) {
         statsByTenant.set(row.tenant_id, {
           count: row.order_count,
           lastMonth: row.orders_last_month,
           lastUploadAt: row.last_upload_at,
+          dealerCount: row.dealer_count,
         });
       }
     }
@@ -86,6 +87,8 @@ export async function GET(): Promise<NextResponse> {
         // OPH-29: ERP config assignment
         erp_config_id: erpConfigId,
         erp_config_name: erpConfigId ? (configNameMap.get(erpConfigId) ?? null) : null,
+        // OPH-50: Dealer count
+        dealer_count: stats?.dealerCount ?? 0,
       };
     });
 
