@@ -104,7 +104,7 @@ export default function AdminTenantDetailPage({ params }: PageProps) {
       document.title = `${tenant.name} - Mandanten-Verwaltung`;
     }
     return () => {
-      document.title = "Order Intelligence Platform";
+      document.title = "Order-Process Hub (OPH)";
     };
   }, [tenant]);
 
