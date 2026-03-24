@@ -14,6 +14,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { UserMenu } from "@/components/layout/user-menu";
+import { TenantLogoDisplay } from "@/components/layout/tenant-logo-display";
 import { useCurrentUserRole } from "@/hooks/use-current-user-role";
 import { cn } from "@/lib/utils";
 
@@ -115,6 +116,8 @@ export function TopNavigation() {
               className="h-7 w-auto"
             />
           </Link>
+          {/* OPH-51: Tenant company logo */}
+          <TenantLogoDisplay />
           <nav className="hidden md:flex items-center gap-1" aria-label="Hauptnavigation">
             {navLinks.map(({ href, label }) => {
               const isActive =
