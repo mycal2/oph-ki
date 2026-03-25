@@ -41,3 +41,10 @@ next-env.d.ts
 
 # supabase
 .mcp.json
+supabase/.temp/
+
+# obsidian
+.obsidian/
+
+# claude code plans
+.claude/plans/
