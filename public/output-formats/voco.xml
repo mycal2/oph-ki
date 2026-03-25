@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ORDERS05>
+  <IDOC BEGIN="1">
+    <EDI_DC40 SEGMENT="1">
+      <DOCNUM>0000000020258144</DOCNUM>
+      <MESTYP>ORDRSP</MESTYP>
+      <SNDPRN>MEISINGER</SNDPRN>
+      <RCVPRN>DT</RCVPRN>
+      <CREDAT>20260211</CREDAT>
+      <CRETIM>172110</CRETIM>
+    </EDI_DC40>
+    <E1EDK01 SEGMENT="1">
+      <ACTION>000</ACTION>
+      <CURCY>EUR</CURCY>
+      <WKURS>1.0000</WKURS>
+      <ZTERM>0016</ZTERM>
+      <BSART>DFUE</BSART>
+      <BELNR>20242256</BELNR>
+      <VSART>15</VSART>
+      <VSART_BEZ>DPD</VSART_BEZ>
+    </E1EDK01>
+    <E1EDK03 SEGMENT="1">
+      <IDDAT>012</IDDAT>
+      <DATUM>20260211</DATUM>
+    </E1EDK03>
+    <E1EDKA1 SEGMENT="1">
+      <PARVW>AG</PARVW>
+      <PARTN>101854</PARTN>
+    </E1EDKA1>
+    <E1EDKA1 SEGMENT="1">
+      <PARVW>LF</PARVW>
+      <PARTN>71707</PARTN>
+    </E1EDKA1>
+    <E1EDK02 SEGMENT="1">
+      <QUALF>001</QUALF>
+      <BELNR>56469</BELNR>
+      <DATUM>20260211</DATUM>
+    </E1EDK02>
+    <E1EDK02 SEGMENT="1">
+      <QUALF>002</QUALF>
+      <BELNR>20258144</BELNR>
+      <DATUM>20260211</DATUM>
+    </E1EDK02>
+    <E1EDP01 SEGMENT="1">
+      <POSEX>1</POSEX>
+      <ACTION>001</ACTION>
+      <MENGE>100</MENGE>
+      <E1EDP02 SEGMENT="1">
+        <QUALF>001</QUALF>
+        <BELNR>56469</BELNR>
+        <ZEILE>000001</ZEILE>
+      </E1EDP02>
+      <E1EDP20 SEGMENT="1">
+        <WMENG>100</WMENG>
+        <EDATU>20260410</EDATU>
+      </E1EDP20>
+      <E1EDP19 SEGMENT="1">
+        <QUALF>002</QUALF>
+        <IDTNR>3100079104045</IDTNR>
+      </E1EDP19>
+      <E1EDP19 SEGMENT="1">
+        <QUALF>001</QUALF>
+        <IDTNR/>
+      </E1EDP19>
+    </E1EDP01>
+    <E1EDP01 SEGMENT="1">
+      <POSEX>2</POSEX>
+      <ACTION>001</ACTION>
+      <MENGE>200</MENGE>
+      <E1EDP02 SEGMENT="1">
+        <QUALF>001</QUALF>
+        <BELNR>56469</BELNR>
+        <ZEILE>000002</ZEILE>
+      </E1EDP02>
+      <E1EDP20 SEGMENT="1">
+        <WMENG>200</WMENG>
+        <EDATU>20260410</EDATU>
+      </E1EDP20>
+      <E1EDP19 SEGMENT="1">
+        <QUALF>002</QUALF>
+        <IDTNR>33085RF104050</IDTNR>
+      </E1EDP19>
+      <E1EDP19 SEGMENT="1">
+        <QUALF>001</QUALF>
+        <IDTNR/>
+      </E1EDP19>
+    </E1EDP01>
+    <E1EDP01 SEGMENT="1">
+      <POSEX>3</POSEX>
+      <ACTION>001</ACTION>
+      <MENGE>1000</MENGE>
+      <E1EDP02 SEGMENT="1">
+        <QUALF>001</QUALF>
+        <BELNR>56469</BELNR>
+        <ZEILE>000003</ZEILE>
+      </E1EDP02>
+      <E1EDP20 SEGMENT="1">
+        <WMENG>1000</WMENG>
+        <EDATU>20260410</EDATU>
+      </E1EDP20>
+      <E1EDP19 SEGMENT="1">
+        <QUALF>002</QUALF>
+        <IDTNR>2000001104021</IDTNR>
+      </E1EDP19>
+      <E1EDP19 SEGMENT="1">
+        <QUALF>001</QUALF>
+        <IDTNR/>
+      </E1EDP19>
+    </E1EDP01>
+    <E1EDP01 SEGMENT="1">
+      <POSEX>4</POSEX>
+      <ACTION>001</ACTION>
+      <MENGE>50</MENGE>
+      <E1EDP02 SEGMENT="1">
+        <QUALF>001</QUALF>
+        <BELNR>56469</BELNR>
+        <ZEILE>000004</ZEILE>
+      </E1EDP02>
+      <E1EDP20 SEGMENT="1">
+        <WMENG>50</WMENG>
+        <EDATU>20260410</EDATU>
+      </E1EDP20>
+      <E1EDP19 SEGMENT="1">
+        <QUALF>002</QUALF>
+        <IDTNR>2500071104040</IDTNR>
+      </E1EDP19>
+      <E1EDP19 SEGMENT="1">
+        <QUALF>001</QUALF>
+        <IDTNR/>
+      </E1EDP19>
+    </E1EDP01>
+    <E1EDP01 SEGMENT="1">
+      <POSEX>5</POSEX>
+      <ACTION>001</ACTION>
+      <MENGE>500</MENGE>
+      <E1EDP02 SEGMENT="1">
+        <QUALF>001</QUALF>
+        <BELNR>56469</BELNR>
+        <ZEILE>000005</ZEILE>
+      </E1EDP02>
+      <E1EDP20 SEGMENT="1">
+        <WMENG>500</WMENG>
+        <EDATU>20260410</EDATU>
+      </E1EDP20>
+      <E1EDP19 SEGMENT="1">
+        <QUALF>002</QUALF>
+        <IDTNR>210033L104012</IDTNR>
+      </E1EDP19>
+      <E1EDP19 SEGMENT="1">
+        <QUALF>001</QUALF>
+        <IDTNR/>
+      </E1EDP19>
+    </E1EDP01>
+    <E1EDP01 SEGMENT="1">
+      <POSEX>6</POSEX>
+      <ACTION>001</ACTION>
+      <MENGE>200</MENGE>
+      <E1EDP02 SEGMENT="1">
+        <QUALF>001</QUALF>
+        <BELNR>56469</BELNR>
+        <ZEILE>000006</ZEILE>
+      </E1EDP02>
+      <E1EDP20 SEGMENT="1">
+        <WMENG>200</WMENG>
+        <EDATU>20260410</EDATU>
+      </E1EDP20>
+      <E1EDP19 SEGMENT="1">
+        <QUALF>002</QUALF>
+        <IDTNR>25079GX104040</IDTNR>
+      </E1EDP19>
+      <E1EDP19 SEGMENT="1">
+        <QUALF>001</QUALF>
+        <IDTNR/>
+      </E1EDP19>
+    </E1EDP01>
+    <E1EDP01 SEGMENT="1">
+      <POSEX>7</POSEX>
+      <ACTION>001</ACTION>
+      <MENGE>50</MENGE>
+      <E1EDP02 SEGMENT="1">
+        <QUALF>001</QUALF>
+        <BELNR>56469</BELNR>
+        <ZEILE>000007</ZEILE>
+      </E1EDP02>
+      <E1EDP20 SEGMENT="1">
+        <WMENG>50</WMENG>
+        <EDATU>20260410</EDATU>
+      </E1EDP20>
+      <E1EDP19 SEGMENT="1">
+        <QUALF>002</QUALF>
+        <IDTNR>25138GX104023</IDTNR>
+      </E1EDP19>
+      <E1EDP19 SEGMENT="1">
+        <QUALF>001</QUALF>
+        <IDTNR/>
+      </E1EDP19>
+    </E1EDP01>
+    <E1EDP01 SEGMENT="1">
+      <POSEX>8</POSEX>
+      <ACTION>001</ACTION>
+      <MENGE>50</MENGE>
+      <E1EDP02 SEGMENT="1">
+        <QUALF>001</QUALF>
+        <BELNR>56469</BELNR>
+        <ZEILE>000008</ZEILE>
+      </E1EDP02>
+      <E1EDP20 SEGMENT="1">
+        <WMENG>50</WMENG>
+        <EDATU>20260410</EDATU>
+      </E1EDP20>
+      <E1EDP19 SEGMENT="1">
+        <QUALF>002</QUALF>
+        <IDTNR>25075HX104060</IDTNR>
+      </E1EDP19>
+      <E1EDP19 SEGMENT="1">
+        <QUALF>001</QUALF>
+        <IDTNR/>
+      </E1EDP19>
+    </E1EDP01>
+  </IDOC>
+</ORDERS05>

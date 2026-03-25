@@ -82,7 +82,36 @@
       "Bash(ls /Users/michaelmollath/projects/oph-ki/src/app/\\\\\\(protected\\\\\\)/admin/)",
       "Bash(npx eslint src/hooks/use-file-upload.ts src/app/\\\\\\(protected\\\\\\)/admin/upload/page.tsx src/components/layout/top-navigation.tsx)",
       "Bash(npx next lint --file src/hooks/use-file-upload.ts --file src/app/\\\\\\(protected\\\\\\)/admin/upload/page.tsx --file src/components/layout/top-navigation.tsx)",
-      "Bash(git add \"src/app/\\(protected\\)/admin/upload/page.tsx\" src/app/api/orders/upload/route.ts src/app/api/orders/upload/confirm/route.ts src/components/layout/top-navigation.tsx src/hooks/use-file-upload.ts)"
+      "Bash(git add \"src/app/\\(protected\\)/admin/upload/page.tsx\" src/app/api/orders/upload/route.ts src/app/api/orders/upload/confirm/route.ts src/components/layout/top-navigation.tsx src/hooks/use-file-upload.ts)",
+      "Bash(grep -r extraction_hints /Users/michaelmollath/projects/oph-ki/src/components --include=*.tsx --include=*.ts)",
+      "Bash(PORT=3003 npm run dev)",
+      "Bash(gh api:*)",
+      "Bash(git branch:*)",
+      "Bash(git checkout:*)",
+      "Bash(git merge:*)",
+      "WebFetch(domain:oph-ki-dev.ids.online)",
+      "Bash(mkdir -p /Users/michaelmollath/projects/oph-ki/src/app/api/articles/[id])",
+      "Bash(mkdir -p /Users/michaelmollath/projects/oph-ki/src/app/api/admin/tenants/[id]/articles/import)",
+      "Bash(git add:*)",
+      "Bash(head -5 /Users/michaelmollath/projects/oph-ki/src/app/api/admin/tenants/[id]/articles/route.ts)",
+      "Bash(ls -la /Users/michaelmollath/projects/oph-ki/src/app/\\\\\\(protected\\\\\\)/settings/article-catalog/)",
+      "Bash(cat \"/Users/michaelmollath/projects/oph-ki/src/app/\\(protected\\)/settings/article-catalog/page.tsx\")",
+      "Bash(ls /Users/michaelmollath/projects/oph-ki/src/app/\\\\\\(protected\\\\\\)/admin/tenants/)",
+      "Bash(ls /Users/michaelmollath/projects/oph-ki/src/app/\\\\\\(protected\\\\\\)/admin/tenants/[id]/)",
+      "Bash(npx vercel:*)",
+      "Bash(npm list:*)",
+      "Bash(node -e \"const XLSX = require\\(''xlsx''\\); const fs = require\\(''fs''\\); console.log\\(XLSX.version\\); console.log\\(''sheet_to_csv options:'', Object.getOwnPropertyNames\\(XLSX.utils\\).filter\\(x => x.includes\\(''csv''\\)\\).slice\\(0, 5\\)\\);\")",
+      "Bash(find /Users/michaelmollath/projects/oph-ki -name *.test.* -o -name *.spec.* -o -name test* -o -name *test*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3003)",
+      "Bash(curl -s http://localhost:3003/api/orders/5291639a-d7e2-4d90-a45e-f2ad2e9cda08/email-body)",
+      "Bash(npx eslint:*)",
+      "Bash(grep -r SUPABASE_URL /Users/michaelmollath/projects/oph-ki/.env*)",
+      "Bash(xargs grep:*)",
+      "Bash(git stash:*)",
+      "Bash(git reset:*)",
+      "Bash(npx next:*)",
+      "Bash(/dev/null --prefix /Users/michaelmollath/projects/oph-ki/)",
+      "Bash(git -C /Users/michaelmollath/projects/oph-ki ls-files src/components/ui/sidebar.tsx src/components/layout/)"
     ],
     "additionalDirectories": [
       "/Users/michaelmollath/projects/ai-coding-starter-kit/src/app/api/orders/[orderId]",
@@ -90,7 +119,9 @@
       "/Users/michaelmollath/projects/ai-coding-starter-kit/src/app/api/admin/email-quarantine/[id]",
       "/Users/michaelmollath/projects/oph-ki/src/app/api/admin/erp-configs/[configId]",
       "/Users/michaelmollath/projects/oph-ki/src/app/api/admin/erp-configs/[configId]/output-format",
-      "/Users/michaelmollath/projects/oph-ki/src/app/(protected)/admin/erp-configs/[tenantId]"
+      "/Users/michaelmollath/projects/oph-ki/src/app/(protected)/admin/erp-configs/[tenantId]",
+      "/Users/michaelmollath/projects/oph-ki/src/app/api/admin/tenants/[id]/users/[userId]",
+      "/Users/michaelmollath/projects/oph-ki/src/app/api/team/[userId]"
     ]
   }
 }

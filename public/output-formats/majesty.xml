@@ -1,0 +1,579 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<VFPData>
+  
+<xsd:schema id="VFPData" xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="VFPData" msdata:IsDataSet="true">
+        <xsd:complexType>
+            <xsd:choice maxOccurs="unbounded">
+                <xsd:element name="bestexp2" minOccurs="0" maxOccurs="unbounded">
+                    <xsd:complexType>
+                        <xsd:sequence>
+                            <xsd:element name="bestnr">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:decimal">
+                                        <xsd:totalDigits value="8"/>
+                                        <xsd:fractionDigits value="0"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="bestdat" type="xsd:date"/>
+                            <xsd:element name="posnr">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:decimal">
+                                        <xsd:totalDigits value="4"/>
+                                        <xsd:fractionDigits value="0"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="artnr">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="22"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="liefartnr">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="22"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="artbez1">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="40"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="artbez2">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="40"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="artbez3">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="40"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="artbezmem">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="2147483647"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="menge">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:decimal">
+                                        <xsd:totalDigits value="9"/>
+                                        <xsd:fractionDigits value="2"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="meinheit">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="12"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="ek">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:decimal">
+                                        <xsd:totalDigits value="9"/>
+                                        <xsd:fractionDigits value="2"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="peinheit">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:decimal">
+                                        <xsd:totalDigits value="4"/>
+                                        <xsd:fractionDigits value="0"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="liefrab">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:decimal">
+                                        <xsd:totalDigits value="5"/>
+                                        <xsd:fractionDigits value="2"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="rabatt">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:decimal">
+                                        <xsd:totalDigits value="5"/>
+                                        <xsd:fractionDigits value="2"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="lieferkw">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="7"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="lieferdat" type="xsd:date"/>
+                            <xsd:element name="setkz">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="1"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="thema">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="32"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="aufbemmemk">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="2147483647"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="aufbemmemp">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="2147483647"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="ihrzeich">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="40"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="ihreaufnr">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="40"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="ihrbestvom" type="xsd:date"/>
+                            <xsd:element name="wunschterm">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="20"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="zeichnr">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="36"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="zeichindex">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="10"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="arbgangnr">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="10"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="fixtermin" type="xsd:boolean"/>
+                            <xsd:element name="signiernr">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="22"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="name1">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="40"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="lname1">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="40"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="lname2">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="40"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="lname3">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="40"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="lstrasse">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="40"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="llandkz">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="4"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="lplz">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="10"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="lort">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="32"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="lland">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="32"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="stempelung">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="2147483647"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="waehrung">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="5"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="kurs">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:decimal">
+                                        <xsd:totalDigits value="16"/>
+                                        <xsd:fractionDigits value="8"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="reserve">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="40"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="vorname">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="22"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="nachname">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="22"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="anredenr">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:decimal">
+                                        <xsd:totalDigits value="3"/>
+                                        <xsd:fractionDigits value="0"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                            <xsd:element name="ediid">
+                                <xsd:simpleType>
+                                    <xsd:restriction base="xsd:string">
+                                        <xsd:maxLength value="36"/>
+                                    </xsd:restriction>
+                                </xsd:simpleType>
+                            </xsd:element>
+                        </xsd:sequence>
+                    </xsd:complexType>
+                </xsd:element>
+            </xsd:choice>
+            <xsd:anyAttribute namespace="http://www.w3.org/XML/1998/namespace" processContents="lax"/>
+        </xsd:complexType>
+    </xsd:element>
+</xsd:schema>
+<bestexp2>
+    <bestnr>14448</bestnr>
+    <bestdat>2026-02-20</bestdat>
+    <posnr>1</posnr>
+    <artnr>PS-33-54408</artnr>
+    <liefartnr>PS-33-54408</liefartnr>
+    <artbez1>BENEplate short with 0.8mm s/s wire</artbez1>
+    <artbez2>BENEplate short with 0.8mm s/s wire</artbez2>
+    <artbez3/>
+    <artbezmem>BENEplate short with 0.8mm s/s wire</artbezmem>
+    <menge>2</menge>
+    <meinheit>Stück</meinheit>
+    <ek>0</ek>
+    <peinheit>1</peinheit>
+    <rabatt>0</rabatt>
+    <liefrab>0</liefrab>
+    <lieferkw/>
+    <lieferdat>2026-03-05</lieferdat>
+    <setkz/>
+    <thema/>
+    <aufbemmemk/>
+    <aufbemmemp/>
+    <ihrzeich/>
+    <ihreaufnr/>
+    <ihrbestvom>2026-02-20</ihrbestvom>
+    <wunschterm/>
+    <zeichnr/>
+    <zeichindex/>
+    <arbgangnr/>
+    <fixtermin>false</fixtermin>
+    <signiernr/>
+    <name1/>
+    <lname1>Arthur Hall Orthodontics Ltd</lname1>
+    <lname2/>
+    <lname3>Mt Wellington</lname3>
+    <lstrasse>Unit I, 172 Marua Road</lstrasse>
+    <llandkz>NZ</llandkz>
+    <lplz>1051</lplz>
+    <lort>Auckland</lort>
+    <lland/>
+    <stempelung/>
+    <waehrung>EUR</waehrung>
+    <kurs>1</kurs>
+    <reserve/>
+    <vorname/>
+    <nachname/>
+    <anredenr>1</anredenr>
+    <ediid/>
+  </bestexp2>
+  <bestexp2>
+    <bestnr>14448</bestnr>
+    <bestdat>2026-02-20</bestdat>
+    <posnr>2</posnr>
+    <artnr>PS-ST33-54209</artnr>
+    <liefartnr>PS-ST33-54209</liefartnr>
+    <artbez1>BENEfit Screw sterile 2.0 x 9mm</artbez1>
+    <artbez2>BENEfit Screw sterile 2.0 x 9mm</artbez2>
+    <artbez3/>
+    <artbezmem>BENEfit Screw sterile 2.0 x 9mm</artbezmem>
+    <menge>10</menge>
+    <meinheit>Stück</meinheit>
+    <ek>0</ek>
+    <peinheit>1</peinheit>
+    <rabatt>0</rabatt>
+    <liefrab>0</liefrab>
+    <lieferkw/>
+    <lieferdat>2026-03-05</lieferdat>
+    <setkz/>
+    <thema/>
+    <aufbemmemk/>
+    <aufbemmemp/>
+    <ihrzeich/>
+    <ihreaufnr/>
+    <ihrbestvom>2026-02-20</ihrbestvom>
+    <wunschterm/>
+    <zeichnr/>
+    <zeichindex/>
+    <arbgangnr/>
+    <fixtermin>false</fixtermin>
+    <signiernr/>
+    <name1/>
+    <lname1>Arthur Hall Orthodontics Ltd</lname1>
+    <lname2/>
+    <lname3>Mt Wellington</lname3>
+    <lstrasse>Unit I, 172 Marua Road</lstrasse>
+    <llandkz>NZ</llandkz>
+    <lplz>1051</lplz>
+    <lort>Auckland</lort>
+    <lland/>
+    <stempelung/>
+    <waehrung>EUR</waehrung>
+    <kurs>1</kurs>
+    <reserve/>
+    <vorname/>
+    <nachname/>
+    <anredenr>1</anredenr>
+    <ediid/>
+  </bestexp2>
+  <bestexp2>
+    <bestnr>14448</bestnr>
+    <bestdat>2026-02-20</bestdat>
+    <posnr>3</posnr>
+    <artnr>PS-73-31971</artnr>
+    <liefartnr>PS-73-31971</liefartnr>
+    <artbez1>Quattro Instrument Tray with Lid</artbez1>
+    <artbez2>Quattro Instrument Tray with Lid</artbez2>
+    <artbez3/>
+    <artbezmem>Quattro Instrument Tray with Lid</artbezmem>
+    <menge>1</menge>
+    <meinheit>Stück</meinheit>
+    <ek>0</ek>
+    <peinheit>1</peinheit>
+    <rabatt>0</rabatt>
+    <liefrab>0</liefrab>
+    <lieferkw/>
+    <lieferdat>2026-03-05</lieferdat>
+    <setkz/>
+    <thema/>
+    <aufbemmemk/>
+    <aufbemmemp/>
+    <ihrzeich/>
+    <ihreaufnr/>
+    <ihrbestvom>2026-02-20</ihrbestvom>
+    <wunschterm/>
+    <zeichnr/>
+    <zeichindex/>
+    <arbgangnr/>
+    <fixtermin>false</fixtermin>
+    <signiernr/>
+    <name1/>
+    <lname1>Arthur Hall Orthodontics Ltd</lname1>
+    <lname2/>
+    <lname3>Mt Wellington</lname3>
+    <lstrasse>Unit I, 172 Marua Road</lstrasse>
+    <llandkz>NZ</llandkz>
+    <lplz>1051</lplz>
+    <lort>Auckland</lort>
+    <lland/>
+    <stempelung/>
+    <waehrung>EUR</waehrung>
+    <kurs>1</kurs>
+    <reserve/>
+    <vorname/>
+    <nachname/>
+    <anredenr>1</anredenr>
+    <ediid/>
+  </bestexp2>
+  <bestexp2>
+    <bestnr>14448</bestnr>
+    <bestdat>2026-02-20</bestdat>
+    <posnr>4</posnr>
+    <artnr>PS-ST33-20009</artnr>
+    <liefartnr>PS-ST33-20009</liefartnr>
+    <artbez1>QUATTRO MINI Screw 2.0 x 9mm</artbez1>
+    <artbez2>QUATTRO MINI Screw 2.0 x 9mm</artbez2>
+    <artbez3/>
+    <artbezmem>QUATTRO MINI Screw 2.0 x 9mm</artbezmem>
+    <menge>2</menge>
+    <meinheit>Stück</meinheit>
+    <ek>0</ek>
+    <peinheit>1</peinheit>
+    <rabatt>0</rabatt>
+    <liefrab>0</liefrab>
+    <lieferkw/>
+    <lieferdat>2026-03-05</lieferdat>
+    <setkz/>
+    <thema/>
+    <aufbemmemk/>
+    <aufbemmemp/>
+    <ihrzeich/>
+    <ihreaufnr/>
+    <ihrbestvom>2026-02-20</ihrbestvom>
+    <wunschterm/>
+    <zeichnr/>
+    <zeichindex/>
+    <arbgangnr/>
+    <fixtermin>false</fixtermin>
+    <signiernr/>
+    <name1/>
+    <lname1>Arthur Hall Orthodontics Ltd</lname1>
+    <lname2/>
+    <lname3>Mt Wellington</lname3>
+    <lstrasse>Unit I, 172 Marua Road</lstrasse>
+    <llandkz>NZ</llandkz>
+    <lplz>1051</lplz>
+    <lort>Auckland</lort>
+    <lland/>
+    <stempelung/>
+    <waehrung>EUR</waehrung>
+    <kurs>1</kurs>
+    <reserve/>
+    <vorname/>
+    <nachname/>
+    <anredenr>1</anredenr>
+    <ediid/>
+  </bestexp2>
+  <bestexp2>
+    <bestnr>14448</bestnr>
+    <bestdat>2026-02-20</bestdat>
+    <posnr>5</posnr>
+    <artnr>PS-ST33-20011</artnr>
+    <liefartnr>PS-ST33-20011</liefartnr>
+    <artbez1>QUATTRO MINI Screw 2.0 x 11mm</artbez1>
+    <artbez2>QUATTRO MINI Screw 2.0 x 11mm</artbez2>
+    <artbez3/>
+    <artbezmem>QUATTRO MINI Screw 2.0 x 11mm</artbezmem>
+    <menge>2</menge>
+    <meinheit>Stück</meinheit>
+    <ek>0</ek>
+    <peinheit>1</peinheit>
+    <rabatt>0</rabatt>
+    <liefrab>0</liefrab>
+    <lieferkw/>
+    <lieferdat>2026-03-05</lieferdat>
+    <setkz/>
+    <thema/>
+    <aufbemmemk/>
+    <aufbemmemp/>
+    <ihrzeich/>
+    <ihreaufnr/>
+    <ihrbestvom>2026-02-20</ihrbestvom>
+    <wunschterm/>
+    <zeichnr/>
+    <zeichindex/>
+    <arbgangnr/>
+    <fixtermin>false</fixtermin>
+    <signiernr/>
+    <name1/>
+    <lname1>Arthur Hall Orthodontics Ltd</lname1>
+    <lname2/>
+    <lname3>Mt Wellington</lname3>
+    <lstrasse>Unit I, 172 Marua Road</lstrasse>
+    <llandkz>NZ</llandkz>
+    <lplz>1051</lplz>
+    <lort>Auckland</lort>
+    <lland/>
+    <stempelung/>
+    <waehrung>EUR</waehrung>
+    <kurs>1</kurs>
+    <reserve/>
+    <vorname/>
+    <nachname/>
+    <anredenr>1</anredenr>
+    <ediid/>
+  </bestexp2>
+</VFPData>
