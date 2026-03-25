@@ -1,0 +1,5 @@
+Bestellnummer;Bestellposition;Materialnummer_Lieferant;Materialnummer_Kunde;Menge;Mengeneinheit;Verkaufsorganisation;Bestelldatum;Wunschlieferdatum;Auftraggeber;AG_Name1;AG_Name2;AG_Strasse1;AG_Strasse2;AG_PLZ;AG_Ort;AG_Land;AG_Tel;AG_Email;Warenempfänger;WE_Name1;WE_Name2;WE_Strasse1;WE_Strasse2;WE_PLZ;WE_Ort;WE_Land;WE_Tel;WE_Email;Rechnungsempfänger;RE_Name1;RE_Name2;RE_Strasse1;RE_Strasse2;RE_PLZ;RE_Ort;RE_Land;RE_Tel;RE_Email;Regulierer;RG_Name1;RG_Name2;RG_Strasse1;RG_Strasse2;RG_PLZ;RG_Ort;RG_Land;RG_Tel;RG_Email
+7100429246;00010;1032631;;2.00;ST;;06.03.2026;;37513;;;;;;;;;;37513;;;;;;;;;;37513;;;;;;;;;;37513;;;;;;;;;
+7100429246;00020;1032636;;2.00;ST;;06.03.2026;;37513;;;;;;;;;;37513;;;;;;;;;;37513;;;;;;;;;;37513;;;;;;;;;
+7100429246;00030;200085;;1.00;ST;;06.03.2026;;37513;;;;;;;;;;37513;;;;;;;;;;37513;;;;;;;;;;37513;;;;;;;;;
+7100429246;00040;186171;;2.00;ST;;06.03.2026;;37513;;;;;;;;;;37513;;;;;;;;;;37513;;;;;;;;;;37513;;;;;;;;;
