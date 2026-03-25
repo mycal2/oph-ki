@@ -54,22 +54,10 @@ function computeDateRange(period: Period): { start: Date; end: Date } {
 }
 
 /**
- * Compute "yesterday" as the end of the current-month revenue window.
- * If today is the 1st, "yesterday" is the last day of the previous month.
- */
-function getYesterday(): Date {
-  const now = new Date();
-  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  // "through yesterday" means the revenue period ends at the start of today
-  return yesterday;
-}
-
-/**
  * GET /api/admin/stats?period=current_month|last_month|current_quarter|last_quarter
  *
  * Returns platform-wide KPIs for the admin dashboard.
- * Activity KPIs are filtered by the selected period.
- * Revenue KPIs are always fixed (current month YTD and last month).
+ * Both activity and revenue KPIs are filtered by the selected period.
  *
  * Platform admin or platform viewer only.
  */
@@ -100,23 +88,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const period = periodResult.data;
     const { start: periodStart, end: periodEnd } = computeDateRange(period);
 
-    // Revenue date ranges
-    const now = new Date();
-    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const currentMonthEnd = getYesterday(); // through yesterday = start of today
-    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 1);
-
-    // Call the RPC function with all date parameters
+    // Call the RPC function — both activity and revenue use the same period
     const { data: rpcResult, error: rpcError } = await adminClient.rpc(
       "get_admin_dashboard_stats",
       {
         p_period_start: periodStart.toISOString(),
         p_period_end: periodEnd.toISOString(),
-        p_current_month_start: currentMonthStart.toISOString(),
-        p_current_month_end: currentMonthEnd.toISOString(),
-        p_last_month_start: lastMonthStart.toISOString(),
-        p_last_month_end: lastMonthEnd.toISOString(),
       }
     );
 
@@ -128,17 +105,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Parse the RPC result (comes back as a JSON object)
+    // Parse the RPC result
     const stats = rpcResult as {
       order_count: number;
       active_tenant_count: number;
       dealer_count: number;
       line_distribution: LineDistribution | null;
-      revenue_current_month: {
-        transaction_turnover: number;
-        monthly_fee_turnover: number;
-      } | null;
-      revenue_last_month: {
+      revenue: {
         transaction_turnover: number;
         monthly_fee_turnover: number;
       } | null;
@@ -153,34 +126,18 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       "11+": 0,
     };
 
-    // Build revenue breakdowns
-    const currentTx = Number(stats.revenue_current_month?.transaction_turnover ?? 0);
-    const currentFee = Number(stats.revenue_current_month?.monthly_fee_turnover ?? 0);
-    const lastTx = Number(stats.revenue_last_month?.transaction_turnover ?? 0);
-    const lastFee = Number(stats.revenue_last_month?.monthly_fee_turnover ?? 0);
-
-    // Compute "as of" date for current month revenue (yesterday's date)
-    // currentMonthEnd = start of today, so subtract 1 day to get yesterday
-    const asOfDate = new Date(currentMonthEnd);
-    asOfDate.setDate(asOfDate.getDate() - 1);
-    // Format as YYYY-MM-DD
-    const asOf = asOfDate.toISOString().split("T")[0];
+    const txTurnover = Number(stats.revenue?.transaction_turnover ?? 0);
+    const feeTurnover = Number(stats.revenue?.monthly_fee_turnover ?? 0);
 
     const response: AdminDashboardStats = {
       orderCount: Number(stats.order_count ?? 0),
       activeTenantCount: Number(stats.active_tenant_count ?? 0),
       dealerCount: Number(stats.dealer_count ?? 0),
       lineDistribution,
-      revenueCurrentMonth: {
-        total: Math.round((currentTx + currentFee) * 100) / 100,
-        transactionTurnover: Math.round(currentTx * 100) / 100,
-        monthlyFeeTurnover: Math.round(currentFee * 100) / 100,
-        asOf,
-      },
-      revenueLastMonth: {
-        total: Math.round((lastTx + lastFee) * 100) / 100,
-        transactionTurnover: Math.round(lastTx * 100) / 100,
-        monthlyFeeTurnover: Math.round(lastFee * 100) / 100,
+      revenue: {
+        total: Math.round((txTurnover + feeTurnover) * 100) / 100,
+        transactionTurnover: Math.round(txTurnover * 100) / 100,
+        monthlyFeeTurnover: Math.round(feeTurnover * 100) / 100,
       },
     };
 

@@ -23,13 +23,12 @@ const emptyLineDistribution: LineDistribution = {
   "11+": 0,
 };
 
-/**
- * Formats an ISO date string (YYYY-MM-DD) to German locale (TT.MM.YYYY).
- */
-function formatAsOfDate(isoDate: string): string {
-  const [year, month, day] = isoDate.split("-");
-  return `Stand: ${day}.${month}.${year}`;
-}
+const periodLabels: Record<Period, string> = {
+  current_month: "Aktueller Monat",
+  last_month: "Letzter Monat",
+  current_quarter: "Aktuelles Quartal",
+  last_quarter: "Letztes Quartal",
+};
 
 export default function AdminDashboardPage() {
   const { isPlatformAdminOrViewer, isLoading: isLoadingRole } = useCurrentUserRole();
@@ -122,21 +121,13 @@ export default function AdminDashboardPage() {
         />
       </div>
 
-      {/* Revenue KPI Row */}
+      {/* Revenue KPI */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <AdminRevenueCard
-          label="Umsatz Aktueller Monat"
-          total={stats?.revenueCurrentMonth.total ?? 0}
-          transactionTurnover={stats?.revenueCurrentMonth.transactionTurnover ?? 0}
-          monthlyFeeTurnover={stats?.revenueCurrentMonth.monthlyFeeTurnover ?? 0}
-          isLoading={isLoading}
-          asOfLabel={stats?.revenueCurrentMonth.asOf ? formatAsOfDate(stats.revenueCurrentMonth.asOf) : undefined}
-        />
-        <AdminRevenueCard
-          label="Umsatz Letzter Monat"
-          total={stats?.revenueLastMonth.total ?? 0}
-          transactionTurnover={stats?.revenueLastMonth.transactionTurnover ?? 0}
-          monthlyFeeTurnover={stats?.revenueLastMonth.monthlyFeeTurnover ?? 0}
+          label={`Umsatz — ${periodLabels[period]}`}
+          total={stats?.revenue.total ?? 0}
+          transactionTurnover={stats?.revenue.transactionTurnover ?? 0}
+          monthlyFeeTurnover={stats?.revenue.monthlyFeeTurnover ?? 0}
           isLoading={isLoading}
         />
       </div>
