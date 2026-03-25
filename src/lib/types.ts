@@ -1069,7 +1069,6 @@ export interface AdminDashboardStats {
   activeTenantCount: number;
   dealerCount: number;
   lineDistribution: LineDistribution;
-  /** Revenue KPIs (always fixed, not period-filtered). */
-  revenueCurrentMonth: RevenueBreakdown & { asOf: string };
-  revenueLastMonth: RevenueBreakdown;
+  /** Revenue KPI (filtered by selected period). */
+  revenue: RevenueBreakdown;
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface AdminRevenueCardProps {
@@ -10,8 +9,6 @@ interface AdminRevenueCardProps {
   transactionTurnover: number;
   monthlyFeeTurnover: number;
   isLoading?: boolean;
-  /** Optional "Stand: TT.MM.YYYY" label for current-month card. */
-  asOfLabel?: string;
 }
 
 /**
@@ -32,18 +29,12 @@ export function AdminRevenueCard({
   transactionTurnover,
   monthlyFeeTurnover,
   isLoading,
-  asOfLabel,
 }: AdminRevenueCardProps) {
   return (
     <Card>
       <CardContent className="pt-6">
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-muted-foreground">{label}</p>
-            <Badge variant="outline" className="text-xs font-normal text-muted-foreground">
-              nicht periodengefiltert
-            </Badge>
-          </div>
+          <p className="text-sm font-medium text-muted-foreground">{label}</p>
 
           {isLoading ? (
             <div className="space-y-2">
@@ -57,9 +48,6 @@ export function AdminRevenueCard({
                 davon Transaktionen: {formatEuro(transactionTurnover)} | Grundgebühren:{" "}
                 {formatEuro(monthlyFeeTurnover)}
               </p>
-              {asOfLabel && (
-                <p className="text-xs text-muted-foreground">{asOfLabel}</p>
-              )}
             </>
           )}
         </div>
