@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { Loader2, Clock, Info, AlertTriangle, Mail } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { Loader2, Clock, Info, AlertTriangle, Mail, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { TagInput } from "@/components/admin/tag-input";
@@ -32,6 +42,28 @@ const STATUS_OPTIONS: { value: TenantStatus; label: string }[] = [
   { value: "inactive", label: "Inaktiv" },
   { value: "trial", label: "Testphase" },
 ];
+
+// OPH-52: Billing model defaults (business constants, not user data)
+type BillingModel = "pay-per-use" | "license-based" | "flat-rate";
+
+const BILLING_MODEL_OPTIONS: { value: BillingModel; label: string }[] = [
+  { value: "pay-per-use", label: "Pay-per-use" },
+  { value: "license-based", label: "License-based" },
+  { value: "flat-rate", label: "Flat-rate" },
+];
+
+const BILLING_DEFAULTS: Record<
+  BillingModel,
+  { setup_fee: number; monthly_fee: number; cost_per_order: number }
+> = {
+  "pay-per-use": { setup_fee: 799.0, monthly_fee: 0.0, cost_per_order: 1.0 },
+  "license-based": {
+    setup_fee: 6999.0,
+    monthly_fee: 290.0,
+    cost_per_order: 0.35,
+  },
+  "flat-rate": { setup_fee: 9999.0, monthly_fee: 390.0, cost_per_order: 0.0 },
+};
 
 interface TenantProfileFormProps {
   tenant: Tenant;
@@ -85,6 +117,27 @@ export function TenantProfileForm({
     }[]
   >([]);
 
+  // OPH-52: Billing state
+  const [billingModel, setBillingModel] = useState<BillingModel | null>(
+    tenant.billing_model ?? null
+  );
+  const [setupFee, setSetupFee] = useState<string>(
+    tenant.setup_fee != null ? String(tenant.setup_fee) : ""
+  );
+  const [monthlyFee, setMonthlyFee] = useState<string>(
+    tenant.monthly_fee != null ? String(tenant.monthly_fee) : ""
+  );
+  const [costPerOrder, setCostPerOrder] = useState<string>(
+    tenant.cost_per_order != null ? String(tenant.cost_per_order) : ""
+  );
+  // Track whether the user manually edited price fields (to trigger confirmation on model switch)
+  const billingPricesManuallyEdited = useRef(false);
+  // Pending billing model change (for confirmation dialog)
+  const [pendingBillingModel, setPendingBillingModel] = useState<
+    BillingModel | null
+  >(null);
+  const [showBillingConfirm, setShowBillingConfirm] = useState(false);
+
   // Re-populate when tenant changes
   useEffect(() => {
     setName(tenant.name);
@@ -98,6 +151,14 @@ export function TenantProfileForm({
     setEmailResultsConfidence(tenant.email_results_confidence_enabled);
     setEmailPostprocess(tenant.email_postprocess_enabled);
     setErpConfigId(tenant.erp_config_id ?? null);
+    // OPH-52: Reset billing state
+    setBillingModel(tenant.billing_model ?? null);
+    setSetupFee(tenant.setup_fee != null ? String(tenant.setup_fee) : "");
+    setMonthlyFee(tenant.monthly_fee != null ? String(tenant.monthly_fee) : "");
+    setCostPerOrder(
+      tenant.cost_per_order != null ? String(tenant.cost_per_order) : ""
+    );
+    billingPricesManuallyEdited.current = false;
   }, [tenant]);
 
   // Fetch ERP configs
@@ -111,6 +172,13 @@ export function TenantProfileForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // OPH-52: Parse billing fee strings to numbers (empty = null)
+    const parseFee = (v: string): number | null => {
+      if (v.trim() === "") return null;
+      const n = parseFloat(v);
+      return isNaN(n) ? null : n;
+    };
+
     const data: UpdateTenantInput = {
       name,
       contact_email: contactEmail,
@@ -123,6 +191,10 @@ export function TenantProfileForm({
       email_results_confidence_enabled: emailResultsConfidence,
       email_postprocess_enabled: emailPostprocess,
       erp_config_id: erpConfigId,
+      billing_model: billingModel,
+      setup_fee: parseFee(setupFee),
+      monthly_fee: parseFee(monthlyFee),
+      cost_per_order: parseFee(costPerOrder),
     };
     await onSave(data);
   };
@@ -158,6 +230,47 @@ export function TenantProfileForm({
       return !!result;
     },
     [onSave]
+  );
+
+  // OPH-52: Apply billing model defaults to the price fields
+  const applyBillingDefaults = useCallback((model: BillingModel | null) => {
+    setBillingModel(model);
+    if (model) {
+      const defaults = BILLING_DEFAULTS[model];
+      setSetupFee(String(defaults.setup_fee));
+      setMonthlyFee(String(defaults.monthly_fee));
+      setCostPerOrder(String(defaults.cost_per_order));
+    } else {
+      setSetupFee("");
+      setMonthlyFee("");
+      setCostPerOrder("");
+    }
+    billingPricesManuallyEdited.current = false;
+  }, []);
+
+  // OPH-52: Handle billing model dropdown change
+  const handleBillingModelChange = useCallback(
+    (value: string) => {
+      const newModel =
+        value === "none" ? null : (value as BillingModel);
+      // If prices were manually edited, show confirmation before overwriting
+      if (billingPricesManuallyEdited.current && newModel !== billingModel) {
+        setPendingBillingModel(newModel);
+        setShowBillingConfirm(true);
+      } else {
+        applyBillingDefaults(newModel);
+      }
+    },
+    [billingModel, applyBillingDefaults]
+  );
+
+  // OPH-52: Mark prices as manually edited when user changes a fee input
+  const handleFeeChange = useCallback(
+    (setter: (v: string) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
+      setter(e.target.value);
+      billingPricesManuallyEdited.current = true;
+    },
+    []
   );
 
   return (
@@ -491,8 +604,119 @@ export function TenantProfileForm({
               />
             </div>
           </div>
+
+          {/* OPH-52: Billing section */}
+          <div className="rounded-lg border p-4 space-y-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Receipt className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Abrechnung</span>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="billing-model">Abrechnungsmodell</Label>
+              <Select
+                value={billingModel ?? "none"}
+                onValueChange={handleBillingModelChange}
+              >
+                <SelectTrigger id="billing-model">
+                  <SelectValue placeholder="Nicht gesetzt" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nicht gesetzt</SelectItem>
+                  {BILLING_MODEL_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="setup-fee">Setup-Gebuhr (EUR)</Label>
+              <Input
+                id="setup-fee"
+                type="number"
+                min="0"
+                step="0.01"
+                value={setupFee}
+                onChange={handleFeeChange(setSetupFee)}
+                placeholder="0.00"
+                disabled={!billingModel}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="monthly-fee">Monatliche Gebuhr (EUR)</Label>
+              <Input
+                id="monthly-fee"
+                type="number"
+                min="0"
+                step="0.01"
+                value={monthlyFee}
+                onChange={handleFeeChange(setMonthlyFee)}
+                placeholder="0.00"
+                disabled={!billingModel}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="cost-per-order">
+                Kosten pro Bestellung (EUR)
+              </Label>
+              <Input
+                id="cost-per-order"
+                type="number"
+                min="0"
+                step="0.01"
+                value={costPerOrder}
+                onChange={handleFeeChange(setCostPerOrder)}
+                placeholder="0.00"
+                disabled={!billingModel}
+              />
+            </div>
+
+            {!billingModel && (
+              <p className="text-xs text-muted-foreground">
+                Wahlen Sie ein Abrechnungsmodell, um die Preise zu konfigurieren.
+              </p>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* OPH-52: Confirmation dialog for billing model switch */}
+      <AlertDialog open={showBillingConfirm} onOpenChange={setShowBillingConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Abrechnungsmodell wechseln?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Preise werden auf Standardwerte zuruckgesetzt. Fortfahren?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setPendingBillingModel(null);
+                setShowBillingConfirm(false);
+              }}
+            >
+              Abbrechen
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                applyBillingDefaults(pendingBillingModel);
+                setPendingBillingModel(null);
+                setShowBillingConfirm(false);
+              }}
+            >
+              Fortfahren
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Save button */}
       <div className="flex justify-end">

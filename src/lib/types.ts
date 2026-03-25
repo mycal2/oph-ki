@@ -34,6 +34,14 @@ export interface Tenant {
   erp_config_id: string | null;
   /** OPH-51: Public URL to tenant company logo in Supabase Storage. */
   logo_url: string | null;
+  /** OPH-52: Billing model type. */
+  billing_model: "pay-per-use" | "license-based" | "flat-rate" | null;
+  /** OPH-52: One-time setup fee in EUR. */
+  setup_fee: number | null;
+  /** OPH-52: Recurring monthly fee in EUR. */
+  monthly_fee: number | null;
+  /** OPH-52: Cost per processed order in EUR. */
+  cost_per_order: number | null;
 }
 
 export interface UserProfile {
@@ -476,6 +484,14 @@ export interface TenantAdminListItem {
   dealer_count: number;
   /** OPH-51: Public URL to tenant company logo. */
   logo_url: string | null;
+  /** OPH-52: Billing model type. */
+  billing_model: "pay-per-use" | "license-based" | "flat-rate" | null;
+  /** OPH-52: One-time setup fee in EUR. */
+  setup_fee: number | null;
+  /** OPH-52: Recurring monthly fee in EUR. */
+  monthly_fee: number | null;
+  /** OPH-52: Cost per processed order in EUR. */
+  cost_per_order: number | null;
 }
 
 /** User belonging to a tenant, shown in the admin user tab. */
@@ -977,4 +993,83 @@ export interface AutoMappingResult {
   target_column: string;
   canonical_field: string | null;
   confidence: number;
+}
+
+/**
+ * OPH-53: Platform Admin KPI Dashboard types.
+ */
+
+/** Line distribution histogram buckets. */
+export interface LineDistribution {
+  "1": number;
+  "2": number;
+  "3-5": number;
+  "6-10": number;
+  "11+": number;
+}
+
+/** Revenue breakdown for a single period. */
+export interface RevenueBreakdown {
+  total: number;
+  transactionTurnover: number;
+  monthlyFeeTurnover: number;
+}
+
+// ---------------------------------------------------------------------------
+// OPH-54: Billing Report types
+// ---------------------------------------------------------------------------
+
+/** Row in the multi-tenant billing report (one row per tenant). */
+export interface BillingReportMultiTenantRow {
+  tenantId: string;
+  tenantName: string;
+  orderCount: number;
+  lineItemCount: number;
+  /** Only present when includePrices is true and tenant has a billing model. */
+  costPerOrder: number | null;
+  transactionTotal: number | null;
+  monthlyFee: number | null;
+  billingModel: string | null;
+}
+
+/** Row in the single-tenant daily billing report (one row per day). */
+export interface BillingReportSingleTenantRow {
+  date: string; // YYYY-MM-DD
+  orderCount: number;
+  lineItemCount: number;
+  transactionTotal: number | null;
+}
+
+/** Totals summary for the billing report. */
+export interface BillingReportTotals {
+  orderCount: number;
+  lineItemCount: number;
+  transactionTotal: number | null;
+  monthlyFeeTotal: number | null;
+  /** Only present in single-tenant mode totals. */
+  costPerOrder?: number | null;
+}
+
+/** Full response from POST /api/admin/reports/billing. */
+export interface BillingReportResponse {
+  mode: "multi-tenant" | "single-tenant";
+  from: string;
+  to: string;
+  monthCount: number;
+  rows: BillingReportMultiTenantRow[] | BillingReportSingleTenantRow[];
+  totals: BillingReportTotals;
+  /** Soft warning when date range exceeds 12 months. */
+  warning?: string;
+}
+
+/** Full response from GET /api/admin/stats. */
+export interface AdminDashboardStats {
+  /** Activity KPIs (filtered by selected period). */
+  orderCount: number;
+  activeTenantCount: number;
+  dealerCount: number;
+  lineDistribution: LineDistribution;
+  /** Revenue KPIs (always fixed, not period-filtered). */
+  revenueCurrentMonth: RevenueBreakdown & { asOf: string };
+  revenueLastMonth: RevenueBreakdown;
 }
