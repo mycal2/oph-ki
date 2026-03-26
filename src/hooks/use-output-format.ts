@@ -30,8 +30,9 @@ interface UseOutputFormatReturn {
 /**
  * Hook for managing output format samples.
  * OPH-29: Uses configId (ERP config) instead of tenantId.
+ * OPH-59: Accepts optional slot parameter for split export templates.
  */
-export function useOutputFormat(configId: string): UseOutputFormatReturn {
+export function useOutputFormat(configId: string, slot: "lines" | "header" = "lines"): UseOutputFormatReturn {
   const [format, setFormat] = useState<TenantOutputFormat | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +45,7 @@ export function useOutputFormat(configId: string): UseOutputFormatReturn {
     setError(null);
 
     try {
-      const res = await fetch(`/api/admin/erp-configs/${configId}/output-format`);
+      const res = await fetch(`/api/admin/erp-configs/${configId}/output-format?slot=${slot}`);
 
       if (res.status === 404) {
         setFormat(null);
@@ -66,7 +67,7 @@ export function useOutputFormat(configId: string): UseOutputFormatReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [configId]);
+  }, [configId, slot]);
 
   useEffect(() => {
     fetchFormat();
@@ -80,6 +81,7 @@ export function useOutputFormat(configId: string): UseOutputFormatReturn {
       try {
         const formData = new FormData();
         formData.append("file", file);
+        formData.append("slot", slot);
 
         const res = await fetch(
           `/api/admin/erp-configs/${configId}/output-format/parse`,
@@ -103,7 +105,7 @@ export function useOutputFormat(configId: string): UseOutputFormatReturn {
         setIsMutating(false);
       }
     },
-    [configId]
+    [configId, slot]
   );
 
   const saveFormat = useCallback(
@@ -114,6 +116,7 @@ export function useOutputFormat(configId: string): UseOutputFormatReturn {
       try {
         const formData = new FormData();
         formData.append("file", file);
+        formData.append("slot", slot);
 
         const res = await fetch(`/api/admin/erp-configs/${configId}/output-format`, {
           method: "POST",
@@ -135,7 +138,7 @@ export function useOutputFormat(configId: string): UseOutputFormatReturn {
         setIsMutating(false);
       }
     },
-    [configId, fetchFormat]
+    [configId, slot, fetchFormat]
   );
 
   const deleteFormat = useCallback(async (): Promise<boolean> => {
@@ -143,7 +146,7 @@ export function useOutputFormat(configId: string): UseOutputFormatReturn {
     setMutationError(null);
 
     try {
-      const res = await fetch(`/api/admin/erp-configs/${configId}/output-format`, {
+      const res = await fetch(`/api/admin/erp-configs/${configId}/output-format?slot=${slot}`, {
         method: "DELETE",
       });
       const json = (await res.json()) as ApiResponse;
@@ -161,7 +164,7 @@ export function useOutputFormat(configId: string): UseOutputFormatReturn {
     } finally {
       setIsMutating(false);
     }
-  }, [configId]);
+  }, [configId, slot]);
 
   /** OPH-32: Save field mappings via PUT. */
   const saveFieldMappings = useCallback(
@@ -173,7 +176,7 @@ export function useOutputFormat(configId: string): UseOutputFormatReturn {
         const res = await fetch(`/api/admin/erp-configs/${configId}/output-format`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ field_mappings: mappings }),
+          body: JSON.stringify({ field_mappings: mappings, slot }),
         });
         const json = (await res.json()) as ApiResponse<TenantOutputFormat>;
 
@@ -194,7 +197,7 @@ export function useOutputFormat(configId: string): UseOutputFormatReturn {
         setIsMutating(false);
       }
     },
-    [configId]
+    [configId, slot]
   );
 
   const clearMutationError = useCallback(() => {

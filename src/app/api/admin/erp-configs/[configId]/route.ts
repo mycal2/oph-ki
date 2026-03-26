@@ -122,6 +122,12 @@ export async function GET(
         decimal_separator: (config.decimal_separator as ErpConfigAdmin["decimal_separator"]) ?? ".",
         fallback_mode: (config.fallback_mode as ErpConfigAdmin["fallback_mode"]) ?? "block",
         xml_template: (config.xml_template as string) ?? null,
+        header_column_mappings: config.header_column_mappings
+          ? ((config.header_column_mappings as ErpConfigAdmin["column_mappings"]).map(
+              (m) => ({ ...m, transformations: m.transformations ?? [], required: m.required ?? false })
+            ))
+          : null,
+        empty_value_placeholder: (config.empty_value_placeholder as string) ?? "",
         created_at: config.created_at as string,
         updated_at: config.updated_at as string,
       },
@@ -247,6 +253,8 @@ export async function PUT(
         decimal_separator: data.decimal_separator,
         fallback_mode: data.fallback_mode,
         xml_template: data.xml_template,
+        header_column_mappings: data.header_column_mappings ?? null,
+        empty_value_placeholder: data.empty_value_placeholder ?? "",
         updated_at: new Date().toISOString(),
       })
       .eq("id", configId);
@@ -279,6 +287,8 @@ export async function PUT(
         quote_char: data.quote_char, encoding: data.encoding,
         line_ending: data.line_ending, decimal_separator: data.decimal_separator,
         fallback_mode: data.fallback_mode, xml_template: data.xml_template,
+        header_column_mappings: data.header_column_mappings ?? null,
+        empty_value_placeholder: data.empty_value_placeholder ?? "",
       },
       comment: data.comment ?? null,
       created_by: user.id,

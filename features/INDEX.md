@@ -68,7 +68,10 @@
 | OPH-54 | Platform Admin Billing Report | In Review | [OPH-54-platform-billing-report.md](OPH-54-platform-billing-report.md) | 2026-03-24 |
 | OPH-55 | Sidebar Navigation Redesign | In Progress | [OPH-55-sidebar-navigation.md](OPH-55-sidebar-navigation.md) | 2026-03-24 |
 | OPH-56 | Collapsible Sub-Groups in Platform Sidebar | In Progress | [OPH-56-sidebar-platform-collapsible-groups.md](OPH-56-sidebar-platform-collapsible-groups.md) | 2026-03-25 |
+| OPH-57 | Tenant Count per Dealer in Händler-Verwaltung | In Review | [OPH-57-dealer-tenant-count.md](OPH-57-dealer-tenant-count.md) | 2026-03-25 |
+| OPH-58 | Split Multi-File ERP Export (Header + Lines CSV) | In Progress | [OPH-58-split-erp-export.md](OPH-58-split-erp-export.md) | 2026-03-25 |
+| OPH-59 | Split CSV Output Format Sample Upload | In Progress | [OPH-59-split-csv-output-format-sample.md](OPH-59-split-csv-output-format-sample.md) | 2026-03-25 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-57
+## Next Available ID: OPH-60

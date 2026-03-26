@@ -81,6 +81,8 @@ function getDefaults(): Omit<ErpConfigAdmin, "id" | "name" | "description" | "cr
     decimal_separator: ".",
     fallback_mode: "block",
     xml_template: null,
+    header_column_mappings: null,
+    empty_value_placeholder: "",
   };
 }
 
@@ -116,6 +118,12 @@ export function ErpConfigEditor({
     config?.fallback_mode ?? defaults.fallback_mode
   );
   const [xmlTemplate, setXmlTemplate] = useState<string>(config?.xml_template ?? "");
+  const [headerColumnMappings, setHeaderColumnMappings] = useState<ErpColumnMappingExtended[]>(
+    config?.header_column_mappings ?? []
+  );
+  const [emptyValuePlaceholder, setEmptyValuePlaceholder] = useState(
+    config?.empty_value_placeholder ?? ""
+  );
   const [comment, setComment] = useState("");
   const [isDirty, setIsDirty] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -126,6 +134,9 @@ export function ErpConfigEditor({
   const [showTemplateSuggestion, setShowTemplateSuggestion] = useState(false);
   const savedOutputFormatRef = useRef<TenantOutputFormat | null>(null);
   const isInitialFormatLoadRef = useRef(true);
+
+  // OPH-59: Header output format for split_csv
+  const [savedHeaderOutputFormat, setSavedHeaderOutputFormat] = useState<TenantOutputFormat | null>(null);
 
   // OPH-32: Field mapper saving state
   const [isFieldMapperSaving, setIsFieldMapperSaving] = useState(false);
@@ -198,6 +209,11 @@ export function ErpConfigEditor({
       setShowTemplateSuggestion(false);
     }
   }, [configName, format, markDirty]);
+
+  // OPH-59: Handler for header slot output format changes
+  const handleHeaderOutputFormatChange = useCallback((fmt: TenantOutputFormat | null) => {
+    setSavedHeaderOutputFormat(fmt);
+  }, []);
 
   const handleAcceptTemplateSuggestion = useCallback((template: string) => {
     setXmlTemplate(template);
@@ -286,9 +302,11 @@ export function ErpConfigEditor({
       decimal_separator: decimalSeparator,
       fallback_mode: fallbackMode,
       xml_template: format === "xml" ? xmlTemplate || null : null,
+      header_column_mappings: format === "split_csv" ? headerColumnMappings : null,
+      empty_value_placeholder: emptyValuePlaceholder,
       comment: comment.trim() || undefined,
     };
-  }, [configName, configDescription, format, columnMappings, separator, quoteChar, encoding, lineEnding, decimalSeparator, fallbackMode, xmlTemplate, comment]);
+  }, [configName, configDescription, format, columnMappings, separator, quoteChar, encoding, lineEnding, decimalSeparator, fallbackMode, xmlTemplate, headerColumnMappings, emptyValuePlaceholder, comment]);
 
   const handleSave = useCallback(async () => {
     setSuccessMessage(null);
@@ -328,6 +346,8 @@ export function ErpConfigEditor({
       setDecimalSeparator(config.decimal_separator);
       setFallbackMode(config.fallback_mode);
       setXmlTemplate(config.xml_template ?? "");
+      setHeaderColumnMappings(config.header_column_mappings ?? []);
+      setEmptyValuePlaceholder(config.empty_value_placeholder ?? "");
       setIsDirty(false);
     }
     // We intentionally depend on configId + configUpdatedAt to re-sync
@@ -383,6 +403,7 @@ export function ErpConfigEditor({
           <TabsTrigger value="csv">CSV</TabsTrigger>
           <TabsTrigger value="xml">XML</TabsTrigger>
           <TabsTrigger value="json">JSON</TabsTrigger>
+          <TabsTrigger value="split_csv">Split CSV</TabsTrigger>
         </TabsList>
 
         {/* Technical Settings - shown for all formats */}
@@ -434,6 +455,94 @@ export function ErpConfigEditor({
               </p>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* OPH-58: Split CSV — Auftragskopf + Positionen */}
+        <TabsContent value="split_csv" className="mt-6 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Split CSV Export</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Erzeugt zwei CSV-Dateien in einem ZIP-Archiv: <strong>Auftragskopf</strong> (eine
+                Zeile mit Bestelldaten) und <strong>Positionen</strong> (eine Zeile pro Artikel).
+                Nicht zugeordnete Spalten erhalten den konfigurierten Platzhalter-Wert.
+              </p>
+              <div className="mt-4 space-y-1.5">
+                <Label className="text-sm">Platzhalter für leere Spalten</Label>
+                <Input
+                  value={emptyValuePlaceholder}
+                  onChange={(e) => { setEmptyValuePlaceholder(e.target.value); markDirty(); }}
+                  placeholder='z.B. "@" oder leer lassen'
+                  className="w-40"
+                  maxLength={10}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Wird für alle nicht zugeordneten Spalten eingesetzt (z.B. &quot;@&quot; für mesonic/WinLine).
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Sub-tabs for header vs. lines */}
+          <Tabs defaultValue="header">
+            <TabsList>
+              <TabsTrigger value="header">Auftragskopf</TabsTrigger>
+              <TabsTrigger value="lines">Positionen</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="header" className="mt-4">
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Spalten für die Auftragskopf-Datei (eine Zeile pro Bestellung). Verwenden Sie
+                  Felder mit <code>order.</code>-Präfix für Bestelldaten (z.B. <code>order.order_number</code>,{" "}
+                  <code>order.sender.customer_number</code>).
+                </p>
+
+                {/* OPH-59: Output format sample upload for Auftragskopf */}
+                <Collapsible defaultOpen={!savedHeaderOutputFormat}>
+                  <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium hover:underline">
+                    <ChevronRight className="h-4 w-4 transition-transform [[data-state=open]>&]:rotate-90" />
+                    Beispieldatei hochladen (Auftragskopf)
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-2">
+                    <OutputFormatTab configId={config.id} slot="header" onFormatChange={handleHeaderOutputFormatChange} />
+                  </CollapsibleContent>
+                </Collapsible>
+
+                <CsvColumnBuilder
+                  columns={headerColumnMappings}
+                  onChange={(cols) => { setHeaderColumnMappings(cols); markDirty(); }}
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="lines" className="mt-4">
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Spalten für die Positionen-Datei (eine Zeile pro Artikel). Verwenden Sie Felder
+                  wie <code>article_number</code>, <code>quantity</code>, <code>position</code> etc.
+                </p>
+
+                {/* OPH-59: Output format sample upload for Positionen */}
+                <Collapsible defaultOpen={!savedOutputFormat}>
+                  <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium hover:underline">
+                    <ChevronRight className="h-4 w-4 transition-transform [[data-state=open]>&]:rotate-90" />
+                    Beispieldatei hochladen (Positionen)
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-2">
+                    <OutputFormatTab configId={config.id} slot="lines" onFormatChange={handleOutputFormatChange} />
+                  </CollapsibleContent>
+                </Collapsible>
+
+                <CsvColumnBuilder
+                  columns={columnMappings}
+                  onChange={(cols) => { setColumnMappings(cols); markDirty(); }}
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
         </TabsContent>
       </Tabs>
 
@@ -704,7 +813,7 @@ function TechnicalSettingsPanel({
               </div>
 
               {/* CSV-specific: separator */}
-              {format === "csv" && (
+              {(format === "csv" || format === "split_csv") && (
                 <>
                   <div className="space-y-1.5">
                     <Label className="text-sm">CSV-Trennzeichen</Label>

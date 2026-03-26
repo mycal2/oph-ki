@@ -231,8 +231,8 @@ export type ReviewApproveInput = z.infer<typeof reviewApproveSchema>;
  * OPH-6: Export validation schemas.
  */
 
-export const exportFormatSchema = z.enum(["csv", "xml", "json"], {
-  message: "Ungültiges Format. Erlaubt: csv, xml, json",
+export const exportFormatSchema = z.enum(["csv", "xml", "json", "split_csv"], {
+  message: "Ungültiges Format. Erlaubt: csv, xml, json, split_csv",
 });
 
 export type ExportFormatInput = z.infer<typeof exportFormatSchema>;
@@ -630,8 +630,8 @@ export const erpConfigSaveSchema = z.object({
     .max(1000, "Beschreibung darf maximal 1000 Zeichen lang sein.")
     .nullable()
     .default(null),
-  format: z.enum(["csv", "xml", "json"], {
-    message: "Ungültiges Format. Erlaubt: csv, xml, json",
+  format: z.enum(["csv", "xml", "json", "split_csv"], {
+    message: "Ungültiges Format. Erlaubt: csv, xml, json, split_csv",
   }),
   column_mappings: z
     .array(erpColumnMappingExtendedSchema)
@@ -656,6 +656,18 @@ export const erpConfigSaveSchema = z.object({
     .max(50000, "XML-Template darf maximal 50000 Zeichen lang sein.")
     .nullable()
     .default(null),
+  /** OPH-58: Column mappings for the header CSV in split_csv format. */
+  header_column_mappings: z
+    .array(erpColumnMappingExtendedSchema)
+    .max(200, "Maximal 200 Auftragskopf-Spalten erlaubt.")
+    .nullable()
+    .optional(),
+  /** OPH-58: Value for unmapped columns (default "", "@" for split_csv). */
+  empty_value_placeholder: z
+    .string()
+    .max(10, "Platzhalter darf maximal 10 Zeichen lang sein.")
+    .optional()
+    .default(""),
   comment: z
     .string()
     .max(500, "Kommentar darf maximal 500 Zeichen lang sein.")

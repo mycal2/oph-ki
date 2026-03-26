@@ -20,6 +20,12 @@ import { z } from "zod";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** OPH-59: Valid slot values for split_csv output format samples. */
+type OutputFormatSlot = "lines" | "header";
+function parseSlot(raw: string | null): OutputFormatSlot {
+  return raw === "header" ? "header" : "lines";
+}
+
 /**
  * GET /api/admin/erp-configs/[configId]/output-format
  *
@@ -28,11 +34,12 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
  * Platform admin only.
  */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ configId: string }> }
 ): Promise<NextResponse> {
   try {
     const { configId } = await params;
+    const slot = parseSlot(request.nextUrl.searchParams.get("slot"));
     const auth = await requirePlatformAdmin();
     if (isErrorResponse(auth)) return auth;
     const { user, adminClient } = auth;
@@ -51,6 +58,7 @@ export async function GET(
       .from("tenant_output_formats")
       .select("*")
       .eq("erp_config_id", configId)
+      .eq("slot", slot)
       .maybeSingle();
 
     if (error) {
@@ -107,7 +115,7 @@ export async function POST(
     // Verify config exists
     const { data: config, error: configError } = await adminClient
       .from("erp_configs")
-      .select("id, column_mappings")
+      .select("id, column_mappings, header_column_mappings")
       .eq("id", configId)
       .single();
 
@@ -128,6 +136,9 @@ export async function POST(
         { status: 400 }
       );
     }
+
+    // OPH-59: Read slot from form data
+    const slot = parseSlot(formData.get("slot") as string | null);
 
     const file = formData.get("file");
     if (!file || !(file instanceof File)) {
@@ -166,7 +177,7 @@ export async function POST(
     // Upload file to Supabase Storage
     const sanitizedName = file.name.replace(/[/\\]/g, "_").replace(/\.\./g, "_");
     const timestamp = Date.now();
-    const storagePath = `configs/${configId}/${timestamp}-${sanitizedName}`;
+    const storagePath = `configs/${configId}/${slot}-${timestamp}-${sanitizedName}`;
 
     const { error: uploadError } = await adminClient.storage
       .from("tenant-output-formats")
@@ -188,6 +199,7 @@ export async function POST(
       .from("tenant_output_formats")
       .select("id, file_path, version")
       .eq("erp_config_id", configId)
+      .eq("slot", slot)
       .maybeSingle();
 
     let savedFormat: TenantOutputFormat;
@@ -231,6 +243,7 @@ export async function POST(
         .from("tenant_output_formats")
         .insert({
           erp_config_id: configId,
+          slot,
           file_name: file.name,
           file_path: storagePath,
           file_type: fileType,
@@ -244,7 +257,7 @@ export async function POST(
         .single();
 
       if (insertError || !inserted) {
-        console.error("Insert error:", insertError);
+        console.error("Insert error:", insertError?.message, insertError?.details, insertError?.hint, insertError?.code);
         await adminClient.storage.from("tenant-output-formats").remove([storagePath]);
         return NextResponse.json(
           { success: false, error: "Fehler beim Speichern des Output-Formats." },
@@ -256,10 +269,13 @@ export async function POST(
     }
 
     // Recalculate confidence scores for orders of all tenants assigned to this config
+    const effectiveMappings = slot === "header"
+      ? config.header_column_mappings as ErpColumnMappingExtended[] | null
+      : config.column_mappings as ErpColumnMappingExtended[] | null;
     await recalculateConfidenceScoresForConfig(
       adminClient,
       configId,
-      config.column_mappings as ErpColumnMappingExtended[] | null,
+      effectiveMappings,
       parseResult.detected_schema
     );
 
@@ -281,11 +297,12 @@ export async function POST(
  * Platform admin only.
  */
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ configId: string }> }
 ): Promise<NextResponse> {
   try {
     const { configId } = await params;
+    const slot = parseSlot(request.nextUrl.searchParams.get("slot"));
     const auth = await requirePlatformAdmin();
     if (isErrorResponse(auth)) return auth;
     const { user, adminClient } = auth;
@@ -304,6 +321,7 @@ export async function DELETE(
       .from("tenant_output_formats")
       .select("id, file_path")
       .eq("erp_config_id", configId)
+      .eq("slot", slot)
       .maybeSingle();
 
     if (fetchError) {
@@ -383,6 +401,7 @@ const fieldMappingSchema = z.object({
 
 const putBodySchema = z.object({
   field_mappings: z.array(fieldMappingSchema),
+  slot: z.enum(["lines", "header"]).optional().default("lines"),
 });
 
 /**
@@ -434,13 +453,14 @@ export async function PUT(
       );
     }
 
-    const { field_mappings } = parseResult.data;
+    const { field_mappings, slot: putSlot } = parseResult.data;
 
-    // Verify output format exists for this config
+    // Verify output format exists for this config and slot
     const { data: existing, error: fetchError } = await adminClient
       .from("tenant_output_formats")
       .select("id")
       .eq("erp_config_id", configId)
+      .eq("slot", putSlot)
       .maybeSingle();
 
     if (fetchError) {

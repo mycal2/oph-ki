@@ -365,7 +365,7 @@ export interface OrderForReview extends OrderWithDealer {
  * OPH-6: ERP-Export & Download types.
  */
 
-export type ExportFormat = "csv" | "xml" | "json";
+export type ExportFormat = "csv" | "xml" | "json" | "split_csv";
 
 /** Column mapping entry for ERP export configuration. */
 export interface ErpColumnMapping {
@@ -524,6 +524,7 @@ export interface DealerAdminListItem {
   active: boolean;
   order_count: number;
   last_order_at: string | null;
+  tenant_count: number;
   created_at: string;
 }
 
@@ -631,6 +632,10 @@ export interface ErpConfigAdmin {
   decimal_separator: ErpDecimalSeparator;
   fallback_mode: ErpFallbackMode;
   xml_template: string | null;
+  /** OPH-58: Column mappings for the header CSV in split_csv format. */
+  header_column_mappings: ErpColumnMappingExtended[] | null;
+  /** OPH-58: Value used for unmapped columns (default "", "@" for split_csv). */
+  empty_value_placeholder: string;
   created_at: string;
   updated_at: string;
 }
@@ -686,6 +691,10 @@ export interface ErpConfigSavePayload {
   decimal_separator: ErpDecimalSeparator;
   fallback_mode: ErpFallbackMode;
   xml_template: string | null;
+  /** OPH-58: Column mappings for the header CSV in split_csv format. */
+  header_column_mappings?: ErpColumnMappingExtended[] | null;
+  /** OPH-58: Value used for unmapped columns (default "", "@" for split_csv). */
+  empty_value_placeholder?: string;
   comment?: string;
 }
 
@@ -851,6 +860,8 @@ export interface TenantOutputFormat {
   tenant_id: string | null;
   /** OPH-29: Output format linked to a shared ERP config. */
   erp_config_id: string | null;
+  /** OPH-59: Which template slot this sample belongs to. */
+  slot: "lines" | "header";
   file_name: string;
   file_path: string;
   file_type: OutputFormatFileType;

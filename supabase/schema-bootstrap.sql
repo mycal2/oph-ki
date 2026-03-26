@@ -89,12 +89,12 @@ END;
 $$;
 
 CREATE OR REPLACE FUNCTION public.get_dealer_order_stats()
-RETURNS TABLE(dealer_id UUID, order_count BIGINT, last_order_at TIMESTAMPTZ)
+RETURNS TABLE(dealer_id UUID, order_count BIGINT, last_order_at TIMESTAMPTZ, tenant_count BIGINT)
 LANGUAGE sql
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT o.dealer_id, COUNT(*)::BIGINT AS order_count, MAX(o.created_at) AS last_order_at
+  SELECT o.dealer_id, COUNT(*)::BIGINT AS order_count, MAX(o.created_at) AS last_order_at, COUNT(DISTINCT o.tenant_id)::BIGINT AS tenant_count
   FROM orders o
   WHERE o.dealer_id IS NOT NULL
   GROUP BY o.dealer_id;

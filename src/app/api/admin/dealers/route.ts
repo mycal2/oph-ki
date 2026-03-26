@@ -32,34 +32,45 @@ export async function GET(): Promise<NextResponse> {
     }
 
     // Get order stats per dealer. Try RPC first (efficient), fall back to limited query.
-    const statsByDealer = new Map<string, { count: number; lastAt: string | null }>();
+    const statsByDealer = new Map<string, { count: number; lastAt: string | null; tenantCount: number }>();
 
     const { data: rpcStats, error: rpcError } = await adminClient.rpc("get_dealer_order_stats");
 
     if (!rpcError && Array.isArray(rpcStats)) {
-      for (const row of rpcStats as { dealer_id: string; order_count: number; last_order_at: string | null }[]) {
+      for (const row of rpcStats as { dealer_id: string; order_count: number; last_order_at: string | null; tenant_count: number }[]) {
         statsByDealer.set(row.dealer_id, {
           count: row.order_count,
           lastAt: row.last_order_at,
+          tenantCount: row.tenant_count ?? 0,
         });
       }
     } else {
       // Fallback: count per dealer_id with limited rows
       const { data: fallbackStats } = await adminClient
         .from("orders")
-        .select("dealer_id")
+        .select("dealer_id, tenant_id")
         .not("dealer_id", "is", null)
         .limit(10000);
 
       if (fallbackStats) {
+        const tenantSets = new Map<string, Set<string>>();
         for (const row of fallbackStats) {
           const did = row.dealer_id as string;
+          const tid = row.tenant_id as string;
           const existing = statsByDealer.get(did);
           if (!existing) {
-            statsByDealer.set(did, { count: 1, lastAt: null });
+            statsByDealer.set(did, { count: 1, lastAt: null, tenantCount: 0 });
+            tenantSets.set(did, new Set([tid]));
           } else {
             existing.count++;
+            const ts = tenantSets.get(did)!;
+            ts.add(tid);
           }
+        }
+        // Apply distinct tenant counts
+        for (const [did, ts] of tenantSets) {
+          const stats = statsByDealer.get(did);
+          if (stats) stats.tenantCount = ts.size;
         }
       }
     }
@@ -76,6 +87,7 @@ export async function GET(): Promise<NextResponse> {
         active: d.active as boolean,
         order_count: stats?.count ?? 0,
         last_order_at: stats?.lastAt ?? null,
+        tenant_count: stats?.tenantCount ?? 0,
         created_at: d.created_at as string,
       };
     });

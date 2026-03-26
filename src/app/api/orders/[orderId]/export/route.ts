@@ -12,6 +12,7 @@ import {
   generateExportContent,
   validateRequiredFields,
 } from "@/lib/erp-transformations";
+import { generateSplitCsvZip } from "@/lib/split-csv-export";
 import { sendPlatformErrorNotification } from "@/lib/postmark";
 import type {
   AppMetadata,
@@ -64,7 +65,7 @@ export async function GET(
     const formatResult = exportFormatSchema.safeParse(rawFormat);
     if (!formatResult.success) {
       return NextResponse.json(
-        { success: false, error: "Ungültiges Format. Erlaubt: csv, xml, json" },
+        { success: false, error: "Ungültiges Format. Erlaubt: csv, xml, json, split_csv" },
         { status: 400 }
       );
     }
@@ -226,6 +227,7 @@ export async function GET(
     const lineEnding = (erpConfig?.line_ending as string) ?? "CRLF";
     const decimalSeparator = (erpConfig?.decimal_separator as string) ?? ".";
     const xmlTemplate = (erpConfig?.xml_template as string) ?? null;
+    const emptyValuePlaceholder = (erpConfig?.empty_value_placeholder as string) ?? "";
 
     // OPH-9 AC-8: Validate required fields before export
     const missingFields = validateRequiredFields(orderData.order.line_items, columnMappings, orderData);
@@ -239,6 +241,63 @@ export async function GET(
         },
         { status: 400 }
       );
+    }
+
+    // OPH-58: Split CSV generates a ZIP with two CSV files
+    if (effectiveFormat === "split_csv") {
+      const headerMappings = (erpConfig?.header_column_mappings as ErpColumnMappingExtended[]) ?? [];
+
+      if (headerMappings.length === 0) {
+        return NextResponse.json(
+          { success: false, error: "Keine Auftragskopf-Spalten konfiguriert für Split-CSV-Export." },
+          { status: 400 }
+        );
+      }
+
+      // Validate required fields in header mappings too
+      const headerMissing = validateRequiredFields(orderData.order.line_items, headerMappings, orderData);
+      if (headerMissing.length > 0) {
+        const fieldList = headerMissing.slice(0, 10).join(", ");
+        return NextResponse.json(
+          { success: false, error: `Pflichtfelder im Auftragskopf fehlen: ${fieldList}.` },
+          { status: 400 }
+        );
+      }
+
+      const { buffer, filename: zipFilename } = await generateSplitCsvZip(
+        orderData,
+        headerMappings,
+        columnMappings,
+        {
+          separator,
+          quoteChar,
+          lineEnding,
+          decimalSeparator,
+          emptyValuePlaceholder,
+        }
+      );
+
+      // Update order status + log (same as single-file path)
+      const now = new Date().toISOString();
+      await adminClient.from("orders").update({ status: "exported", last_exported_at: now }).eq("id", orderId);
+      await adminClient.from("export_logs").insert({
+        order_id: orderId, tenant_id: effectiveTenantId, user_id: user.id,
+        format: "split_csv", filename: zipFilename, exported_at: now,
+      });
+      if (order.status !== "exported") {
+        await adminClient.from("order_edits").insert({
+          order_id: orderId, tenant_id: effectiveTenantId, user_id: user.id,
+          field_path: "status", old_value: JSON.stringify(order.status), new_value: JSON.stringify("exported"),
+        });
+      }
+
+      const headers = new Headers();
+      headers.set("Content-Type", "application/zip");
+      headers.set("Content-Disposition", contentDisposition(zipFilename));
+      headers.set("Cache-Control", "no-store");
+      headers.set("X-Content-Type-Options", "nosniff");
+
+      return new NextResponse(new Uint8Array(buffer), { status: 200, headers });
     }
 
     const filename = generateFilename(tenantSlug, orderData.order.order_number, effectiveFormat);

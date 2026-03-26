@@ -372,6 +372,10 @@ export function generateExportContent(
       return { content, contentType: "application/json; charset=utf-8", warnings };
     }
 
+    case "split_csv":
+      // Handled separately in the export route via generateSplitCsvZip
+      throw new Error("split_csv format must be handled via generateSplitCsvZip, not generateExportContent");
+
     default:
       throw new Error(`Unsupported format: ${format}`);
   }
