@@ -76,8 +76,10 @@ Eine mandantenfähige SaaS-Plattform ("Order Intelligence Platform"), die Dental
 | P1 | OPH-55: Sidebar Navigation Redesign | Planned |
 | P1 | OPH-56: Collapsible Sub-Groups in Platform Sidebar | In Progress |
 | P1 | OPH-57: Tenant Count per Dealer in Händler-Verwaltung | Planned |
-| P1 | OPH-58: Split Multi-File ERP Export (Header + Lines CSV) | Planned |
-| P1 | OPH-59: Split CSV Output Format Sample Upload | Planned |
+| P1 | OPH-58: Split Multi-File ERP Export (Header + Lines CSV) | In Progress |
+| P1 | OPH-59: Split CSV Output Format Sample Upload | In Progress |
+| P1 | OPH-60: Fixed Value Column Mapping in ERP Config | In Review |
+| P1 | OPH-61: Configurable Output Filenames for Split CSV Export | Planned |
 
 ## Success Metrics
 - Bearbeitungszeit pro Bestellung: von ~15 Min. manuell auf < 3 Min. mit System

@@ -606,7 +606,8 @@ const erpColumnMappingExtendedSchema = z.object({
   source_field: z
     .string()
     .max(200, "Quellfeld darf maximal 200 Zeichen lang sein.")
-    .trim(),
+    .trim()
+    .default(""),
   target_column_name: z
     .string()
     .min(1, "Ausgabe-Spaltenname ist erforderlich.")
@@ -617,6 +618,12 @@ const erpColumnMappingExtendedSchema = z.object({
     .array(erpTransformationStepSchema)
     .max(10, "Maximal 10 Transformationen pro Spalte.")
     .default([]),
+  /** OPH-60: Fixed constant value. When set, the column always outputs this value. */
+  fixed_value: z
+    .string()
+    .max(500, "Fester Wert darf maximal 500 Zeichen lang sein.")
+    .nullable()
+    .optional(),
 });
 
 export const erpConfigSaveSchema = z.object({
@@ -668,6 +675,29 @@ export const erpConfigSaveSchema = z.object({
     .max(10, "Platzhalter darf maximal 10 Zeichen lang sein.")
     .optional()
     .default(""),
+  /** OPH-61: Output mode for split_csv export. */
+  split_output_mode: z
+    .enum(["zip", "separate"], { message: "Ungültiger Ausgabemodus." })
+    .nullable()
+    .optional(),
+  /** OPH-61: Filename template for the header CSV. */
+  header_filename_template: z
+    .string()
+    .max(200, "Dateiname-Template darf maximal 200 Zeichen lang sein.")
+    .nullable()
+    .optional(),
+  /** OPH-61: Filename template for the lines CSV. */
+  lines_filename_template: z
+    .string()
+    .max(200, "Dateiname-Template darf maximal 200 Zeichen lang sein.")
+    .nullable()
+    .optional(),
+  /** OPH-61: Filename template for the ZIP archive. */
+  zip_filename_template: z
+    .string()
+    .max(200, "Dateiname-Template darf maximal 200 Zeichen lang sein.")
+    .nullable()
+    .optional(),
   comment: z
     .string()
     .max(500, "Kommentar darf maximal 500 Zeichen lang sein.")

@@ -189,26 +189,25 @@ export async function POST(
 
     // 7. If not authorized → quarantine
     if (!isAuthorized) {
-      // Archive the raw email to storage
-      let storagePath: string | null = null;
-      try {
-        const emlBuffer = Buffer.from(rawBody, "utf-8");
-        const sanitizedSubject = (payload.Subject || "no-subject")
-          .replace(/[^a-z0-9-]/gi, "_")
-          .slice(0, 50);
-        const targetPath = `${tenant.id}/quarantine/${Date.now()}_${sanitizedSubject}.json`;
-        const { error: archiveError } = await adminClient.storage
-          .from("order-files")
-          .upload(targetPath, emlBuffer, {
-            contentType: "application/json",
-          });
-        if (archiveError) {
-          console.error("Failed to archive quarantined email:", archiveError.message);
-        } else {
-          storagePath = targetPath;
-        }
-      } catch (err) {
-        console.error("Failed to archive quarantined email:", err);
+      // Archive the raw email to storage — MUST succeed for reprocessing to work
+      const emlBuffer = Buffer.from(rawBody, "utf-8");
+      const sanitizedSubject = (payload.Subject || "no-subject")
+        .replace(/[^a-z0-9-]/gi, "_")
+        .slice(0, 50);
+      const targetPath = `${tenant.id}/quarantine/${Date.now()}_${sanitizedSubject}.json`;
+      const { error: archiveError } = await adminClient.storage
+        .from("order-files")
+        .upload(targetPath, emlBuffer, {
+          contentType: "application/json",
+        });
+
+      if (archiveError) {
+        // Fail loudly so Postmark retries the webhook
+        console.error("Failed to archive quarantined email — returning 500 for retry:", archiveError.message);
+        return NextResponse.json(
+          { success: false, error: "E-Mail-Archivierung fehlgeschlagen." },
+          { status: 500 }
+        );
       }
 
       // Insert into quarantine table
@@ -220,7 +219,7 @@ export async function POST(
           sender_name: senderName || null,
           subject: payload.Subject || null,
           message_id: messageId,
-          storage_path: storagePath,
+          storage_path: targetPath,
           review_status: "pending",
         });
 

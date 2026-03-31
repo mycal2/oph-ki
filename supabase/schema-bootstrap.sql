@@ -125,7 +125,7 @@ REVOKE EXECUTE ON FUNCTION public.custom_access_token_hook FROM authenticated, a
 -- erp_configs (no FK dependencies)
 CREATE TABLE public.erp_configs (
   id           uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  format       text        NOT NULL CHECK (format IN ('csv','xml','json')),
+  format       text        NOT NULL CHECK (format IN ('csv','xml','json','split_csv')),
   column_mappings jsonb    NOT NULL DEFAULT '[]'::jsonb,
   separator    text        NOT NULL DEFAULT ',',
   quote_char   text        NOT NULL DEFAULT '"',
@@ -137,7 +137,13 @@ CREATE TABLE public.erp_configs (
   decimal_separator text   NOT NULL DEFAULT '.' CHECK (decimal_separator IN ('.',',')),
   fallback_mode text       NOT NULL DEFAULT 'block' CHECK (fallback_mode IN ('block','fallback_csv')),
   name         text        NOT NULL,
-  description  text        NULL
+  description  text        NULL,
+  header_column_mappings jsonb DEFAULT NULL,
+  empty_value_placeholder text NOT NULL DEFAULT '',
+  split_output_mode text NULL DEFAULT 'zip' CHECK (split_output_mode IS NULL OR split_output_mode IN ('zip', 'separate')),
+  header_filename_template text NULL,
+  lines_filename_template text NULL,
+  zip_filename_template text NULL
 );
 
 -- tenants (FK → erp_configs)

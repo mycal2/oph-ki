@@ -9,7 +9,7 @@ const SCHEMA_VERSION = "1.0.0";
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 2000;
-const MAX_OUTPUT_TOKENS = 16384;
+const MAX_OUTPUT_TOKENS = 32768;
 
 /** Excel files with more data rows than this are extracted in chunks. */
 const CHUNK_ROW_THRESHOLD = 200;
@@ -376,6 +376,13 @@ export async function extractOrderData(
         messages: [{ role: "user", content: contentBlocks }],
       });
 
+      // Check if response was truncated due to max_tokens
+      if (message.stop_reason === "max_tokens") {
+        throw new Error(
+          `Extraktion abgebrochen: Antwort wurde bei ${MAX_OUTPUT_TOKENS} Tokens abgeschnitten. Die Bestellung hat vermutlich zu viele Positionen für eine einzelne Extraktion.`
+        );
+      }
+
       // Extract text from response
       const responseText = message.content
         .filter((block): block is Anthropic.TextBlock => block.type === "text")
@@ -516,6 +523,13 @@ async function extractSingleChunk(params: {
         system: systemPrompt,
         messages: [{ role: "user", content: contentBlocks }],
       });
+
+      // Check if response was truncated due to max_tokens
+      if (message.stop_reason === "max_tokens") {
+        throw new Error(
+          `Extraktion abgebrochen: Antwort wurde bei ${MAX_OUTPUT_TOKENS} Tokens abgeschnitten (Chunk-Extraktion).`
+        );
+      }
 
       const responseText = message.content
         .filter((block): block is Anthropic.TextBlock => block.type === "text")

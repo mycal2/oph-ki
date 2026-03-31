@@ -7,7 +7,7 @@
  * extracted data (via ERP field mapping).
  */
 
-import { normalizeMapping, getTransformedValue } from "@/lib/erp-transformations";
+import { normalizeMapping, getTransformedValue, isFixedValueMapping } from "@/lib/erp-transformations";
 import type {
   CanonicalOrderData,
   OutputFormatSchemaColumn,
@@ -83,6 +83,12 @@ export function calculateConfidenceScore(
     if (!mapping) {
       // No mapping exists for this output column — missing
       missingColumns.push(col.column_name);
+      continue;
+    }
+
+    // OPH-60: Fixed-value columns are always considered "filled"
+    if (isFixedValueMapping(mapping)) {
+      filledCount++;
       continue;
     }
 

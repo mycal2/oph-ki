@@ -418,6 +418,8 @@ export interface ExportPreviewResponse {
   tenantDefaultFormat?: ExportFormat;
   /** OPH-28: Confidence score for the output format, if configured. */
   confidenceScore?: ConfidenceScoreData;
+  /** OPH-61: Output mode for split_csv ("zip" or "separate"). */
+  splitOutputMode?: "zip" | "separate";
 }
 
 /** Response metadata after an export download. */
@@ -616,6 +618,8 @@ export interface ErpColumnMappingExtended {
   target_column_name: string;
   required: boolean;
   transformations: ErpTransformationStep[];
+  /** OPH-60: Fixed constant value. When set, the column always outputs this value (ignoring source_field). */
+  fixed_value?: string | null;
 }
 
 /** OPH-29: Full ERP config as used in the admin UI. */
@@ -636,6 +640,14 @@ export interface ErpConfigAdmin {
   header_column_mappings: ErpColumnMappingExtended[] | null;
   /** OPH-58: Value used for unmapped columns (default "", "@" for split_csv). */
   empty_value_placeholder: string;
+  /** OPH-61: Output mode for split_csv ("zip" or "separate"). */
+  split_output_mode: "zip" | "separate" | null;
+  /** OPH-61: Filename template for the header CSV. */
+  header_filename_template: string | null;
+  /** OPH-61: Filename template for the lines CSV. */
+  lines_filename_template: string | null;
+  /** OPH-61: Filename template for the ZIP archive. */
+  zip_filename_template: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -695,6 +707,14 @@ export interface ErpConfigSavePayload {
   header_column_mappings?: ErpColumnMappingExtended[] | null;
   /** OPH-58: Value used for unmapped columns (default "", "@" for split_csv). */
   empty_value_placeholder?: string;
+  /** OPH-61: Output mode for split_csv ("zip" or "separate"). */
+  split_output_mode?: "zip" | "separate" | null;
+  /** OPH-61: Filename template for the header CSV. */
+  header_filename_template?: string | null;
+  /** OPH-61: Filename template for the lines CSV. */
+  lines_filename_template?: string | null;
+  /** OPH-61: Filename template for the ZIP archive. */
+  zip_filename_template?: string | null;
   comment?: string;
 }
 

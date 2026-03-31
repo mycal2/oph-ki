@@ -71,7 +71,9 @@
 | OPH-57 | Tenant Count per Dealer in Händler-Verwaltung | In Review | [OPH-57-dealer-tenant-count.md](OPH-57-dealer-tenant-count.md) | 2026-03-25 |
 | OPH-58 | Split Multi-File ERP Export (Header + Lines CSV) | In Progress | [OPH-58-split-erp-export.md](OPH-58-split-erp-export.md) | 2026-03-25 |
 | OPH-59 | Split CSV Output Format Sample Upload | In Progress | [OPH-59-split-csv-output-format-sample.md](OPH-59-split-csv-output-format-sample.md) | 2026-03-25 |
+| OPH-60 | Fixed Value Column Mapping in ERP Config | In Review | [OPH-60-fixed-value-column-mapping.md](OPH-60-fixed-value-column-mapping.md) | 2026-03-30 |
+| OPH-61 | Configurable Output Filenames for Split CSV Export | In Progress | [OPH-61-split-csv-configurable-filenames.md](OPH-61-split-csv-configurable-filenames.md) | 2026-03-30 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-60
+## Next Available ID: OPH-62

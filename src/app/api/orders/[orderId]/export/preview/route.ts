@@ -240,6 +240,11 @@ export async function GET(
       console.error("Error calculating confidence score for preview:", scoreError);
     }
 
+    // OPH-61: Include split output mode for split_csv configs
+    const splitOutputMode = effectiveFormat === "split_csv"
+      ? ((erpConfig?.split_output_mode as string) ?? "zip") as "zip" | "separate"
+      : undefined;
+
     if (effectiveFormat === "csv") {
       const headers = columnMappings.map((m) => m.target_column_name);
       const rows = previewItems.map((item) =>
@@ -276,6 +281,7 @@ export async function GET(
         usingDefaultConfig,
         tenantDefaultFormat,
         confidenceScore,
+        splitOutputMode,
       },
     });
   } catch (error) {

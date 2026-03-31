@@ -12,7 +12,8 @@ import {
   generateExportContent,
   validateRequiredFields,
 } from "@/lib/erp-transformations";
-import { generateSplitCsvZip } from "@/lib/split-csv-export";
+import { generateSplitCsvZip, generateSplitCsvSeparate } from "@/lib/split-csv-export";
+import type { SplitCsvFilenameConfig } from "@/lib/split-csv-export";
 import { sendPlatformErrorNotification } from "@/lib/postmark";
 import type {
   AppMetadata,
@@ -264,17 +265,53 @@ export async function GET(
         );
       }
 
-      const { buffer, filename: zipFilename } = await generateSplitCsvZip(
-        orderData,
-        headerMappings,
-        columnMappings,
-        {
-          separator,
-          quoteChar,
-          lineEnding,
-          decimalSeparator,
-          emptyValuePlaceholder,
+      // OPH-61: Build filename configuration from ERP config
+      const filenameConfig: SplitCsvFilenameConfig = {
+        headerFilenameTemplate: (erpConfig?.header_filename_template as string) ?? null,
+        linesFilenameTemplate: (erpConfig?.lines_filename_template as string) ?? null,
+        zipFilenameTemplate: (erpConfig?.zip_filename_template as string) ?? null,
+      };
+
+      const splitOutputMode = (erpConfig?.split_output_mode as string) ?? "zip";
+      const splitCsvOptions = { separator, quoteChar, lineEnding, decimalSeparator, emptyValuePlaceholder };
+
+      // OPH-61: Handle "separate" mode — return the requested file (header or lines)
+      if (splitOutputMode === "separate") {
+        const fileType = request.nextUrl.searchParams.get("file") ?? "header";
+        const { headerFile, linesFile } = generateSplitCsvSeparate(
+          orderData, headerMappings, columnMappings, splitCsvOptions, filenameConfig
+        );
+
+        const file = fileType === "lines" ? linesFile : headerFile;
+
+        // Update order status + log on first file download (header)
+        if (fileType !== "lines") {
+          const now = new Date().toISOString();
+          await adminClient.from("orders").update({ status: "exported", last_exported_at: now }).eq("id", orderId);
+          await adminClient.from("export_logs").insert({
+            order_id: orderId, tenant_id: effectiveTenantId, user_id: user.id,
+            format: "split_csv", filename: `${headerFile.filename} + ${linesFile.filename}`, exported_at: now,
+          });
+          if (order.status !== "exported") {
+            await adminClient.from("order_edits").insert({
+              order_id: orderId, tenant_id: effectiveTenantId, user_id: user.id,
+              field_path: "status", old_value: JSON.stringify(order.status), new_value: JSON.stringify("exported"),
+            });
+          }
         }
+
+        const headers = new Headers();
+        headers.set("Content-Type", "text/csv; charset=utf-8");
+        headers.set("Content-Disposition", contentDisposition(file.filename));
+        headers.set("Cache-Control", "no-store");
+        headers.set("X-Content-Type-Options", "nosniff");
+
+        return new NextResponse(file.content, { status: 200, headers });
+      }
+
+      // Default: ZIP mode
+      const { buffer, filename: zipFilename } = await generateSplitCsvZip(
+        orderData, headerMappings, columnMappings, splitCsvOptions, filenameConfig
       );
 
       // Update order status + log (same as single-file path)

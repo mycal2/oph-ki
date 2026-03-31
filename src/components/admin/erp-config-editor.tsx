@@ -53,6 +53,7 @@ import { XmlTemplateSuggestion } from "@/components/admin/xml-template-suggestio
 import { FieldMapperPanel } from "@/components/admin/field-mapper-panel";
 import { AutoMappingPanel } from "@/components/admin/auto-mapping-panel";
 import { generateXmlTemplate } from "@/lib/xml-template-generator";
+import { generateCsvColumnsFromMappings } from "@/lib/generate-template-from-mappings";
 
 interface ErpConfigEditorProps {
   detail: ErpConfigDetail;
@@ -83,6 +84,10 @@ function getDefaults(): Omit<ErpConfigAdmin, "id" | "name" | "description" | "cr
     xml_template: null,
     header_column_mappings: null,
     empty_value_placeholder: "",
+    split_output_mode: null,
+    header_filename_template: null,
+    lines_filename_template: null,
+    zip_filename_template: null,
   };
 }
 
@@ -123,6 +128,19 @@ export function ErpConfigEditor({
   );
   const [emptyValuePlaceholder, setEmptyValuePlaceholder] = useState(
     config?.empty_value_placeholder ?? ""
+  );
+  // OPH-61: Split CSV filename configuration
+  const [splitOutputMode, setSplitOutputMode] = useState<"zip" | "separate">(
+    config?.split_output_mode ?? "zip"
+  );
+  const [headerFilenameTemplate, setHeaderFilenameTemplate] = useState(
+    config?.header_filename_template ?? ""
+  );
+  const [linesFilenameTemplate, setLinesFilenameTemplate] = useState(
+    config?.lines_filename_template ?? ""
+  );
+  const [zipFilenameTemplate, setZipFilenameTemplate] = useState(
+    config?.zip_filename_template ?? ""
   );
   const [comment, setComment] = useState("");
   const [isDirty, setIsDirty] = useState(false);
@@ -172,6 +190,11 @@ export function ErpConfigEditor({
       fmt.detected_schema.length > 0 &&
       (!previousFormat || previousFormat.id !== fmt.id || previousFormat.uploaded_at !== fmt.uploaded_at)
     ) {
+      // OPH-59: Don't auto-switch format tabs when inside split_csv — samples are slot-specific
+      if (format === "split_csv") {
+        return;
+      }
+
       // For XML samples: auto-fill the XML template field directly
       if (fmt.file_type === "xml") {
         const result = generateXmlTemplate(
@@ -256,17 +279,73 @@ export function ErpConfigEditor({
     [config.id]
   );
 
-  // OPH-45: Apply auto-mapping results to field mapper
+  // OPH-45: Apply auto-mapping results to field mapper — also generate CSV columns for split_csv
   const handleAutoMappingApply = useCallback(
     async (mappings: FieldMapping[]): Promise<boolean> => {
       const success = await handleSaveFieldMappings(mappings);
       if (success) {
         // Increment key to force FieldMapperPanel to re-mount with new mappings
         setFieldMapperKey((k) => k + 1);
+
+        // For split_csv: also auto-generate CSV columns from the mappings
+        if (format === "split_csv" && savedOutputFormat) {
+          const csvColumns = generateCsvColumnsFromMappings(
+            savedOutputFormat.detected_schema,
+            mappings
+          );
+          setColumnMappings(csvColumns);
+          markDirty();
+        }
       }
       return success;
     },
-    [handleSaveFieldMappings]
+    [handleSaveFieldMappings, format, savedOutputFormat, markDirty]
+  );
+
+  // OPH-59: Save field mappings for header slot via PUT endpoint
+  const handleSaveHeaderFieldMappings = useCallback(
+    async (mappings: FieldMapping[]): Promise<boolean> => {
+      setIsFieldMapperSaving(true);
+      try {
+        const res = await fetch(`/api/admin/erp-configs/${config.id}/output-format`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ field_mappings: mappings, slot: "header" }),
+        });
+        const json = (await res.json()) as ApiResponse<TenantOutputFormat>;
+
+        if (!res.ok || !json.success) {
+          return false;
+        }
+
+        if (json.data) {
+          setSavedHeaderOutputFormat(json.data);
+        }
+        return true;
+      } catch {
+        return false;
+      } finally {
+        setIsFieldMapperSaving(false);
+      }
+    },
+    [config.id]
+  );
+
+  // OPH-59: Apply auto-mapping results for header slot — also generate CSV columns
+  const handleHeaderAutoMappingApply = useCallback(
+    async (mappings: FieldMapping[]): Promise<boolean> => {
+      const success = await handleSaveHeaderFieldMappings(mappings);
+      if (success && savedHeaderOutputFormat) {
+        const csvColumns = generateCsvColumnsFromMappings(
+          savedHeaderOutputFormat.detected_schema,
+          mappings
+        );
+        setHeaderColumnMappings(csvColumns);
+        markDirty();
+      }
+      return success;
+    },
+    [handleSaveHeaderFieldMappings, savedHeaderOutputFormat, markDirty]
   );
 
   // OPH-32: Accept generated template from field mapper
@@ -304,9 +383,13 @@ export function ErpConfigEditor({
       xml_template: format === "xml" ? xmlTemplate || null : null,
       header_column_mappings: format === "split_csv" ? headerColumnMappings : null,
       empty_value_placeholder: emptyValuePlaceholder,
+      split_output_mode: format === "split_csv" ? splitOutputMode : null,
+      header_filename_template: format === "split_csv" ? (headerFilenameTemplate.trim() || null) : null,
+      lines_filename_template: format === "split_csv" ? (linesFilenameTemplate.trim() || null) : null,
+      zip_filename_template: format === "split_csv" ? (zipFilenameTemplate.trim() || null) : null,
       comment: comment.trim() || undefined,
     };
-  }, [configName, configDescription, format, columnMappings, separator, quoteChar, encoding, lineEnding, decimalSeparator, fallbackMode, xmlTemplate, headerColumnMappings, emptyValuePlaceholder, comment]);
+  }, [configName, configDescription, format, columnMappings, separator, quoteChar, encoding, lineEnding, decimalSeparator, fallbackMode, xmlTemplate, headerColumnMappings, emptyValuePlaceholder, splitOutputMode, headerFilenameTemplate, linesFilenameTemplate, zipFilenameTemplate, comment]);
 
   const handleSave = useCallback(async () => {
     setSuccessMessage(null);
@@ -348,6 +431,10 @@ export function ErpConfigEditor({
       setXmlTemplate(config.xml_template ?? "");
       setHeaderColumnMappings(config.header_column_mappings ?? []);
       setEmptyValuePlaceholder(config.empty_value_placeholder ?? "");
+      setSplitOutputMode(config.split_output_mode ?? "zip");
+      setHeaderFilenameTemplate(config.header_filename_template ?? "");
+      setLinesFilenameTemplate(config.lines_filename_template ?? "");
+      setZipFilenameTemplate(config.zip_filename_template ?? "");
       setIsDirty(false);
     }
     // We intentionally depend on configId + configUpdatedAt to re-sync
@@ -463,13 +550,13 @@ export function ErpConfigEditor({
             <CardHeader>
               <CardTitle className="text-base">Split CSV Export</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
               <p className="text-sm text-muted-foreground">
-                Erzeugt zwei CSV-Dateien in einem ZIP-Archiv: <strong>Auftragskopf</strong> (eine
+                Erzeugt zwei CSV-Dateien: <strong>Auftragskopf</strong> (eine
                 Zeile mit Bestelldaten) und <strong>Positionen</strong> (eine Zeile pro Artikel).
                 Nicht zugeordnete Spalten erhalten den konfigurierten Platzhalter-Wert.
               </p>
-              <div className="mt-4 space-y-1.5">
+              <div className="space-y-1.5">
                 <Label className="text-sm">Platzhalter für leere Spalten</Label>
                 <Input
                   value={emptyValuePlaceholder}
@@ -481,6 +568,127 @@ export function ErpConfigEditor({
                 <p className="text-xs text-muted-foreground">
                   Wird für alle nicht zugeordneten Spalten eingesetzt (z.B. &quot;@&quot; für mesonic/WinLine).
                 </p>
+              </div>
+
+              {/* OPH-61: Output mode and filename configuration */}
+              <Separator />
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Ausgabemodus</Label>
+                  <Select
+                    value={splitOutputMode}
+                    onValueChange={(v) => { setSplitOutputMode(v as "zip" | "separate"); markDirty(); }}
+                  >
+                    <SelectTrigger className="w-64">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="zip">ZIP-Archiv (eine Datei)</SelectItem>
+                      <SelectItem value="separate">Zwei CSV-Dateien (separate Downloads)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Dateiname Auftragskopf</Label>
+                    <div className="flex gap-1">
+                      <Input
+                        value={headerFilenameTemplate}
+                        onChange={(e) => { setHeaderFilenameTemplate(e.target.value); markDirty(); }}
+                        placeholder="Auftragskopf_{timestamp}"
+                        maxLength={200}
+                      />
+                      <span className="text-sm text-muted-foreground self-center">.csv</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {["{order_number}", "{timestamp}", "{customer_number}", "{order_date}"].map((v) => (
+                        <button
+                          key={v}
+                          type="button"
+                          className="text-xs px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 text-muted-foreground font-mono"
+                          onClick={() => { setHeaderFilenameTemplate((prev) => prev + v); markDirty(); }}
+                        >
+                          {v}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Vorschau: {(headerFilenameTemplate || "Auftragskopf_{timestamp}")
+                        .replace(/\{order_number\}/g, "56878")
+                        .replace(/\{timestamp\}/g, "202603300815")
+                        .replace(/\{customer_number\}/g, "202124")
+                        .replace(/\{order_date\}/g, "20260330")}.csv
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Dateiname Positionen</Label>
+                    <div className="flex gap-1">
+                      <Input
+                        value={linesFilenameTemplate}
+                        onChange={(e) => { setLinesFilenameTemplate(e.target.value); markDirty(); }}
+                        placeholder="Positionen_{timestamp}"
+                        maxLength={200}
+                      />
+                      <span className="text-sm text-muted-foreground self-center">.csv</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {["{order_number}", "{timestamp}", "{customer_number}", "{order_date}"].map((v) => (
+                        <button
+                          key={v}
+                          type="button"
+                          className="text-xs px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 text-muted-foreground font-mono"
+                          onClick={() => { setLinesFilenameTemplate((prev) => prev + v); markDirty(); }}
+                        >
+                          {v}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Vorschau: {(linesFilenameTemplate || "Positionen_{timestamp}")
+                        .replace(/\{order_number\}/g, "56878")
+                        .replace(/\{timestamp\}/g, "202603300815")
+                        .replace(/\{customer_number\}/g, "202124")
+                        .replace(/\{order_date\}/g, "20260330")}.csv
+                    </p>
+                  </div>
+                </div>
+
+                {splitOutputMode === "zip" && (
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Dateiname ZIP-Archiv</Label>
+                    <div className="flex gap-1">
+                      <Input
+                        value={zipFilenameTemplate}
+                        onChange={(e) => { setZipFilenameTemplate(e.target.value); markDirty(); }}
+                        placeholder="Export_{order_number}_{timestamp}"
+                        className="max-w-md"
+                        maxLength={200}
+                      />
+                      <span className="text-sm text-muted-foreground self-center">.zip</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {["{order_number}", "{timestamp}", "{customer_number}", "{order_date}"].map((v) => (
+                        <button
+                          key={v}
+                          type="button"
+                          className="text-xs px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 text-muted-foreground font-mono"
+                          onClick={() => { setZipFilenameTemplate((prev) => prev + v); markDirty(); }}
+                        >
+                          {v}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Vorschau: {(zipFilenameTemplate || "Export_{order_number}_{timestamp}")
+                        .replace(/\{order_number\}/g, "56878")
+                        .replace(/\{timestamp\}/g, "202603300815")
+                        .replace(/\{customer_number\}/g, "202124")
+                        .replace(/\{order_date\}/g, "20260330")}.zip
+                    </p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -511,6 +719,21 @@ export function ErpConfigEditor({
                   </CollapsibleContent>
                 </Collapsible>
 
+                {/* OPH-59: Auto-mapping for Auftragskopf */}
+                {savedHeaderOutputFormat &&
+                  savedHeaderOutputFormat.detected_schema.length > 0 && (
+                    <AutoMappingPanel
+                      configId={config.id}
+                      outputFormat={savedHeaderOutputFormat}
+                      slot="header"
+                      hasExistingMappings={
+                        (savedHeaderOutputFormat.field_mappings ?? []).length > 0
+                      }
+                      onApplyMappings={handleHeaderAutoMappingApply}
+                      isSaving={isFieldMapperSaving}
+                    />
+                  )}
+
                 <CsvColumnBuilder
                   columns={headerColumnMappings}
                   onChange={(cols) => { setHeaderColumnMappings(cols); markDirty(); }}
@@ -535,6 +758,21 @@ export function ErpConfigEditor({
                     <OutputFormatTab configId={config.id} slot="lines" onFormatChange={handleOutputFormatChange} />
                   </CollapsibleContent>
                 </Collapsible>
+
+                {/* OPH-59: Auto-mapping for Positionen */}
+                {savedOutputFormat &&
+                  savedOutputFormat.detected_schema.length > 0 && (
+                    <AutoMappingPanel
+                      configId={config.id}
+                      outputFormat={savedOutputFormat}
+                      slot="lines"
+                      hasExistingMappings={
+                        (savedOutputFormat.field_mappings ?? []).length > 0
+                      }
+                      onApplyMappings={handleAutoMappingApply}
+                      isSaving={isFieldMapperSaving}
+                    />
+                  )}
 
                 <CsvColumnBuilder
                   columns={columnMappings}
