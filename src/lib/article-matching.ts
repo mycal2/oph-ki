@@ -16,6 +16,7 @@ interface CatalogEntry {
   article_number: string;
   name: string;
   gtin: string | null;
+  ref_no: string | null;
   keywords: string | null;
   packaging: string | null;
   size1: string | null;
@@ -103,7 +104,7 @@ export async function matchArticleNumbers(
   // Load entire catalog for this tenant
   const { data: catalog, error } = await adminClient
     .from("article_catalog")
-    .select("article_number, name, gtin, keywords, packaging, size1, size2")
+    .select("article_number, name, gtin, ref_no, keywords, packaging, size1, size2")
     .eq("tenant_id", tenantId)
     .limit(10000);
 
@@ -124,6 +125,7 @@ export async function matchArticleNumbers(
     article_number: row.article_number as string,
     name: row.name as string,
     gtin: (row.gtin as string | null) ?? null,
+    ref_no: (row.ref_no as string | null) ?? null,
     keywords: (row.keywords as string | null) ?? null,
     packaging: (row.packaging as string | null) ?? null,
     size1: (row.size1 as string | null) ?? null,
@@ -140,33 +142,43 @@ export async function matchArticleNumbers(
   });
 
   return lineItems.map((item) => {
-    // Already has article_number from extraction: check if it matches a catalog keyword
-    // (the extracted "article number" might actually be a dealer code, not the manufacturer's)
+    // Already has article_number from extraction: check if it matches a catalog entry
+    // (the extracted "article number" might actually be a REF number or dealer code)
     if (item.article_number) {
       const extractedLower = item.article_number.trim().toLowerCase();
 
-      // Check if the extracted article_number is a keyword in any catalog entry
       for (let i = 0; i < catalogEntries.length; i++) {
         const entry = catalogEntries[i];
         const entryKeywords = catalogKeywords[i];
-
-        // Exact keyword match: the extracted article_number is actually a dealer alias
-        if (entryKeywords.includes(extractedLower)) {
-          return {
-            ...item,
-            article_number: entry.article_number,
-            // Move the original extracted value to dealer_article_number (if not already set)
-            dealer_article_number: item.dealer_article_number || item.article_number,
-            article_number_source: "catalog_match" as const,
-            article_number_match_reason: `Alias-Übereinstimmung: Extrahierte Nr. '${item.article_number}' gefunden in Suchbegriffen von '${entry.article_number}'`,
-          };
-        }
 
         // Exact article_number match: the extracted number IS the manufacturer article number
         if (extractedLower === entry.article_number.trim().toLowerCase()) {
           return {
             ...item,
             article_number_source: "extracted" as const,
+          };
+        }
+
+        // REF number match: the extracted value matches a catalog ref_no
+        // (e.g., Dentalair orders with Meisinger REF numbers instead of article numbers)
+        if (entry.ref_no && extractedLower === entry.ref_no.trim().toLowerCase()) {
+          return {
+            ...item,
+            article_number: entry.article_number,
+            dealer_article_number: item.dealer_article_number || item.article_number,
+            article_number_source: "catalog_match" as const,
+            article_number_match_reason: `Ref.-Nr.-Übereinstimmung: Extrahierte Nr. '${item.article_number}' = Ref.-Nr. von '${entry.article_number}'`,
+          };
+        }
+
+        // Exact keyword match: the extracted article_number is actually a dealer alias
+        if (entryKeywords.includes(extractedLower)) {
+          return {
+            ...item,
+            article_number: entry.article_number,
+            dealer_article_number: item.dealer_article_number || item.article_number,
+            article_number_source: "catalog_match" as const,
+            article_number_match_reason: `Alias-Übereinstimmung: Extrahierte Nr. '${item.article_number}' gefunden in Suchbegriffen von '${entry.article_number}'`,
           };
         }
       }
@@ -198,7 +210,20 @@ export async function matchArticleNumbers(
         }
       }
 
-      // 2. Dealer article number vs catalog keywords (exact, case-insensitive)
+      // 2. REF number match: check if dealer_article_number matches catalog ref_no
+      if (entry.ref_no && item.dealer_article_number) {
+        const dealerArt = item.dealer_article_number.trim().toLowerCase();
+        if (dealerArt === entry.ref_no.trim().toLowerCase()) {
+          candidates.push({
+            catalogEntry: entry,
+            score: 0.98,
+            reason: `Ref.-Nr.-Übereinstimmung: Händler-Art.-Nr. '${item.dealer_article_number}' = Ref.-Nr. von '${entry.article_number}'`,
+          });
+          continue;
+        }
+      }
+
+      // 3. Dealer article number vs catalog keywords (exact, case-insensitive)
       if (item.dealer_article_number && entryKeywords.length > 0) {
         const dealerArtLower = item.dealer_article_number.trim().toLowerCase();
         if (dealerArtLower && entryKeywords.includes(dealerArtLower)) {
