@@ -165,9 +165,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       .single();
 
     if (insertError || !config) {
-      console.error("Failed to create ERP config:", insertError?.message);
+      console.error("Failed to create ERP config:", insertError?.message, insertError?.details, insertError?.hint);
       return NextResponse.json(
-        { success: false, error: "ERP-Konfiguration konnte nicht erstellt werden." },
+        { success: false, error: `ERP-Konfiguration konnte nicht erstellt werden: ${insertError?.message ?? "Unbekannter Fehler"}` },
         { status: 500 }
       );
     }
