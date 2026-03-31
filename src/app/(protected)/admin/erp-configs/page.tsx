@@ -118,6 +118,11 @@ export default function AdminErpConfigsPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-2">
+              {mutationError && (
+                <Alert variant="destructive">
+                  <AlertDescription>{mutationError}</AlertDescription>
+                </Alert>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="config-name">Name</Label>
                 <Input
