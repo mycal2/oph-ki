@@ -50,6 +50,7 @@ interface DealerFormSheetProps {
   onFetchAuditLog: (id: string) => Promise<DealerAuditLogEntry[]>;
   onFetchTenantUsage?: (id: string) => Promise<DealerTenantUsage[]>;
   isMutating: boolean;
+  mutationError?: string | null;
 }
 
 const FORMAT_OPTIONS: { value: DealerFormatType; label: string }[] = [
@@ -82,6 +83,7 @@ export function DealerFormSheet({
   onFetchAuditLog,
   onFetchTenantUsage,
   isMutating,
+  mutationError,
 }: DealerFormSheetProps) {
   const isNew = !dealerId;
 
@@ -102,6 +104,7 @@ export function DealerFormSheet({
 
   // UI state
   const [isLoadingDealer, setIsLoadingDealer] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<DealerRuleConflict[]>([]);
   const [auditLog, setAuditLog] = useState<DealerAuditLogEntry[]>([]);
   const [isLoadingAudit, setIsLoadingAudit] = useState(false);
@@ -124,6 +127,7 @@ export function DealerFormSheet({
     setFilenamePatterns([]);
     setExtractionHints("");
     setActive(true);
+    setSaveError(null);
     setWarnings([]);
     setAuditLog([]);
     setTenantUsage([]);
@@ -189,6 +193,7 @@ export function DealerFormSheet({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaveError(null);
 
     const data = {
       name,
@@ -208,10 +213,13 @@ export function DealerFormSheet({
 
     const result = await onSave(data, isNew);
     if (result) {
+      setSaveError(null);
       setWarnings(result.warnings);
       if (result.warnings.length === 0) {
         onOpenChange(false);
       }
+    } else {
+      setSaveError("Speichern fehlgeschlagen. Bitte prüfe die Felder und versuche es erneut.");
     }
   };
 
@@ -238,6 +246,15 @@ export function DealerFormSheet({
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+            {/* Save Error */}
+            {(saveError || mutationError) && (
+              <div className="px-6 pt-4">
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>{mutationError || saveError}</AlertDescription>
+                </Alert>
+              </div>
+            )}
             {/* Warnings */}
             {warnings.length > 0 && (
               <div className="px-6 pt-4">
