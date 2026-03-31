@@ -369,12 +369,14 @@ export async function extractOrderData(
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      const message = await anthropic.messages.create({
+      // Use streaming to avoid SDK timeout on large responses
+      const stream = anthropic.messages.stream({
         model,
         max_tokens: MAX_OUTPUT_TOKENS,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: contentBlocks }],
       });
+      const message = await stream.finalMessage();
 
       // Check if response was truncated due to max_tokens
       if (message.stop_reason === "max_tokens") {
@@ -517,12 +519,14 @@ async function extractSingleChunk(params: {
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      const message = await anthropic.messages.create({
+      // Use streaming to avoid SDK timeout on large responses
+      const stream = anthropic.messages.stream({
         model,
         max_tokens: MAX_OUTPUT_TOKENS,
         system: systemPrompt,
         messages: [{ role: "user", content: contentBlocks }],
       });
+      const message = await stream.finalMessage();
 
       // Check if response was truncated due to max_tokens
       if (message.stop_reason === "max_tokens") {
