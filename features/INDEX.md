@@ -73,7 +73,8 @@
 | OPH-59 | Split CSV Output Format Sample Upload | In Progress | [OPH-59-split-csv-output-format-sample.md](OPH-59-split-csv-output-format-sample.md) | 2026-03-25 |
 | OPH-60 | Fixed Value Column Mapping in ERP Config | In Review | [OPH-60-fixed-value-column-mapping.md](OPH-60-fixed-value-column-mapping.md) | 2026-03-30 |
 | OPH-61 | Configurable Output Filenames for Split CSV Export | In Progress | [OPH-61-split-csv-configurable-filenames.md](OPH-61-split-csv-configurable-filenames.md) | 2026-03-30 |
+| OPH-62 | Article Catalog Bulk Delete | In Review | [OPH-62-article-catalog-bulk-delete.md](OPH-62-article-catalog-bulk-delete.md) | 2026-03-31 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-62
+## Next Available ID: OPH-63

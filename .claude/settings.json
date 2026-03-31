@@ -111,7 +111,9 @@
       "Bash(git reset:*)",
       "Bash(npx next:*)",
       "Bash(/dev/null --prefix /Users/michaelmollath/projects/oph-ki/)",
-      "Bash(git -C /Users/michaelmollath/projects/oph-ki ls-files src/components/ui/sidebar.tsx src/components/layout/)"
+      "Bash(git -C /Users/michaelmollath/projects/oph-ki ls-files src/components/ui/sidebar.tsx src/components/layout/)",
+      "Bash(ls -la /Users/michaelmollath/projects/oph-ki/src/app/\\\\\\(protected\\\\\\)/admin/dealers/)",
+      "Bash(git diff:*)"
     ],
     "additionalDirectories": [
       "/Users/michaelmollath/projects/ai-coding-starter-kit/src/app/api/orders/[orderId]",

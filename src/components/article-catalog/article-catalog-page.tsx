@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Plus,
   Upload,
@@ -16,6 +16,7 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -31,6 +32,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useArticleCatalog } from "@/hooks/use-article-catalog";
 import { ArticleFormDialog } from "@/components/article-catalog/article-form-dialog";
 import { ArticleDeleteDialog } from "@/components/article-catalog/article-delete-dialog";
+import { ArticleBulkDeleteDialog } from "@/components/article-catalog/article-bulk-delete-dialog";
 import { ArticleImportDialog } from "@/components/article-catalog/article-import-dialog";
 import type { ArticleCatalogItem } from "@/lib/types";
 import type { CreateArticleInput, UpdateArticleInput } from "@/lib/validations";
@@ -62,6 +64,7 @@ export function ArticleCatalogPage({
     createArticle,
     updateArticle,
     deleteArticle,
+    bulkDeleteArticles,
     importFile,
     exportCsv,
     refetch,
@@ -73,6 +76,45 @@ export function ArticleCatalogPage({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingArticle, setDeletingArticle] = useState<ArticleCatalogItem | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+
+  // Selection state for bulk operations
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Clear selection when search changes
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [search]);
+
+  // Clear selection when page changes
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [page]);
+
+  const allVisibleSelected =
+    articles.length > 0 && articles.every((a) => selectedIds.has(a.id));
+
+  const someSelected = selectedIds.size > 0;
+
+  const toggleSelectAll = useCallback(() => {
+    if (allVisibleSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(articles.map((a) => a.id)));
+    }
+  }, [allVisibleSelected, articles]);
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
 
   const totalPages = Math.ceil(total / pageSize);
 
@@ -123,6 +165,24 @@ export function ArticleCatalogPage({
     }
     return result;
   }, [deletingArticle, deleteArticle]);
+
+  const handleBulkDeleteConfirm = useCallback(async () => {
+    const ids = Array.from(selectedIds);
+    const result = await bulkDeleteArticles(ids);
+    if (result.ok) {
+      const deleted = result.deleted ?? ids.length;
+      const skipped = ids.length - deleted;
+      if (skipped > 0) {
+        toast.warning(
+          `${deleted} von ${ids.length} Artikeln gelöscht. ${skipped} konnten nicht gefunden werden.`
+        );
+      } else {
+        toast.success(`${deleted} Artikel gelöscht.`);
+      }
+      setSelectedIds(new Set());
+    }
+    return result;
+  }, [selectedIds, bulkDeleteArticles]);
 
   const handleImport = useCallback(
     async (file: File) => {
@@ -239,12 +299,33 @@ export function ArticleCatalogPage({
         )}
       </div>
 
-      {/* Article count */}
+      {/* Article count & selection toolbar */}
       {!isLoading && total > 0 && (
-        <p className="text-sm text-muted-foreground">
-          {total} Artikel{total !== 1 ? "" : ""}
-          {search && ` fuer "${search}"`}
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            {someSelected ? (
+              <span className="font-medium text-foreground">
+                {selectedIds.size} Artikel ausgewaehlt
+              </span>
+            ) : (
+              <>
+                {total} Artikel{total !== 1 ? "" : ""}
+                {search && ` fuer "${search}"`}
+              </>
+            )}
+          </p>
+          {someSelected && !readOnly && (
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={() => setBulkDeleteOpen(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Auswahl loeschen
+            </Button>
+          )}
+        </div>
       )}
 
       {/* Loading state */}
@@ -299,6 +380,15 @@ export function ArticleCatalogPage({
             <Table>
               <TableHeader>
                 <TableRow>
+                  {!readOnly && (
+                    <TableHead className="w-[40px]">
+                      <Checkbox
+                        checked={allVisibleSelected}
+                        onCheckedChange={toggleSelectAll}
+                        aria-label="Alle sichtbaren Artikel auswaehlen"
+                      />
+                    </TableHead>
+                  )}
                   <TableHead className="min-w-[140px]">Herst.-Art.-Nr.</TableHead>
                   <TableHead className="min-w-[200px]">Artikelbezeichnung</TableHead>
                   <TableHead className="hidden md:table-cell">Kategorie</TableHead>
@@ -312,7 +402,19 @@ export function ArticleCatalogPage({
               </TableHeader>
               <TableBody>
                 {articles.map((article) => (
-                  <TableRow key={article.id}>
+                  <TableRow
+                    key={article.id}
+                    data-state={selectedIds.has(article.id) ? "selected" : undefined}
+                  >
+                    {!readOnly && (
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedIds.has(article.id)}
+                          onCheckedChange={() => toggleSelect(article.id)}
+                          aria-label={`Artikel ${article.article_number} auswaehlen`}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell className="font-medium">
                       {article.article_number}
                     </TableCell>
@@ -445,6 +547,13 @@ export function ArticleCatalogPage({
         open={importOpen}
         onOpenChange={setImportOpen}
         onImport={handleImport}
+      />
+
+      <ArticleBulkDeleteDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        count={selectedIds.size}
+        onConfirm={handleBulkDeleteConfirm}
       />
     </div>
   );

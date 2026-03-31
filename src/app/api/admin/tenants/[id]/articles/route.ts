@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { requirePlatformAdmin, isErrorResponse } from "@/lib/admin-auth";
 import { createArticleSchema } from "@/lib/validations";
-import type { ArticleCatalogItem, ApiResponse } from "@/lib/types";
+import type { ArticleCatalogItem } from "@/lib/types";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

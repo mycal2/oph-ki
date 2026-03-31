@@ -80,6 +80,7 @@ Eine mandantenfähige SaaS-Plattform ("Order Intelligence Platform"), die Dental
 | P1 | OPH-59: Split CSV Output Format Sample Upload | In Progress |
 | P1 | OPH-60: Fixed Value Column Mapping in ERP Config | In Review |
 | P1 | OPH-61: Configurable Output Filenames for Split CSV Export | Planned |
+| P1 | OPH-62: Article Catalog Bulk Delete | Planned |
 
 ## Success Metrics
 - Bearbeitungszeit pro Bestellung: von ~15 Min. manuell auf < 3 Min. mit System

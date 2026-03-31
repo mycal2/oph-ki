@@ -911,6 +911,19 @@ export type CreateArticleInput = z.infer<typeof createArticleSchema>;
 export type UpdateArticleInput = z.infer<typeof updateArticleSchema>;
 
 /**
+ * OPH-62: Article Catalog Bulk Delete validation schema.
+ */
+
+export const bulkDeleteArticlesSchema = z.object({
+  ids: z
+    .array(z.string().uuid("Ungueltige Artikel-ID."))
+    .min(1, "Mindestens eine Artikel-ID ist erforderlich.")
+    .max(10000, "Maximal 10.000 Artikel gleichzeitig loeschbar."),
+});
+
+export type BulkDeleteArticlesInput = z.infer<typeof bulkDeleteArticlesSchema>;
+
+/**
  * OPH-46: Manufacturer Customer Catalog validation schemas.
  */
 
