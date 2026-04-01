@@ -409,7 +409,8 @@ export async function GET(
 
     return new NextResponse(content, { status: 200, headers });
   } catch (error) {
-    console.error("Error in GET /api/orders/[orderId]/export:", error);
+    const exportErrMsg = error instanceof Error ? error.message : String(error);
+    console.error("Error in GET /api/orders/[orderId]/export:", exportErrMsg, error);
 
     // --- OPH-24: Send platform admin error notification ---
     const platformApiToken = process.env.POSTMARK_SERVER_API_TOKEN;
@@ -460,7 +461,7 @@ export async function GET(
     }
 
     return NextResponse.json(
-      { success: false, error: "Interner Serverfehler." },
+      { success: false, error: `Interner Serverfehler: ${exportErrMsg}` },
       { status: 500 }
     );
   }

@@ -285,9 +285,10 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Error in GET /api/orders/[orderId]/export/preview:", error);
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("Error in GET /api/orders/[orderId]/export/preview:", msg, error);
     return NextResponse.json(
-      { success: false, error: "Interner Serverfehler." },
+      { success: false, error: `Interner Serverfehler: ${msg}` },
       { status: 500 }
     );
   }
