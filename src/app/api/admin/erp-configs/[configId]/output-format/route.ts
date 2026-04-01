@@ -260,7 +260,7 @@ export async function POST(
         console.error("Insert error:", insertError?.message, insertError?.details, insertError?.hint, insertError?.code);
         await adminClient.storage.from("tenant-output-formats").remove([storagePath]);
         return NextResponse.json(
-          { success: false, error: "Fehler beim Speichern des Output-Formats." },
+          { success: false, error: `Fehler beim Speichern des Output-Formats: ${insertError?.message ?? "Unbekannter Fehler"}` },
           { status: 500 }
         );
       }
