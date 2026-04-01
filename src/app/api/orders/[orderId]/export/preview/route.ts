@@ -257,6 +257,19 @@ export async function GET(
       });
     }
 
+    if (effectiveFormat === "split_csv") {
+      // Preview the lines (Positionen) CSV portion
+      const headers = columnMappings.map((m) => m.target_column_name);
+      const rows = previewItems.map((item) =>
+        columnMappings.map((m) => getTransformedValue(item, m, decimalSeparator, orderData))
+      );
+
+      return NextResponse.json({
+        success: true,
+        data: { format: effectiveFormat, headers, rows, totalRows, filename, usingDefaultConfig, tenantDefaultFormat, confidenceScore, splitOutputMode },
+      });
+    }
+
     // For XML and JSON, generate full content then truncate for preview
     const { content: rawContent } = generateExportContent(
       orderData,
