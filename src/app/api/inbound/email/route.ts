@@ -88,8 +88,18 @@ export async function POST(
 
     const adminClient = createAdminClient();
 
-    // 4. Look up tenant by "To" address slug
-    const toAddress = payload.ToFull?.[0]?.Email ?? payload.To;
+    // 4. Look up tenant by envelope recipient or "To" address slug
+    // Prefer OriginalRecipient (SMTP envelope) — more reliable when emails
+    // are forwarded by Exchange/M365, which preserves the original To header.
+    const inboundDomain = process.env.INBOUND_EMAIL_DOMAIN;
+    const originalRecipient = payload.OriginalRecipient;
+    let toAddress = payload.ToFull?.[0]?.Email ?? payload.To;
+
+    // If OriginalRecipient is on our inbound domain, prefer it over the To header
+    if (originalRecipient && inboundDomain && originalRecipient.endsWith(`@${inboundDomain}`)) {
+      toAddress = originalRecipient;
+    }
+
     const slug = extractSlugFromEmail(toAddress);
 
     if (!slug) {

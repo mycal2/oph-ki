@@ -118,6 +118,8 @@ export const postmarkInboundPayloadSchema = z.object({
     ContentType: z.string(),
     ContentLength: z.number(),
   })).default([]),
+  // SMTP envelope recipient — more reliable than To header for forwarded emails
+  OriginalRecipient: z.string().default(""),
 }).passthrough();
 
 export type PostmarkInboundPayload = z.infer<typeof postmarkInboundPayloadSchema>;
