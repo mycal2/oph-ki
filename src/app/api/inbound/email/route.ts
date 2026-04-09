@@ -209,7 +209,7 @@ export async function POST(
       const { error: archiveError } = await adminClient.storage
         .from("order-files")
         .upload(targetPath, emlBuffer, {
-          contentType: "application/json",
+          contentType: "text/plain",
         });
 
       if (archiveError) {
@@ -453,7 +453,7 @@ export async function POST(
       await adminClient.storage
         .from("order-files")
         .upload(archivePath, Buffer.from(rawBody, "utf-8"), {
-          contentType: "application/json",
+          contentType: "text/plain",
         });
     } catch (err) {
       console.error("Failed to archive original email:", err);
