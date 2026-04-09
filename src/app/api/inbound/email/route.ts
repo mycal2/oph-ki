@@ -545,10 +545,13 @@ export async function POST(
     {
       const serverApiToken = process.env.POSTMARK_SERVER_API_TOKEN;
       const shouldSendEmail = isTrial || tenant.email_confirmation_enabled;
+      console.log(`[DEBUG] Confirmation email: token=${serverApiToken ? "SET" : "MISSING"}, shouldSend=${shouldSendEmail}, isTrial=${isTrial}, confirmEnabled=${tenant.email_confirmation_enabled}`);
       if (serverApiToken && shouldSendEmail) {
         const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+        console.log(`[DEBUG] Scheduling confirmation email to ${senderEmail}, siteUrl=${siteUrl}`);
 
         after(async () => {
+          console.log("[DEBUG] after() callback for confirmation email started");
           try {
             await sendConfirmationEmail({
               serverApiToken,
@@ -558,6 +561,7 @@ export async function POST(
               subject: payload.Subject || "Bestellung",
               siteUrl,
             });
+            console.log("[DEBUG] Confirmation email sent successfully");
           } catch (err) {
             console.error("Failed to send confirmation email:", err);
           }
