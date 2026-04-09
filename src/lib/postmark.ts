@@ -27,6 +27,10 @@ async function postmarkFetchWithRetry(
 ): Promise<void> {
   let lastError: string | null = null;
 
+  // Use the configured Postmark message stream, or default to "outbound"
+  const messageStream = process.env.POSTMARK_MESSAGE_STREAM || "outbound";
+  const fullBody = { ...body, MessageStream: messageStream };
+
   for (let attempt = 0; attempt < POSTMARK_MAX_RETRIES; attempt++) {
     try {
       const response = await fetch("https://api.postmarkapp.com/email", {
@@ -36,7 +40,7 @@ async function postmarkFetchWithRetry(
           "Content-Type": "application/json",
           "X-Postmark-Server-Token": serverApiToken,
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify(fullBody),
       });
 
       if (response.ok) return; // Success
