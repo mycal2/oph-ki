@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { Loader2, Clock, Info, AlertTriangle, Mail, Receipt } from "lucide-react";
+import { Loader2, Clock, Info, AlertTriangle, Mail, Receipt, Forward } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -100,6 +100,13 @@ export function TenantProfileForm({
   const [emailPostprocess, setEmailPostprocess] = useState(
     tenant.email_postprocess_enabled
   );
+  // OPH-63: Email forwarding
+  const [emailForwardingEnabled, setEmailForwardingEnabled] = useState(
+    tenant.email_forwarding_enabled
+  );
+  const [emailForwardingAddress, setEmailForwardingAddress] = useState(
+    tenant.email_forwarding_address ?? ""
+  );
   // OPH-28: ERP config selector
   const [erpConfigId, setErpConfigId] = useState<string | null>(
     tenant.erp_config_id ?? null
@@ -151,6 +158,9 @@ export function TenantProfileForm({
     setEmailResultsConfidence(tenant.email_results_confidence_enabled);
     setEmailPostprocess(tenant.email_postprocess_enabled);
     setErpConfigId(tenant.erp_config_id ?? null);
+    // OPH-63: Reset forwarding state
+    setEmailForwardingEnabled(tenant.email_forwarding_enabled);
+    setEmailForwardingAddress(tenant.email_forwarding_address ?? "");
     // OPH-52: Reset billing state
     setBillingModel(tenant.billing_model ?? null);
     setSetupFee(tenant.setup_fee != null ? String(tenant.setup_fee) : "");
@@ -191,6 +201,8 @@ export function TenantProfileForm({
       email_results_confidence_enabled: emailResultsConfidence,
       email_postprocess_enabled: emailPostprocess,
       erp_config_id: erpConfigId,
+      email_forwarding_enabled: emailForwardingEnabled,
+      email_forwarding_address: emailForwardingAddress || null,
       billing_model: billingModel,
       setup_fee: parseFee(setupFee),
       monthly_fee: parseFee(monthlyFee),
@@ -602,6 +614,51 @@ export function TenantProfileForm({
                 checked={emailPostprocess}
                 onCheckedChange={setEmailPostprocess}
               />
+            </div>
+          </div>
+
+          {/* OPH-63: Email forwarding section */}
+          <div className="rounded-lg border p-4 space-y-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Forward className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">E-Mail-Weiterleitung</span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="email-forwarding" className="text-sm">
+                  E-Mail-Weiterleitung
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Eingehende Bestell-E-Mails an eine weitere Adresse weiterleiten.
+                </p>
+              </div>
+              <Switch
+                id="email-forwarding"
+                checked={emailForwardingEnabled}
+                onCheckedChange={setEmailForwardingEnabled}
+                aria-label="E-Mail-Weiterleitung aktivieren"
+              />
+            </div>
+
+            <div className={`space-y-2 ${!emailForwardingEnabled ? "opacity-50" : ""}`}>
+              <Label htmlFor="email-forwarding-address" className="text-sm">
+                Weiterleitungs-Adresse
+              </Label>
+              <Input
+                id="email-forwarding-address"
+                type="email"
+                value={emailForwardingAddress}
+                onChange={(e) => setEmailForwardingAddress(e.target.value)}
+                placeholder="weiterleitung@beispiel.de"
+                disabled={!emailForwardingEnabled}
+                aria-label="Weiterleitungs-E-Mail-Adresse"
+              />
+              {!emailForwardingEnabled && (
+                <p className="text-xs text-muted-foreground">
+                  Aktivieren Sie die Weiterleitung, um eine Adresse zu konfigurieren.
+                </p>
+              )}
             </div>
           </div>
 

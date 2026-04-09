@@ -8,6 +8,7 @@ import {
   extractSlugFromEmail,
   filterAttachments,
   sendConfirmationEmail,
+  sendForwardedEmail,
   sendQuarantineNotification,
   sendPlatformErrorNotification,
   postmarkInboundPayloadSchema,
@@ -99,7 +100,7 @@ export async function POST(
 
     const { data: tenant, error: tenantError } = await adminClient
       .from("tenants")
-      .select("id, name, slug, status, contact_email, allowed_email_domains, email_confirmation_enabled")
+      .select("id, name, slug, status, contact_email, allowed_email_domains, email_confirmation_enabled, email_forwarding_enabled, email_forwarding_address")
       .eq("slug", slug)
       .single();
 
@@ -549,6 +550,47 @@ export async function POST(
             });
           } catch (err) {
             console.error("Failed to send confirmation email:", err);
+          }
+        });
+      }
+    }
+
+    // 16. OPH-63: Forward the original email to the tenant's configured forwarding address
+    // Only for non-trial, active tenants with forwarding enabled and a valid address.
+    {
+      const serverApiToken = process.env.POSTMARK_SERVER_API_TOKEN;
+      const shouldForward =
+        !isTrial &&
+        tenant.email_forwarding_enabled &&
+        typeof tenant.email_forwarding_address === "string" &&
+        tenant.email_forwarding_address.trim().length > 0;
+
+      if (serverApiToken && shouldForward) {
+        // Capture the values we need inside the after() callback
+        const forwardingAddress = tenant.email_forwarding_address as string;
+        const originalSubject = payload.Subject || "";
+        const originalBodyText = payload.TextBody || "";
+        const receivedAt = payload.Date || new Date().toISOString();
+        const originalAttachments = supportedAttachments;
+        const tenantName = tenant.name;
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+        after(async () => {
+          try {
+            await sendForwardedEmail({
+              serverApiToken,
+              toEmail: forwardingAddress,
+              originalSenderEmail: senderEmail,
+              originalSenderName: senderName,
+              originalSubject,
+              originalBodyText,
+              receivedAt,
+              tenantName,
+              siteUrl,
+              attachments: originalAttachments,
+            });
+          } catch (err) {
+            console.error("OPH-63: Failed to forward email:", err);
           }
         });
       }

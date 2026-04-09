@@ -506,6 +506,17 @@ export const updateTenantSchema = z.object({
   monthly_fee: z.number().min(0, "Monatliche Gebühr darf nicht negativ sein.").nullable().optional(),
   /** OPH-52: Cost per processed order in EUR. */
   cost_per_order: z.number().min(0, "Kosten pro Bestellung dürfen nicht negativ sein.").nullable().optional(),
+  /** OPH-63: Whether email forwarding is active for this tenant. */
+  email_forwarding_enabled: z.boolean().optional(),
+  /** OPH-63: The email address to forward inbound order emails to. Null or empty clears it. */
+  email_forwarding_address: z
+    .union([
+      z.string().email("Bitte geben Sie eine gültige Weiterleitungs-E-Mail-Adresse ein."),
+      z.literal(""),
+      z.null(),
+    ])
+    .transform((val) => (val === "" ? null : val))
+    .optional(),
 });
 
 /** Invite user on behalf of a specific tenant (platform admin). */

@@ -42,6 +42,10 @@ export interface Tenant {
   monthly_fee: number | null;
   /** OPH-52: Cost per processed order in EUR. */
   cost_per_order: number | null;
+  /** OPH-63: Whether email forwarding is active for this tenant. */
+  email_forwarding_enabled: boolean;
+  /** OPH-63: The email address to forward inbound order emails to. */
+  email_forwarding_address: string | null;
 }
 
 export interface UserProfile {
@@ -839,6 +843,10 @@ export interface DataRetentionSettings {
   emailResultsFormat: "standard_csv" | "tenant_format";
   emailResultsConfidenceEnabled: boolean;
   emailPostprocessEnabled: boolean;
+  /** OPH-63: Whether email forwarding is active. */
+  emailForwardingEnabled: boolean;
+  /** OPH-63: The email address to forward inbound order emails to. */
+  emailForwardingAddress: string | null;
 }
 
 /** Response from DELETE /api/orders/[orderId]. */
