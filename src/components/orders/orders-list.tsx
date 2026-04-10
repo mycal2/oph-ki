@@ -204,17 +204,26 @@ export function OrdersList() {
     };
   }, [hasProcessingOrders, fetchOrders]);
 
-  // OPH-18: Derive unique tenant names from orders for the filter dropdown
-  const tenantOptions = useMemo(() => {
-    if (!isPlatformAdmin) return [];
-    const names = new Set<string>();
-    for (const order of orders) {
-      if (order.tenant_name) {
-        names.add(order.tenant_name);
+  // OPH-18: Fetch all tenant names for the filter dropdown (platform admins only)
+  const [tenantOptions, setTenantOptions] = useState<string[]>([]);
+  useEffect(() => {
+    if (!isPlatformAdmin) return;
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/tenants");
+        const json = await res.json();
+        if (json.success && json.data) {
+          const names = (json.data as Array<{ name: string }>)
+            .map((t) => t.name)
+            .filter(Boolean)
+            .sort((a, b) => a.localeCompare(b, "de"));
+          setTenantOptions(names);
+        }
+      } catch {
+        // Silently fall back to no tenant filter
       }
-    }
-    return Array.from(names).sort((a, b) => a.localeCompare(b, "de"));
-  }, [orders, isPlatformAdmin]);
+    })();
+  }, [isPlatformAdmin]);
 
   // OPH-18: Client-side tenant filter (admins only, on top of server filters)
   const filteredOrders = useMemo(() => {
