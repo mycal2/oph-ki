@@ -464,53 +464,67 @@ export async function POST(
       const resolvedDealerId = (aiDealerUpdate.dealer_id as string) ?? (order.dealer_id as string);
       let finalResult = result;
 
-      if (resolvedDealerId && !columnMappingContext && fileContents.length > 0) {
-        const primaryMimeType = fileContents[0].mimeType;
-        const resolvedFormatType = mimeTypeToFormatType(primaryMimeType);
+      // --- Re-extract if AI matching discovered a dealer with hints or column mappings ---
+      // When the dealer wasn't known before extraction (no metadata-based recognition),
+      // AI matching may have identified the dealer from extracted content. If that dealer
+      // has extraction hints or column mappings, re-extract so the AI can use them.
+      if (resolvedDealerId && fileContents.length > 0) {
+        // Fetch dealer hints for the resolved dealer if not already loaded
+        let resolvedDealerInfo = dealerInfo;
+        if (!resolvedDealerInfo || resolvedDealerInfo.id !== resolvedDealerId) {
+          const { data: rDealer } = await adminClient
+            .from("dealers")
+            .select("id, name, extraction_hints")
+            .eq("id", resolvedDealerId)
+            .single();
+          if (rDealer) {
+            resolvedDealerInfo = {
+              id: rDealer.id as string,
+              name: rDealer.name as string,
+              extractionHints: (rDealer.extraction_hints as string) ?? null,
+            };
+          }
+        }
 
-        if (resolvedFormatType) {
-          const resolvedProfile = await getColumnMappingProfile(
-            adminClient,
-            resolvedDealerId,
-            resolvedFormatType
+        // Fetch column mappings for the resolved dealer if not already loaded
+        let resolvedColumnCtx = columnMappingContext;
+        if (!resolvedColumnCtx) {
+          const primaryMimeType = fileContents[0].mimeType;
+          const resolvedFormatType = mimeTypeToFormatType(primaryMimeType);
+
+          if (resolvedFormatType) {
+            const resolvedProfile = await getColumnMappingProfile(
+              adminClient,
+              resolvedDealerId,
+              resolvedFormatType
+            );
+            if (resolvedProfile && resolvedProfile.mappings.length > 0) {
+              resolvedColumnCtx = formatColumnMappingForPrompt(resolvedProfile);
+            }
+          }
+        }
+
+        // Re-extract if we now have hints or column mappings that weren't used initially
+        const hasNewHints = !dealerInfo?.extractionHints && resolvedDealerInfo?.extractionHints;
+        const hasNewColumnMappings = !columnMappingContext && resolvedColumnCtx;
+
+        if (hasNewHints || hasNewColumnMappings) {
+          console.log(
+            `Re-extracting order ${orderId} with dealer context for ${resolvedDealerId} (hints=${!!resolvedDealerInfo?.extractionHints}, columns=${!!resolvedColumnCtx})`
           );
 
-          if (resolvedProfile && resolvedProfile.mappings.length > 0) {
-            const resolvedColumnCtx = formatColumnMappingForPrompt(resolvedProfile);
-            console.log(
-              `Re-extracting order ${orderId} with column mapping for dealer ${resolvedDealerId} (${resolvedFormatType})`
-            );
+          finalResult = await extractOrderData({
+            orderId,
+            files: fileContents,
+            dealer: resolvedDealerInfo,
+            mappingsContext,
+            columnMappingContext: resolvedColumnCtx,
+            emailSubject: orderSubject,
+          });
 
-            // Fetch dealer hints for the resolved dealer (may differ from initial)
-            let resolvedDealerInfo = dealerInfo;
-            if (!resolvedDealerInfo || resolvedDealerInfo.id !== resolvedDealerId) {
-              const { data: rDealer } = await adminClient
-                .from("dealers")
-                .select("id, name, extraction_hints")
-                .eq("id", resolvedDealerId)
-                .single();
-              if (rDealer) {
-                resolvedDealerInfo = {
-                  id: rDealer.id as string,
-                  name: rDealer.name as string,
-                  extractionHints: (rDealer.extraction_hints as string) ?? null,
-                };
-              }
-            }
-
-            finalResult = await extractOrderData({
-              orderId,
-              files: fileContents,
-              dealer: resolvedDealerInfo,
-              mappingsContext,
-              columnMappingContext: resolvedColumnCtx,
-              emailSubject: orderSubject,
-            });
-
-            // Preserve the AI-matched dealer info in the re-extracted data
-            if (aiDealerUpdate.dealer_id) {
-              finalResult.extractedData.order.dealer = result.extractedData.order.dealer;
-            }
+          // Preserve the AI-matched dealer info in the re-extracted data
+          if (aiDealerUpdate.dealer_id) {
+            finalResult.extractedData.order.dealer = result.extractedData.order.dealer;
           }
         }
       }
