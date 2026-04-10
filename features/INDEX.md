@@ -75,7 +75,7 @@
 | OPH-61 | Configurable Output Filenames for Split CSV Export | In Progress | [OPH-61-split-csv-configurable-filenames.md](OPH-61-split-csv-configurable-filenames.md) | 2026-03-30 |
 | OPH-62 | Article Catalog Bulk Delete | In Review | [OPH-62-article-catalog-bulk-delete.md](OPH-62-article-catalog-bulk-delete.md) | 2026-03-31 |
 
-| OPH-63 | Per-Tenant Email Forwarding | In Progress | [OPH-63-per-tenant-email-forwarding.md](OPH-63-per-tenant-email-forwarding.md) | 2026-04-09 |
+| OPH-63 | Per-Tenant Email Forwarding | Deployed | [OPH-63-per-tenant-email-forwarding.md](OPH-63-per-tenant-email-forwarding.md) | 2026-04-09 |
 
 <!-- Add features above this line -->
 

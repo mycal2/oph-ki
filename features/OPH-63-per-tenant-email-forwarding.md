@@ -1,6 +1,6 @@
 # OPH-63: Per-Tenant Email Forwarding
 
-## Status: In Progress
+## Status: Deployed
 **Created:** 2026-04-09
 **Last Updated:** 2026-04-09
 
