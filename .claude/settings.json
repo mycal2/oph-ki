@@ -122,7 +122,8 @@
       "Bash(grep -v \"^$\")",
       "Skill(dealerrule)",
       "Skill(dealerrule:*)",
-      "Bash(gh repo:*)"
+      "Bash(gh repo:*)",
+      "Edit(/.claude/skills/dealerrule/**)"
     ],
     "additionalDirectories": [
       "/Users/michaelmollath/projects/ai-coding-starter-kit/src/app/api/orders/[orderId]",

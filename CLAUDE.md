@@ -38,7 +38,7 @@ docs/
 
 ### Operational Skills
 
-- `/dealerrule` - Generate structured extraction hints for dealer profiles. Analyzes example order documents (PDF, Excel, CSV) to create precise hints that guide the AI extraction engine. Also creates dealer documentation in `hints/`.
+- `/dealerrule` - Generate structured extraction hints for dealer profiles. Analyzes example order documents (PDF, Excel, CSV) to create precise hints that guide the AI extraction engine. Also creates dealer documentation in `dealerrules/`.
 
 ## Feature Tracking
 

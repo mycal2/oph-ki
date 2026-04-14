@@ -93,7 +93,7 @@ Am Ende des Feature-Dokuments fügt QA die Test-Ergebnisse hinzu:
 ## Operative Skills (außerhalb des Feature-Workflows)
 
 ### `/dealerrule` — Dealer Extraction Hints Generator
-Analysiert Beispiel-Bestellungen (PDF, Excel, CSV) eines Händlers und generiert strukturierte Extraktions-Hints für das Händler-Profil. Die Hints steuern die KI-Extraktion und werden im Feld `extraction_hints` gespeichert. Erstellt zusätzlich eine Dokumentation in `hints/`.
+Analysiert Beispiel-Bestellungen (PDF, Excel, CSV) eines Händlers und generiert strukturierte Extraktions-Hints für das Händler-Profil. Die Hints steuern die KI-Extraktion und werden im Feld `extraction_hints` gespeichert. Erstellt zusätzlich eine Dokumentation in `dealerrules/`.
 
 **Wann verwenden:**
 - Neuer Händler mit besonderem Bestellformat

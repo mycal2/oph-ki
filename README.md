@@ -99,7 +99,7 @@ oph-ki/
 │   └── lib/                         # Utilities (supabase, postmark, types, validations)
 ├── features/                        # Feature specifications (OPH-X-name.md)
 │   └── INDEX.md                     # Feature status tracking
-├── hints/                           # Dealer extraction hint documentation
+├── dealerrules/                     # Dealer extraction rule documentation
 ├── docs/
 │   └── PRD.md                       # Product Requirements Document
 ├── supabase/

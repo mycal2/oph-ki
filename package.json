@@ -1,7 +1,7 @@
 {
-  "name": "ai-coding-starter-kit",
+  "name": "oph-ki",
   "version": "1.0.0",
-  "description": "AI Coding Starter Kit with AI Agent Team System for Claude Code",
+  "description": "Order Intelligence Platform — AI-powered order processing for dental manufacturers",
   "private": true,
   "scripts": {
     "dev": "next dev",

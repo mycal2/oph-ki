@@ -52,43 +52,45 @@ Eine mandantenfähige SaaS-Plattform ("Order Intelligence Platform"), die Dental
 | P1 | OPH-30: Auto-Generate XML Template from Output Format Sample | Deployed |
 | P1 | OPH-31: Variable Click-to-Insert in XML Template Editor | Deployed |
 | P1 | OPH-32: Visual Field Mapper for ERP Output Format | Deployed |
-| P1 | OPH-33: Field Mapper Output for All Formats (CSV, JSON, XML) | Planned |
+| P1 | OPH-33: Field Mapper Output for All Formats (CSV, JSON, XML) | In Review |
 | P1 | OPH-34: Admin Manual Upload with Tenant Selection | Deployed |
 | P1 | OPH-35: Per-Tenant Email Notification Settings | Deployed |
-| P2 | OPH-36: Sticky PDF Preview on Order Review Page | Planned |
-| P1 | OPH-37: Dealer Article Number (Lieferantenartikelnummer) | Planned |
-| P1 | OPH-39: Manufacturer Article Catalog | Planned |
-| P1 | OPH-40: AI Article Number Matching during Extraction | Planned |
-| P1 | OPH-41: Change Tenant User Role | Planned |
-| P1 | OPH-42: Admin Tenant Detail Page (Full-Page Layout) | In Progress |
-| P2 | OPH-43: Sample CSV Download for Article Import | Planned |
-| P1 | OPH-44: Manufacturer Article Number Label Recognition in Extraction | Planned |
-| P1 | OPH-45: AI-Assisted ERP Field Mapping | Planned |
-| P1 | OPH-46: Manufacturer Customer Catalog | Planned |
-| P1 | OPH-47: AI Customer Number Matching during Extraction | Planned |
-| P1 | OPH-48: Platform Team User Management Actions | Planned |
+| P2 | OPH-36: Sticky PDF Preview on Order Review Page | In Review |
+| P1 | OPH-37: Dealer Article Number (Lieferantenartikelnummer) | In Review |
+| P1 | OPH-38: Admin: Resend Invite & Trigger Password Reset for Tenant Users | Deployed |
+| P1 | OPH-39: Manufacturer Article Catalog | Deployed |
+| P1 | OPH-40: AI Article Number Matching during Extraction | Deployed |
+| P1 | OPH-41: Change Tenant User Role | Deployed |
+| P1 | OPH-42: Admin Tenant Detail Page (Full-Page Layout) | Deployed |
+| P2 | OPH-43: Sample CSV Download for Article Import | In Review |
+| P1 | OPH-44: Manufacturer Article Number Label Recognition in Extraction | In Review |
+| P1 | OPH-45: AI-Assisted ERP Field Mapping | Deployed |
+| P1 | OPH-46: Manufacturer Customer Catalog | Deployed |
+| P1 | OPH-47: AI Customer Number Matching during Extraction | Deployed |
+| P1 | OPH-48: Platform Team User Management Actions | In Progress |
 | P1 | OPH-49: Dealer-Linked Kundenstamm | Deployed |
 | P1 | OPH-50: Dealer Count per Tenant on Admin Mandanten-Verwaltung | Deployed |
-| P2 | OPH-51: Tenant Company Logo | Planned |
+| P2 | OPH-51: Tenant Company Logo | Deployed |
 | P1 | OPH-52: Tenant Billing Model Configuration | In Review |
-| P1 | OPH-53: Platform Admin KPI Dashboard | Planned |
-| P1 | OPH-54: Platform Admin Billing Report | Planned |
-| P1 | OPH-55: Sidebar Navigation Redesign | Planned |
+| P1 | OPH-53: Platform Admin KPI Dashboard | In Progress |
+| P1 | OPH-54: Platform Admin Billing Report | In Review |
+| P1 | OPH-55: Sidebar Navigation Redesign | In Progress |
 | P1 | OPH-56: Collapsible Sub-Groups in Platform Sidebar | In Progress |
-| P1 | OPH-57: Tenant Count per Dealer in Händler-Verwaltung | Planned |
+| P1 | OPH-57: Tenant Count per Dealer in Händler-Verwaltung | In Review |
 | P1 | OPH-58: Split Multi-File ERP Export (Header + Lines CSV) | In Progress |
 | P1 | OPH-59: Split CSV Output Format Sample Upload | In Progress |
 | P1 | OPH-60: Fixed Value Column Mapping in ERP Config | In Review |
-| P1 | OPH-61: Configurable Output Filenames for Split CSV Export | Planned |
-| P1 | OPH-62: Article Catalog Bulk Delete | Planned |
+| P1 | OPH-61: Configurable Output Filenames for Split CSV Export | In Progress |
+| P1 | OPH-62: Article Catalog Bulk Delete | In Review |
 | P1 | OPH-63: Per-Tenant Email Forwarding | Deployed |
-| P1 | OPH-64: Admin: Reset Artikelstamm / Kundenstamm for Tenant | Planned |
+| P1 | OPH-64: Admin: Reset Artikelstamm / Kundenstamm for Tenant | In Progress |
 
 ## Success Metrics
 - Bearbeitungszeit pro Bestellung: von ~15 Min. manuell auf < 3 Min. mit System
 - Extraktionsgenauigkeit: > 95 % der Felder korrekt erkannt ohne manuelle Korrektur
 - Onboarding neuer Mandanten: < 1 Tag bis erste produktive Bestellung
 - Händler-Erkennungsrate: > 90 % bekannter Händler automatisch identifiziert
+- Dealer-Onboarding: Neuer Händler inkl. händlerspezifischer Regeln und Besonderheiten in < 5 Min. durch Nicht-Entwickler trainierbar
 
 ## Constraints
 - **DSGVO / Datenschutz:** Bestelldaten enthalten personenbezogene Daten (Endkunden-Adressen etc.) — EU-Hosting erforderlich, Datenspeicherung nur so lange wie nötig

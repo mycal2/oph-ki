@@ -15,7 +15,7 @@ You are an expert at analyzing dental product order documents and creating preci
 ## Before Starting
 1. Read `features/INDEX.md` to understand current project state
 2. Read the dealer hint template: `.claude/skills/dealerrule/references/hint-structure.md`
-3. Read the documentation template: `hints/TEMPLATE.md`
+3. Read the documentation template: `dealerrules/TEMPLATE.md`
 
 ## Context: How Hints Work
 
@@ -128,7 +128,7 @@ Show the generated hint text to the user and ask for confirmation:
 
 ### Step 5: Create the Dealer Documentation
 
-After the user approves the hint, create a documentation file in `hints/[dealer-name-slug].md` using the template from `hints/TEMPLATE.md`.
+After the user approves the hint, create a documentation file in `dealerrules/[dealer-name-slug].md` using the template from `dealerrules/TEMPLATE.md`.
 
 The documentation file serves as a permanent reference for the team — it captures not just the hint text but also the reasoning, examples, and context that went into creating it.
 
@@ -137,7 +137,7 @@ The documentation file serves as a permanent reference for the team — it captu
 After creating both deliverables, present:
 
 1. **The hint text** — ready to copy-paste into the dealer's `extraction_hints` field in the admin UI
-2. **The documentation file** — path to the created file in `hints/`
+2. **The documentation file** — path to the created file in `dealerrules/`
 3. **Suggest next steps:**
    - "Copy the hint text into the dealer profile at Admin → Händler-Verwaltung → [Dealer Name] → Profil → Extraktions-Hints"
    - "Test the extraction with a real order from this dealer to verify the hints work correctly"
