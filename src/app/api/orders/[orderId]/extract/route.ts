@@ -358,9 +358,20 @@ export async function POST(
           const senderCountry = result.extractedData.order.sender?.country?.toLowerCase().trim() ?? null;
           let bestMatch: { id: string; name: string; confidence: number } | null = null;
 
-          /** Split a name into significant words (2+ chars, strip punctuation). */
+          /** Company legal form stopwords — never count as meaningful name overlap. */
+          const COMPANY_STOPWORDS = new Set([
+            "gmbh", "co", "kg", "ag", "se", "ohg", "ug", "ev", "mbh",
+            "bv", "nv", "srl", "spa", "sas", "sa", "sarl", "saul", "sau",
+            "ltd", "llc", "inc", "corp", "plc", "pty",
+            "bvba", "sprl", "cvba", "vof", "stp",
+            "ab", "oy", "as", "aps",
+            "sro", "doo", "uab", "sia", "ou",
+            "dental", "dentale", "dentales",
+          ]);
+
+          /** Split a name into significant words (2+ chars, strip punctuation, remove stopwords). */
           const toWords = (s: string) =>
-            s.replace(/[&.,()]/g, " ").split(/\s+/).filter((w) => w.length > 1);
+            s.replace(/[&.,()]/g, " ").split(/\s+/).filter((w) => w.length > 1 && !COMPANY_STOPWORDS.has(w));
 
           /** Check if dealer address matches the sender address. */
           const addressMatches = (dealer: { city: unknown; country: unknown }): boolean => {
