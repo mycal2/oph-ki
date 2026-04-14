@@ -46,12 +46,17 @@ function buildMeta(
 
 function getHeaders(
   report: BillingReportResponse,
+  includeLineItems: boolean,
   includePrices: boolean
 ): string[] {
   const base =
     report.mode === "multi-tenant"
-      ? ["Mandant", "Bestellungen", "Bestellpositionen"]
-      : ["Datum", "Bestellungen", "Bestellpositionen"];
+      ? ["Mandant", "Bestellungen"]
+      : ["Datum", "Bestellungen"];
+
+  if (includeLineItems) {
+    base.push("Bestellpositionen");
+  }
 
   if (includePrices) {
     if (report.mode === "multi-tenant") {
@@ -67,11 +72,13 @@ function getHeaders(
 function getRowData(
   row: BillingReportMultiTenantRow | BillingReportSingleTenantRow,
   report: BillingReportResponse,
+  includeLineItems: boolean,
   includePrices: boolean
 ): string[] {
   if (report.mode === "multi-tenant") {
     const r = row as BillingReportMultiTenantRow;
-    const base = [r.tenantName, String(r.orderCount), String(r.lineItemCount)];
+    const base = [r.tenantName, String(r.orderCount)];
+    if (includeLineItems) base.push(String(r.lineItemCount));
     if (includePrices) {
       base.push(
         formatCurrency(r.costPerOrder),
@@ -82,7 +89,8 @@ function getRowData(
     return base;
   } else {
     const r = row as BillingReportSingleTenantRow;
-    const base = [formatDateDE(r.date), String(r.orderCount), String(r.lineItemCount)];
+    const base = [formatDateDE(r.date), String(r.orderCount)];
+    if (includeLineItems) base.push(String(r.lineItemCount));
     if (includePrices) {
       base.push(
         "\u2014", // no cost per order on individual days
@@ -96,10 +104,12 @@ function getRowData(
 
 function getTotalsRow(
   report: BillingReportResponse,
+  includeLineItems: boolean,
   includePrices: boolean
 ): string[] {
   const t = report.totals;
-  const base = ["Gesamt", String(t.orderCount), String(t.lineItemCount)];
+  const base = ["Gesamt", String(t.orderCount)];
+  if (includeLineItems) base.push(String(t.lineItemCount));
 
   if (includePrices) {
     if (report.mode === "multi-tenant") {
@@ -133,11 +143,12 @@ function escapeCsv(value: string): string {
 
 export function exportCsv(
   report: BillingReportResponse,
+  includeLineItems: boolean,
   includePrices: boolean,
   tenantNames: string[]
 ): void {
   const meta = buildMeta(report, tenantNames);
-  const headers = getHeaders(report, includePrices);
+  const headers = getHeaders(report, includeLineItems, includePrices);
 
   const lines: string[] = [
     meta.title,
@@ -149,10 +160,10 @@ export function exportCsv(
   ];
 
   for (const row of report.rows) {
-    lines.push(getRowData(row, report, includePrices).map(escapeCsv).join(","));
+    lines.push(getRowData(row, report, includeLineItems, includePrices).map(escapeCsv).join(","));
   }
 
-  lines.push(getTotalsRow(report, includePrices).map(escapeCsv).join(","));
+  lines.push(getTotalsRow(report, includeLineItems, includePrices).map(escapeCsv).join(","));
 
   const blob = new Blob(["\uFEFF" + lines.join("\n")], {
     type: "text/csv;charset=utf-8;",
@@ -166,12 +177,13 @@ export function exportCsv(
 
 export async function exportXls(
   report: BillingReportResponse,
+  includeLineItems: boolean,
   includePrices: boolean,
   tenantNames: string[]
 ): Promise<void> {
   const XLSX = await import("xlsx");
   const meta = buildMeta(report, tenantNames);
-  const headers = getHeaders(report, includePrices);
+  const headers = getHeaders(report, includeLineItems, includePrices);
 
   const wsData: (string | number)[][] = [
     [meta.title],
@@ -183,10 +195,10 @@ export async function exportXls(
   ];
 
   for (const row of report.rows) {
-    wsData.push(getRowData(row, report, includePrices));
+    wsData.push(getRowData(row, report, includeLineItems, includePrices));
   }
 
-  wsData.push(getTotalsRow(report, includePrices));
+  wsData.push(getTotalsRow(report, includeLineItems, includePrices));
 
   const ws = XLSX.utils.aoa_to_sheet(wsData);
   const wb = XLSX.utils.book_new();
@@ -200,6 +212,7 @@ export async function exportXls(
 
 export async function exportPdf(
   report: BillingReportResponse,
+  includeLineItems: boolean,
   includePrices: boolean,
   tenantNames: string[]
 ): Promise<void> {
@@ -207,7 +220,7 @@ export async function exportPdf(
   const autoTable = (await import("jspdf-autotable")).default;
 
   const meta = buildMeta(report, tenantNames);
-  const headers = getHeaders(report, includePrices);
+  const headers = getHeaders(report, includeLineItems, includePrices);
 
   // Use landscape for wide tables
   const isWide = includePrices && report.mode === "multi-tenant";
@@ -224,11 +237,11 @@ export async function exportPdf(
   // Table body
   const body: string[][] = [];
   for (const row of report.rows) {
-    body.push(getRowData(row, report, includePrices));
+    body.push(getRowData(row, report, includeLineItems, includePrices));
   }
 
   // Totals row
-  const totals = getTotalsRow(report, includePrices);
+  const totals = getTotalsRow(report, includeLineItems, includePrices);
 
   autoTable(doc, {
     startY: 48,
