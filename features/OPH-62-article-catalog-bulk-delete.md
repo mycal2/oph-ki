@@ -62,7 +62,88 @@ Tenant admins and platform admins can select multiple articles in the catalog ta
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Component Structure
+
+```
+Artikelstamm Page (article-catalog-page.tsx)
++-- Toolbar Row
+|   +-- Search Input
+|   +-- [When ≥1 selected] Selection Count Badge ("X Artikel ausgewählt")
+|   +-- [When ≥1 selected] "Auswahl löschen" Button  ← NEW
+|   +-- Import Button
+|   +-- Export Button
+|   +-- "Artikel hinzufügen" Button
++-- Article Table
+|   +-- [NEW] Checkbox Column (header: select-all, rows: per-article)
+|   +-- Artikelnummer Column
+|   +-- Bezeichnung Column
+|   +-- Einheit Column
+|   +-- Actions Column
++-- Pagination
++-- [NEW] Article Bulk Delete Dialog (article-bulk-delete-dialog.tsx)
+    +-- AlertDialog (shadcn)
+    +-- Title: "X Artikel löschen?"
+    +-- Body: "Diese Aktion kann nicht rückgängig gemacht werden."
+    +-- [Cancel] / [Alles löschen] Buttons
+    +-- Inline Error (on failure)
+```
+
+The `article-catalog-page.tsx` component is used in two contexts via props:
+- **Tenant view:** Settings → Artikelstamm (read/write for tenant_admin, read-only for tenant_user)
+- **Admin view:** Admin → Tenant Detail → Artikelstamm (always read/write for platform_admin, `adminTenantId` prop set)
+
+The `readOnly` prop gates all mutation actions (checkboxes, bulk delete, add/edit/delete).
+
+### Data Model
+
+No new database tables. Uses the existing `article_catalog` table:
+
+| Field | Purpose |
+|-------|---------|
+| `id` | UUID — used as the selection key and delete target |
+| `tenant_id` | UUID — ensures only the correct tenant's articles are deleted |
+| `article_number` | Shown in the table |
+| `description` | Shown in the table |
+| `unit` | Shown in the table |
+
+**Selection state** is held entirely in the browser (React `useState` with a `Set<string>` of selected IDs). No database state is modified until the admin confirms the dialog.
+
+### API Design
+
+Two parallel endpoints handle the same operation for different caller roles:
+
+| Endpoint | Caller Role | Tenant Scope |
+|----------|------------|--------------|
+| `DELETE /api/articles/bulk` | tenant_admin | Own tenant (from JWT) |
+| `DELETE /api/admin/tenants/[id]/articles/bulk` | platform_admin | Any tenant (from URL) |
+
+Both accept a JSON body with an array of article UUIDs and return `{ success: true, data: { deleted: number } }`.
+
+Tenant isolation is enforced at two levels: RLS policy on the `article_catalog` table, plus an explicit `tenant_id` filter in the application query (defence in depth).
+
+### Tech Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| **Selection stored in React state (not database)** | Ephemeral UI state — no need to persist which rows are checked. Cleared on search change and page change to prevent stale selections. |
+| **Single bulk DELETE query** | One `DELETE WHERE id IN (...)` query handles any number of IDs without N+1 loops. Supabase supports up to ~10k IDs in a single `.in()` call — more than sufficient for any realistic catalog size. |
+| **Two separate API endpoints (tenant vs admin)** | Clean separation of concerns. The tenant endpoint enforces the caller's own `tenant_id` from the JWT; the admin endpoint takes the target `tenant_id` from the URL. Neither endpoint accepts `tenant_id` in the request body (prevents spoofing). |
+| **`AlertDialog` (shadcn) for confirmation** | Blocks interaction with the page while open, requiring an explicit confirm/cancel. More appropriate than a regular Dialog for a destructive action. Consistent with shadcn patterns already used in `article-delete-dialog.tsx`. |
+| **`/bulk` sub-resource, not `DELETE /api/articles`** | Avoids ambiguity: the same base route handles GET (list) and POST (create). A separate `/bulk` sub-resource keeps routing unambiguous and makes the destructive intent explicit in the URL. |
+| **No new DB migration** | Bulk delete operates on the existing `article_catalog` table. Only application-layer code changed. |
+
+### Touch Points Summary
+
+| File | Change |
+|------|--------|
+| `src/components/article-catalog/article-catalog-page.tsx` | Added checkbox column, selection state, toolbar badge, "Auswahl löschen" button, dialog trigger |
+| `src/components/article-catalog/article-bulk-delete-dialog.tsx` | New component — AlertDialog for bulk delete confirmation |
+| `src/app/api/articles/bulk/route.ts` | New route — tenant_admin bulk delete |
+| `src/app/api/admin/tenants/[id]/articles/bulk/route.ts` | New route — platform_admin bulk delete |
+
+### No New Dependencies
+All UI primitives used (`Checkbox`, `AlertDialog`, `Button`, `Badge`) are already installed shadcn/ui components.
 
 ## QA Test Results
 

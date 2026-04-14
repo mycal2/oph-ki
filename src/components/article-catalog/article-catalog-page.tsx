@@ -12,6 +12,7 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
+  RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -34,12 +35,15 @@ import { ArticleFormDialog } from "@/components/article-catalog/article-form-dia
 import { ArticleDeleteDialog } from "@/components/article-catalog/article-delete-dialog";
 import { ArticleBulkDeleteDialog } from "@/components/article-catalog/article-bulk-delete-dialog";
 import { ArticleImportDialog } from "@/components/article-catalog/article-import-dialog";
+import { CatalogResetDialog } from "@/components/ui/catalog-reset-dialog";
 import type { ArticleCatalogItem } from "@/lib/types";
 import type { CreateArticleInput, UpdateArticleInput } from "@/lib/validations";
 
 interface ArticleCatalogPageProps {
   /** When provided, use admin API mode for this tenant. */
   adminTenantId?: string | null;
+  /** When provided (admin mode), show the reset-catalog button and use this name in dialogs. */
+  adminTenantName?: string | null;
   /** When true, hide the page-level heading (used when embedded in a sheet/tab). */
   compact?: boolean;
   /** When true, hide add/edit/delete/import buttons (read-only view for tenant_user). */
@@ -48,6 +52,7 @@ interface ArticleCatalogPageProps {
 
 export function ArticleCatalogPage({
   adminTenantId,
+  adminTenantName,
   compact = false,
   readOnly = false,
 }: ArticleCatalogPageProps) {
@@ -77,6 +82,7 @@ export function ArticleCatalogPage({
   const [deletingArticle, setDeletingArticle] = useState<ArticleCatalogItem | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
 
   // Selection state for bulk operations
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -205,6 +211,29 @@ export function ArticleCatalogPage({
     toast.success("Artikelstamm wurde als CSV exportiert.");
   }, [exportCsv]);
 
+  const handleResetConfirm = useCallback(async () => {
+    if (!adminTenantId) return { ok: false, error: "Kein Mandant ausgewaehlt." };
+
+    try {
+      const res = await fetch(`/api/admin/tenants/${adminTenantId}/articles`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+
+      if (!res.ok || !json.success) {
+        return { ok: false, error: json.error ?? "Fehler beim Loeschen." };
+      }
+
+      const deleted = json.data?.deleted ?? 0;
+      toast.success(`${deleted} Artikel geloescht.`);
+      refetch();
+      setSelectedIds(new Set());
+      return { ok: true, deleted };
+    } catch {
+      return { ok: false, error: "Netzwerkfehler beim Loeschen." };
+    }
+  }, [adminTenantId, refetch]);
+
   const handleDownloadSample = useCallback(() => {
     const BOM = "\uFEFF";
     const header =
@@ -295,6 +324,18 @@ export function ArticleCatalogPage({
               <Plus className="mr-2 h-4 w-4" />
               Artikel hinzufuegen
             </Button>
+            {adminTenantId && total > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-destructive border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => setResetDialogOpen(true)}
+              >
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Gesamten Stamm loeschen
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -555,6 +596,17 @@ export function ArticleCatalogPage({
         count={selectedIds.size}
         onConfirm={handleBulkDeleteConfirm}
       />
+
+      {adminTenantId && adminTenantName && (
+        <CatalogResetDialog
+          open={resetDialogOpen}
+          onOpenChange={setResetDialogOpen}
+          catalogType="Artikelstamm"
+          tenantName={adminTenantName}
+          recordCount={total}
+          onConfirm={handleResetConfirm}
+        />
+      )}
     </div>
   );
 }
