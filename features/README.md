@@ -3,12 +3,12 @@
 Dieser Ordner enthält detaillierte Feature Specs vom Requirements Engineer.
 
 ## Naming Convention
-`PROJ-X-feature-name.md`
+`OPH-X-feature-name.md`
 
 Beispiele:
-- `PROJ-1-user-authentication.md`
-- `PROJ-2-kanban-board.md`
-- `PROJ-3-file-attachments.md`
+- `OPH-1-user-authentication.md`
+- `OPH-2-kanban-board.md`
+- `OPH-3-file-attachments.md`
 
 ## Was gehört in eine Feature Spec?
 
@@ -89,6 +89,16 @@ Am Ende des Feature-Dokuments fügt QA die Test-Ergebnisse hinzu:
 5. **Frontend/Backend Devs** implementieren (dokumentiert via Git Commits)
 6. **QA Engineer** testet und fügt Test-Ergebnisse zum Feature-Dokument hinzu
 7. **DevOps** deployed und fügt Deployment-Status zum Feature-Dokument hinzu
+
+## Operative Skills (außerhalb des Feature-Workflows)
+
+### `/dealerrule` — Dealer Extraction Hints Generator
+Analysiert Beispiel-Bestellungen (PDF, Excel, CSV) eines Händlers und generiert strukturierte Extraktions-Hints für das Händler-Profil. Die Hints steuern die KI-Extraktion und werden im Feld `extraction_hints` gespeichert. Erstellt zusätzlich eine Dokumentation in `hints/`.
+
+**Wann verwenden:**
+- Neuer Händler mit besonderem Bestellformat
+- Extraktionsprobleme bei einem bestehenden Händler
+- Spalten-Zuordnung oder Zeilen-Filterung für einen Händler konfigurieren
 
 ## Status-Tracking
 

@@ -113,7 +113,16 @@
       "Bash(/dev/null --prefix /Users/michaelmollath/projects/oph-ki/)",
       "Bash(git -C /Users/michaelmollath/projects/oph-ki ls-files src/components/ui/sidebar.tsx src/components/layout/)",
       "Bash(ls -la /Users/michaelmollath/projects/oph-ki/src/app/\\\\\\(protected\\\\\\)/admin/dealers/)",
-      "Bash(git diff:*)"
+      "Bash(git diff:*)",
+      "Bash(ls -la /Users/michaelmollath/projects/oph-ki/src/app/\\\\\\(protected\\\\\\)/settings/dealer-mappings/)",
+      "Bash(grep -n \"email_confirmation\\\\|email_results\\\\|email_postprocess\" /Users/michaelmollath/projects/oph-ki/supabase/migrations/*.sql)",
+      "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")",
+      "Bash(vercel --version)",
+      "Bash(timeout 10 head -50)",
+      "Bash(grep -v \"^$\")",
+      "Skill(dealerrule)",
+      "Skill(dealerrule:*)",
+      "Bash(gh repo:*)"
     ],
     "additionalDirectories": [
       "/Users/michaelmollath/projects/ai-coding-starter-kit/src/app/api/orders/[orderId]",

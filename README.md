@@ -1,4 +1,4 @@
-# AI Coding Starter Kit
+# OPH-KI Agentic coding
 
 > Build production-ready web apps faster with AI-powered Skills handling Requirements, Architecture, Development, QA, and Deployment.
 
@@ -80,6 +80,7 @@ To add more features later, run `/requirements` again - it detects the existing 
 | Backend Developer | `/backend` | Builds APIs, database schemas, RLS policies with Supabase |
 | QA Engineer | `/qa` | Tests features against acceptance criteria + security audit |
 | DevOps | `/deploy` | Deploys to Vercel with production-ready checks |
+| Dealer Rule Generator | `/dealerrule` | Analyzes order documents and generates dealer extraction hints |
 | Help | `/help` | Context-aware guide: shows where you are and what to do next |
 
 ### How Skills Work
@@ -108,8 +109,8 @@ Features are tracked in `features/INDEX.md`:
 
 | ID | Feature | Status | Spec |
 |----|---------|--------|------|
-| PROJ-1 | User Login | Deployed | [Spec](features/PROJ-1-user-login.md) |
-| PROJ-2 | Dashboard | In Progress | [Spec](features/PROJ-2-dashboard.md) |
+| OPH-1 | User Login | Deployed | [Spec](features/PROJ-1-user-login.md) |
+| OPH-2 | Dashboard | In Progress | [Spec](features/PROJ-2-dashboard.md) |
 
 Every skill reads this file at start and updates it when done, preventing duplicate work.
 
@@ -149,6 +150,7 @@ ai-coding-starter-kit/
 |   |   +-- backend/SKILL.md             /backend (runs as sub-agent)
 |   |   +-- qa/SKILL.md                  /qa (runs as sub-agent)
 |   |   +-- deploy/SKILL.md              /deploy
+|   |   +-- dealerrule/SKILL.md          /dealerrule (dealer extraction hints)
 |   |   +-- help/SKILL.md                /help
 |   +-- agents/                      <-- Sub-agent configs
 |       +-- frontend-dev.md              Model, tools, limits
@@ -225,6 +227,7 @@ Each skill is a structured workflow that Claude Code discovers automatically. Sk
 | `/backend` | Sub-agent (forked) | Heavy file editing, SQL, API code |
 | `/qa` | Sub-agent (forked) | Systematic testing, lots of output |
 | `/deploy` | Inline | Deployment needs user oversight |
+| `/dealerrule` | Inline (Sonnet) | Interactive analysis of order documents, user reviews hints |
 | `/help` | Inline | Quick status check and guidance |
 
 ### Rules (`.claude/rules/`)
@@ -306,18 +309,3 @@ npm run build      # Production build
 npm run start      # Production server
 npm run lint       # ESLint
 ```
-
----
-
-## Author
-
-Created by **Alex Sprogis** – AI Product Engineer & Content Creator.
-
-- [YouTube](https://www.youtube.com/@alex.sprogis)
-- [Website](https://alexsprogis.de)
-
----
-
-## License
-
-MIT License - feel free to use for your projects!
