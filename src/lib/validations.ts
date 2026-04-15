@@ -161,8 +161,8 @@ const canonicalLineItemSchema = z.object({
   unit_price: z.number().nullable(),
   total_price: z.number().nullable(),
   currency: z.string().nullable(),
-  /** OPH-40: How the article_number was determined. */
-  article_number_source: z.enum(["extracted", "catalog_match", "manual"]).nullable().optional(),
+  /** OPH-40: How the article_number was determined. OPH-65 added "normalized_match". */
+  article_number_source: z.enum(["extracted", "catalog_match", "normalized_match", "manual"]).nullable().optional(),
   /** OPH-40: Human-readable reason for catalog match. */
   article_number_match_reason: z.string().nullable().optional(),
 });
@@ -177,6 +177,10 @@ const canonicalSenderSchema = z.object({
   email: z.string().nullable(),
   phone: z.string().nullable(),
   customer_number: z.string().nullable(),
+  /** OPH-47: How the customer_number was determined. OPH-65 added "catalog_normalized". */
+  customer_number_source: z.enum(["catalog_email", "catalog_exact", "catalog_normalized", "catalog_keyword", "catalog_fuzzy_name", "catalog_phone", "extracted"]).nullable().optional(),
+  /** OPH-47: Human-readable reason for the customer number match. */
+  customer_number_match_reason: z.string().nullable().optional(),
 });
 
 /** Schema for the order part of reviewed_data. */
@@ -359,6 +363,7 @@ export const createDealerSchema = z.object({
   filename_patterns: regexPatternArray.default([]),
   extraction_hints: extractionHintsField,
   active: z.boolean().default(true),
+  strip_leading_zeros_in_article_numbers: z.boolean().default(false),
 });
 
 export const updateDealerSchema = z.object({
@@ -386,6 +391,7 @@ export const updateDealerSchema = z.object({
   filename_patterns: regexPatternArray.optional(),
   extraction_hints: extractionHintsField,
   active: z.boolean().optional(),
+  strip_leading_zeros_in_article_numbers: z.boolean().optional(),
 });
 
 export type CreateDealerInput = z.infer<typeof createDealerSchema>;

@@ -281,12 +281,14 @@ export async function POST(
       id: string | null;
       name: string | null;
       extractionHints: string | null;
+      /** OPH-65: Per-dealer toggle for leading-zero stripping in article matching. */
+      stripLeadingZeros: boolean;
     } | null = null;
 
     if (order.dealer_id) {
       const { data: dealer } = await adminClient
         .from("dealers")
-        .select("id, name, extraction_hints")
+        .select("id, name, extraction_hints, strip_leading_zeros_in_article_numbers")
         .eq("id", order.dealer_id as string)
         .single();
 
@@ -295,6 +297,7 @@ export async function POST(
           id: dealer.id as string,
           name: dealer.name as string,
           extractionHints: (dealer.extraction_hints as string) ?? null,
+          stripLeadingZeros: (dealer.strip_leading_zeros_in_article_numbers as boolean) ?? false,
         };
       }
     }
@@ -474,6 +477,8 @@ export async function POST(
       // can correctly interpret ambiguous/unlabeled columns.
       const resolvedDealerId = (aiDealerUpdate.dealer_id as string) ?? (order.dealer_id as string);
       let finalResult = result;
+      /** OPH-65: Resolved per-dealer leading-zero flag (may be updated during dealer discovery). */
+      let resolvedStripLeadingZeros = dealerInfo?.stripLeadingZeros ?? false;
 
       // --- Re-extract if AI matching discovered a dealer with hints or column mappings ---
       // When the dealer wasn't known before extraction (no metadata-based recognition),
@@ -485,7 +490,7 @@ export async function POST(
         if (!resolvedDealerInfo || resolvedDealerInfo.id !== resolvedDealerId) {
           const { data: rDealer } = await adminClient
             .from("dealers")
-            .select("id, name, extraction_hints")
+            .select("id, name, extraction_hints, strip_leading_zeros_in_article_numbers")
             .eq("id", resolvedDealerId)
             .single();
           if (rDealer) {
@@ -493,7 +498,10 @@ export async function POST(
               id: rDealer.id as string,
               name: rDealer.name as string,
               extractionHints: (rDealer.extraction_hints as string) ?? null,
+              stripLeadingZeros: (rDealer.strip_leading_zeros_in_article_numbers as boolean) ?? false,
             };
+            // OPH-65: Update the outer-scoped flag so article matching uses the resolved dealer's setting
+            resolvedStripLeadingZeros = resolvedDealerInfo.stripLeadingZeros;
           }
         }
 
@@ -558,13 +566,14 @@ export async function POST(
       // unexpected abbreviations. Also marks truly unknown units with "(unbekannt)".
       finalExtractedData = normalizeUnits(finalExtractedData);
 
-      // --- OPH-40: Article number matching against tenant catalog ---
+      // --- OPH-40 + OPH-65: Article number matching against tenant catalog ---
       if (tenantId) {
         try {
           const matchedItems = await matchArticleNumbers(
             adminClient,
             finalExtractedData.order.line_items,
-            tenantId
+            tenantId,
+            { stripLeadingZeros: resolvedStripLeadingZeros }
           );
           finalExtractedData = {
             ...finalExtractedData,

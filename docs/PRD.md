@@ -84,6 +84,7 @@ Eine mandantenfähige SaaS-Plattform ("Order Intelligence Platform"), die Dental
 | P1 | OPH-62: Article Catalog Bulk Delete | In Review |
 | P1 | OPH-63: Per-Tenant Email Forwarding | Deployed |
 | P1 | OPH-64: Admin: Reset Artikelstamm / Kundenstamm for Tenant | In Progress |
+| P1 | OPH-65: Tolerant Article Number Matching (Whitespace, Hyphens, Optional Leading Zeros) | Planned |
 
 ## Success Metrics
 - Bearbeitungszeit pro Bestellung: von ~15 Min. manuell auf < 3 Min. mit System

@@ -101,6 +101,7 @@ export function DealerFormSheet({
   const [filenamePatterns, setFilenamePatterns] = useState<string[]>([]);
   const [extractionHints, setExtractionHints] = useState("");
   const [active, setActive] = useState(true);
+  const [stripLeadingZeros, setStripLeadingZeros] = useState(false);
 
   // UI state
   const [isLoadingDealer, setIsLoadingDealer] = useState(false);
@@ -127,6 +128,7 @@ export function DealerFormSheet({
     setFilenamePatterns([]);
     setExtractionHints("");
     setActive(true);
+    setStripLeadingZeros(false);
     setSaveError(null);
     setWarnings([]);
     setAuditLog([]);
@@ -149,6 +151,7 @@ export function DealerFormSheet({
     setFilenamePatterns(dealer.filename_patterns);
     setExtractionHints(dealer.extraction_hints ?? "");
     setActive(dealer.active);
+    setStripLeadingZeros(dealer.strip_leading_zeros_in_article_numbers ?? false);
   }, []);
 
   // Load dealer on open
@@ -209,6 +212,7 @@ export function DealerFormSheet({
       filename_patterns: filenamePatterns,
       extraction_hints: extractionHints || null,
       active,
+      strip_leading_zeros_in_article_numbers: stripLeadingZeros,
     };
 
     const result = await onSave(data, isNew);
@@ -426,6 +430,25 @@ export function DealerFormSheet({
                       id="dealer-active"
                       checked={active}
                       onCheckedChange={setActive}
+                    />
+                  </div>
+
+                  <Separator />
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="dealer-strip-leading-zeros">
+                        Führende Nullen in Artikelnummern ignorieren
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Aktivieren wenn &quot;016&quot; und &quot;16&quot; dieselbe Artikelnummer sind (z.B. KARL STORZ).
+                      </p>
+                    </div>
+                    <Switch
+                      id="dealer-strip-leading-zeros"
+                      checked={stripLeadingZeros}
+                      onCheckedChange={setStripLeadingZeros}
+                      aria-label="Führende Nullen in Artikelnummern ignorieren"
                     />
                   </div>
                 </TabsContent>

@@ -164,6 +164,8 @@ export interface Dealer {
   format_type: DealerFormatType;
   extraction_hints: string | null;
   active: boolean;
+  /** OPH-65: Strip leading zeros from digit runs during article number matching for this dealer. */
+  strip_leading_zeros_in_article_numbers: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -266,7 +268,7 @@ export interface CanonicalLineItem {
   total_price: number | null;
   currency: string | null;
   /** OPH-40: How the article_number was determined. */
-  article_number_source?: "extracted" | "catalog_match" | "manual" | null;
+  article_number_source?: "extracted" | "catalog_match" | "normalized_match" | "manual" | null;
   /** OPH-40: Human-readable reason for catalog match (German). */
   article_number_match_reason?: string | null;
 }
@@ -280,8 +282,8 @@ export interface CanonicalSender {
   email: string | null;
   phone: string | null;
   customer_number: string | null;
-  /** OPH-47: How the customer_number was determined. */
-  customer_number_source?: "catalog_email" | "catalog_exact" | "catalog_keyword" | "catalog_fuzzy_name" | "catalog_phone" | "extracted" | null;
+  /** OPH-47: How the customer_number was determined. OPH-65 added "catalog_normalized". */
+  customer_number_source?: "catalog_email" | "catalog_exact" | "catalog_normalized" | "catalog_keyword" | "catalog_fuzzy_name" | "catalog_phone" | "extracted" | null;
   /** OPH-47: Human-readable reason for the customer number match (German). */
   customer_number_match_reason?: string | null;
 }

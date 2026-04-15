@@ -152,6 +152,7 @@ export async function POST(
         filename_patterns: input.filename_patterns,
         extraction_hints: input.extraction_hints ?? null,
         active: input.active,
+        strip_leading_zeros_in_article_numbers: input.strip_leading_zeros_in_article_numbers ?? false,
       })
       .select()
       .single();
