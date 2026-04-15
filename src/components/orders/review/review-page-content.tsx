@@ -20,12 +20,14 @@ import { DocumentPreviewPanel } from "./document-preview-panel";
 import { OrderEditForm } from "./order-edit-form";
 import { DealerSection } from "@/components/orders/dealer";
 import { useAutoSave } from "@/hooks/use-auto-save";
+import { useCurrentUserRole } from "@/hooks/use-current-user-role";
 import type {
   OrderForReview,
   CanonicalOrderData,
   ApiResponse,
   ReviewApproveResponse,
   DealerOverrideResponse,
+  DealerResetResponse,
 } from "@/lib/types";
 
 interface ReviewPageContentProps {
@@ -38,6 +40,7 @@ interface ReviewPageContentProps {
  */
 export function ReviewPageContent({ orderId }: ReviewPageContentProps) {
   const router = useRouter();
+  const { isPlatformAdmin } = useCurrentUserRole();
   const [order, setOrder] = useState<OrderForReview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -114,8 +117,36 @@ export function ReviewPageContent({ orderId }: ReviewPageContentProps) {
           dealer_overridden_at: result.overriddenAt,
           overridden_by_name: result.overriddenByName,
           override_reason: result.overrideReason,
+          // OPH-66: Clear reset fields on new dealer assignment
+          dealer_reset_by: null,
+          dealer_reset_at: null,
+          reset_by_name: null,
         });
         // Update updatedAt from the order's actual updated_at
+        setUpdatedAt(result.updatedAt);
+      }
+    },
+    [order]
+  );
+
+  // OPH-66: Handle dealer reset — clear all dealer fields in local state
+  const handleDealerReset = useCallback(
+    (result: DealerResetResponse) => {
+      if (order) {
+        setOrder({
+          ...order,
+          dealer_id: null,
+          dealer_name: null,
+          recognition_method: "none",
+          recognition_confidence: 0,
+          dealer_overridden_by: null,
+          dealer_overridden_at: null,
+          overridden_by_name: null,
+          override_reason: null,
+          dealer_reset_by: result.resetBy,
+          dealer_reset_at: result.resetAt,
+          reset_by_name: result.resetByName,
+        });
         setUpdatedAt(result.updatedAt);
       }
     },
@@ -324,6 +355,8 @@ export function ReviewPageContent({ orderId }: ReviewPageContentProps) {
         recognitionMethod={order.recognition_method}
         orderUpdatedAt={updatedAt}
         onDealerChanged={handleDealerChanged}
+        onDealerReset={handleDealerReset}
+        isPlatformAdmin={isPlatformAdmin}
       />
 
       {/* Error banner */}

@@ -138,6 +138,16 @@ export const dealerOverrideSchema = z.object({
 export type DealerOverrideInput = z.infer<typeof dealerOverrideSchema>;
 
 /**
+ * OPH-66: Dealer reset validation schema.
+ */
+export const dealerResetSchema = z.object({
+  /** ISO timestamp for optimistic locking — prevents concurrent edit conflicts. */
+  updatedAt: z.string().optional(),
+});
+
+export type DealerResetInput = z.infer<typeof dealerResetSchema>;
+
+/**
  * OPH-5: Order Review validation schemas.
  */
 

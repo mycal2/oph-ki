@@ -427,6 +427,9 @@ export async function POST(
               dealer_id: bestMatch.id,
               recognition_method: "ai_content",
               recognition_confidence: bestMatch.confidence,
+              // OPH-66: Clear dealer reset audit fields when a new dealer is assigned
+              dealer_reset_by: null,
+              dealer_reset_at: null,
             };
             // Also set dealer info in extracted data for consistency
             result.extractedData.order.dealer = {
@@ -459,6 +462,9 @@ export async function POST(
                 dealer_id: newDealer.id as string,
                 recognition_method: "ai_content",
                 recognition_confidence: 70,
+                // OPH-66: Clear dealer reset audit fields when a new dealer is assigned
+                dealer_reset_by: null,
+                dealer_reset_at: null,
               };
               result.extractedData.order.dealer = {
                 id: newDealer.id as string,

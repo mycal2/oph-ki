@@ -212,6 +212,12 @@ export interface OrderWithDealer extends Order {
   has_unmapped_articles: boolean;
   /** OPH-25: Email subject stored on the order (from Postmark, .eml parsing, or manual input). */
   subject: string | null;
+  /** OPH-66: Who reset the dealer assignment (null if never reset or cleared on new assignment). */
+  dealer_reset_by: string | null;
+  /** OPH-66: When the dealer assignment was reset. */
+  dealer_reset_at: string | null;
+  /** OPH-66: Display name of the user who reset the dealer. */
+  reset_by_name: string | null;
 }
 
 /** Lightweight order summary for the orders list page. */
@@ -240,6 +246,16 @@ export interface DealerOverrideResponse {
   overriddenAt: string;
   overrideReason: string | null;
   /** The order's actual updated_at after the override (for optimistic locking). */
+  updatedAt: string;
+}
+
+/** Response from DELETE /api/orders/[orderId]/dealer (OPH-66: dealer reset) */
+export interface DealerResetResponse {
+  orderId: string;
+  resetBy: string;
+  resetByName: string;
+  resetAt: string;
+  /** The order's actual updated_at after the reset (for optimistic locking). */
   updatedAt: string;
 }
 
