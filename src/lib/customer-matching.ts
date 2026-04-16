@@ -115,19 +115,33 @@ export async function matchCustomerNumber(
   // No sender info at all -> skip (EC-4)
   if (!sender) return sender;
 
-  // Load entire customer catalog for this tenant (one query, in-memory matching)
-  const { data: catalog, error } = await adminClient
-    .from("customer_catalog")
-    .select("customer_number, company_name, email, phone, keywords")
-    .eq("tenant_id", tenantId)
-    .limit(10000);
+  // Load entire customer catalog for this tenant (paginated to bypass PostgREST row limit)
+  const PAGE_SIZE = 1000;
+  let catalog: Record<string, unknown>[] = [];
+  let offset = 0;
+  let hasMore = true;
 
-  if (error) {
-    console.error("Error loading customer catalog for matching:", error.message);
-    // Mark existing customer_number as "extracted" if present
-    return sender.customer_number
-      ? { ...sender, customer_number_source: "extracted" }
-      : sender;
+  while (hasMore) {
+    const { data: page, error } = await adminClient
+      .from("customer_catalog")
+      .select("customer_number, company_name, email, phone, keywords")
+      .eq("tenant_id", tenantId)
+      .range(offset, offset + PAGE_SIZE - 1);
+
+    if (error) {
+      console.error("Error loading customer catalog for matching:", error.message);
+      return sender.customer_number
+        ? { ...sender, customer_number_source: "extracted" }
+        : sender;
+    }
+
+    if (page && page.length > 0) {
+      catalog = catalog.concat(page);
+      offset += page.length;
+      hasMore = page.length === PAGE_SIZE;
+    } else {
+      hasMore = false;
+    }
   }
 
   // No catalog entries -> skip (EC-1)
