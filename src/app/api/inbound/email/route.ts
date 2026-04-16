@@ -288,6 +288,15 @@ export async function POST(
       console.info("Attachment warnings for email from", senderEmail, ":", warnings);
     }
 
+    // OPH-69 DEBUG: Log what filterAttachments returned (temporary)
+    console.info("OPH-69 DEBUG: filterAttachments result:", {
+      totalAttachments: (payload.Attachments ?? []).length,
+      supportedCount: supportedAttachments.length,
+      supportedNames: supportedAttachments.map(a => `${a.Name} (${a.ContentType}, ${a.ContentLength}b, CID=${a.ContentID ?? "none"})`),
+      warningsCount: warnings.length,
+      rawAttachments: (payload.Attachments ?? []).map(a => ({ Name: a.Name, ContentType: a.ContentType, ContentLength: a.ContentLength, ContentID: a.ContentID ?? "none" })),
+    });
+
     // 9. Create order record (include ingestion warnings if any)
     // Generate a preview token for every email-ingested order so the
     // confirmation email can link to the public preview page.
@@ -331,7 +340,9 @@ export async function POST(
     let primaryFilename: string | null = null;
     let primaryStoragePath: string | null = null;
 
+    console.info("OPH-69 DEBUG: About to upload", supportedAttachments.length, "attachments for order", orderId);
     for (const attachment of supportedAttachments) {
+      console.info("OPH-69 DEBUG: Uploading attachment:", attachment.Name, attachment.ContentType, attachment.ContentLength, "bytes, Content length:", attachment.Content?.length ?? "MISSING");
       const buffer = Buffer.from(attachment.Content, "base64");
       const sanitizedName = attachment.Name.replace(/[^a-z0-9._-]/gi, "_");
       const storagePath = `${tenant.id}/${orderId}/${sanitizedName}`;
