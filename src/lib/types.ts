@@ -834,6 +834,8 @@ export interface OrdersFilterState {
   page: number;
   /** OPH-18: Server-side tenant filter for platform admins (tenant UUID or "__all__"). */
   tenantId?: string;
+  /** OPH-68: Server-side dealer filter for tenant_admin and platform_admin (dealer UUID or "__all__"). */
+  dealerId?: string;
 }
 
 /**
