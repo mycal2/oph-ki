@@ -1,13 +1,12 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { FileText, Upload, Users } from "lucide-react";
+import Link from "next/link";
+import { Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { DashboardStats } from "@/components/orders/dashboard-stats";
+import { RecentOrders } from "@/components/dashboard/recent-orders";
+import { TeamOrActionTile } from "@/components/dashboard/team-or-action-tile";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import type { AppMetadata } from "@/lib/types";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -21,97 +20,84 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Fetch the user's profile for display name
+  // Fetch the user's profile for display name and role
   let firstName = "";
+  let userRole = "tenant_user";
+  let tenantId: string | null = null;
+  let teamMemberCount: number | null = null;
+
   if (user) {
+    const appMetadata = user.app_metadata as AppMetadata | undefined;
+    tenantId = appMetadata?.tenant_id ?? null;
+    userRole = appMetadata?.role ?? "tenant_user";
+
     const { data: profile } = await supabase
       .from("user_profiles")
-      .select("first_name")
+      .select("first_name, role")
       .eq("id", user.id)
       .single();
 
-    firstName = profile?.first_name || user.user_metadata?.first_name || user.email?.split("@")[0] || "";
+    firstName =
+      profile?.first_name ||
+      user.user_metadata?.first_name ||
+      user.email?.split("@")[0] ||
+      "";
+
+    if (profile?.role) {
+      userRole = profile.role;
+    }
+
+    // Fetch team member count for admins (server-side)
+    const isAdmin = userRole === "tenant_admin" || userRole === "platform_admin";
+    if (isAdmin && tenantId) {
+      try {
+        const adminClient = createAdminClient();
+        const { count } = await adminClient
+          .from("user_profiles")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", tenantId)
+          .eq("status", "active");
+
+        teamMemberCount = count ?? 0;
+      } catch {
+        // Fail silently - tile will still show, just without count
+        teamMemberCount = null;
+      }
+    }
   }
+
+  const isAdmin = userRole === "tenant_admin" || userRole === "platform_admin";
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold md:text-3xl">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">
-          Willkommen zurück{firstName ? `, ${firstName}` : ""}. Hier ist eine Übersicht Ihres Arbeitsbereichs.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold md:text-3xl">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">
+            Willkommen zur{"\u00fc"}ck{firstName ? `, ${firstName}` : ""}. Hier ist eine {"\u00dc"}bersicht Ihres Arbeitsbereichs.
+          </p>
+        </div>
+        <Button asChild className="sm:shrink-0">
+          <Link href="/orders/upload">
+            <Upload className="h-4 w-4" />
+            Bestellung hochladen
+          </Link>
+        </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Bestellungen heute
-            </CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              <Badge variant="secondary" className="text-xs">
-                Keine neuen Bestellungen
-              </Badge>
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Ausstehende Prüfungen
-            </CardTitle>
-            <Upload className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              <Badge variant="secondary" className="text-xs">
-                Alles erledigt
-              </Badge>
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Teammitglieder
-            </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">-</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              <Badge variant="secondary" className="text-xs">
-                Siehe Teamverwaltung
-              </Badge>
-            </p>
-          </CardContent>
-        </Card>
+      {/* Stats tiles row: DashboardStats (5 tiles) + team/action tile */}
+      <div className="space-y-3">
+        <DashboardStats />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <TeamOrActionTile
+            teamMemberCount={teamMemberCount}
+            isAdmin={isAdmin}
+          />
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Letzte Aktivität</CardTitle>
-          <CardDescription>
-            Ihre neuesten Bestellungen und Aktionen.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
-            <p className="text-muted-foreground text-sm">
-              Noch keine Bestellungen vorhanden. Laden Sie Ihre erste Bestellung
-              hoch, um zu starten.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Recent Orders */}
+      <RecentOrders />
     </div>
   );
 }

@@ -78,7 +78,8 @@
 | OPH-64 | Admin: Reset Artikelstamm / Kundenstamm for Tenant | In Progress | [OPH-64-admin-catalog-reset.md](OPH-64-admin-catalog-reset.md) | 2026-04-14 |
 | OPH-65 | Tolerant Article Number Matching (Whitespace, Hyphens, Optional Leading Zeros) | In Progress | [OPH-65-tolerant-article-matching.md](OPH-65-tolerant-article-matching.md) | 2026-04-15 |
 | OPH-66 | Reset Dealer Recognition on an Order | In Progress | [OPH-66-reset-dealer-on-order.md](OPH-66-reset-dealer-on-order.md) | 2026-04-15 |
+| OPH-67 | Tenant User Dashboard | Planned | [OPH-67-tenant-dashboard.md](OPH-67-tenant-dashboard.md) | 2026-04-16 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-67
+## Next Available ID: OPH-68
