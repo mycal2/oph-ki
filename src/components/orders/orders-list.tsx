@@ -9,6 +9,7 @@ import {
   Loader2,
   AlertCircle,
   Building2,
+  Store,
   ChevronLeft,
   ChevronRight,
   Trash2,
@@ -74,8 +75,14 @@ const STATUS_VARIANTS: Record<
 /** Sentinel value for "All tenants" in the Select component. */
 const ALL_TENANTS = "__all__";
 
+/** Sentinel value for "All dealers" in the Select component. */
+const ALL_DEALERS = "__all__";
+
 /** sessionStorage key for persisting the tenant filter across navigation. */
 const TENANT_FILTER_KEY = "oph18_tenant_filter";
+
+/** sessionStorage key for persisting the dealer filter across navigation. */
+const DEALER_FILTER_KEY = "oph68_dealer_filter";
 
 const DEFAULT_FILTERS: OrdersFilterState = {
   status: "all",
@@ -110,9 +117,14 @@ export function OrdersList() {
     if (typeof window === "undefined") return ALL_TENANTS;
     return sessionStorage.getItem(TENANT_FILTER_KEY) ?? ALL_TENANTS;
   });
+  const [selectedDealer] = useState<string>(() => {
+    if (typeof window === "undefined") return ALL_DEALERS;
+    return sessionStorage.getItem(DEALER_FILTER_KEY) ?? ALL_DEALERS;
+  });
   const [filters, setFilters] = useState<OrdersFilterState>({
     ...DEFAULT_FILTERS,
     tenantId: selectedTenant,
+    dealerId: selectedDealer,
   });
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; filename: string; fileCount: number } | null>(null);
 
@@ -122,12 +134,24 @@ export function OrdersList() {
     } else {
       sessionStorage.setItem(TENANT_FILTER_KEY, value);
     }
+    // OPH-68: Reset dealer filter when tenant changes — the old dealer may not exist in the new tenant
+    sessionStorage.removeItem(DEALER_FILTER_KEY);
     // OPH-18 fix: Server-side tenant filter — reset to page 1 and refetch
-    setFilters((prev) => ({ ...prev, page: 1, tenantId: value }));
+    setFilters((prev) => ({ ...prev, page: 1, tenantId: value, dealerId: ALL_DEALERS }));
+  }, []);
+
+  const handleDealerChange = useCallback((value: string) => {
+    if (value === ALL_DEALERS) {
+      sessionStorage.removeItem(DEALER_FILTER_KEY);
+    } else {
+      sessionStorage.setItem(DEALER_FILTER_KEY, value);
+    }
+    setFilters((prev) => ({ ...prev, page: 1, dealerId: value }));
   }, []);
 
   const { role, isPlatformAdmin, isLoading: isRoleLoading } = useCurrentUserRole();
   const canDelete = role === "tenant_admin" || role === "platform_admin";
+  const canFilterByDealer = role === "tenant_admin" || role === "platform_admin";
 
   const fetchOrders = useCallback(
     async (currentFilters: OrdersFilterState, silent = false) => {
@@ -152,6 +176,9 @@ export function OrdersList() {
         }
         if (currentFilters.tenantId && currentFilters.tenantId !== ALL_TENANTS) {
           params.set("tenantId", currentFilters.tenantId);
+        }
+        if (currentFilters.dealerId && currentFilters.dealerId !== ALL_DEALERS) {
+          params.set("dealerId", currentFilters.dealerId);
         }
 
         const res = await fetch(`/api/orders?${params.toString()}`);
@@ -231,6 +258,33 @@ export function OrdersList() {
     })();
   }, [isPlatformAdmin]);
 
+  // OPH-68: Fetch dealers that appear in orders for the dealer filter dropdown
+  const [dealerOptions, setDealerOptions] = useState<{ id: string; name: string }[]>([]);
+  const [isDealerOptionsLoading, setIsDealerOptionsLoading] = useState(false);
+  useEffect(() => {
+    if (!canFilterByDealer) return;
+    (async () => {
+      setIsDealerOptionsLoading(true);
+      try {
+        const params = new URLSearchParams();
+        if (filters.tenantId && filters.tenantId !== ALL_TENANTS) {
+          params.set("tenantId", filters.tenantId);
+        }
+        const res = await fetch(`/api/orders/dealers?${params.toString()}`);
+        const json = await res.json();
+        if (json.success && json.data) {
+          setDealerOptions(json.data as Array<{ id: string; name: string }>);
+        }
+      } catch {
+        // Silently fall back to no dealer filter options
+      } finally {
+        setIsDealerOptionsLoading(false);
+      }
+    })();
+    // Re-fetch when tenant filter changes (dealer list depends on tenant scope)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canFilterByDealer, filters.tenantId]);
+
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const handlePageChange = useCallback(
@@ -277,7 +331,8 @@ export function OrdersList() {
     filters.status !== "all" ||
     filters.search !== "" ||
     filters.dateFrom !== "" ||
-    filters.dateTo !== "";
+    filters.dateTo !== "" ||
+    (filters.dealerId !== undefined && filters.dealerId !== ALL_DEALERS);
 
   if (!isLoading && orders.length === 0 && !hasActiveFilters) {
     return (
@@ -332,6 +387,44 @@ export function OrdersList() {
             </SelectContent>
           </Select>
           {filters.tenantId && filters.tenantId !== ALL_TENANTS && (
+            <span className="text-xs text-muted-foreground">
+              {total}{" "}
+              {total === 1
+                ? "Bestellung"
+                : "Bestellungen"}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* OPH-68: Dealer filter for tenant_admin + platform_admin */}
+      {canFilterByDealer && (
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Store className="h-4 w-4" aria-hidden="true" />
+            <span className="hidden sm:inline">Händler:</span>
+          </div>
+          <Select
+            value={filters.dealerId ?? ALL_DEALERS}
+            onValueChange={handleDealerChange}
+            disabled={isDealerOptionsLoading}
+          >
+            <SelectTrigger
+              className="w-[220px]"
+              aria-label="Händler filtern"
+            >
+              <SelectValue placeholder="Alle Händler" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_DEALERS}>Alle Händler</SelectItem>
+              {dealerOptions.map((d) => (
+                <SelectItem key={d.id} value={d.id}>
+                  {d.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {filters.dealerId && filters.dealerId !== ALL_DEALERS && (
             <span className="text-xs text-muted-foreground">
               {total}{" "}
               {total === 1
