@@ -320,7 +320,14 @@ export async function POST(
         subject: payload.Subject ? payload.Subject.slice(0, 500) : null,
         preview_token: previewToken,
         preview_token_expires_at: tokenExpiresAt.toISOString(),
-        ...(warnings.length > 0 ? { ingestion_notes: warnings } : {}),
+        ingestion_notes: [
+          ...warnings,
+          // OPH-69 DEBUG (temporary): Write attachment metadata to DB for diagnosis
+          `DEBUG: ${(payload.Attachments ?? []).length} attachments from Postmark`,
+          ...(payload.Attachments ?? []).map(a => `DEBUG ATT: ${a.Name} | ${a.ContentType} | ${a.ContentLength}b | CID=${a.ContentID ?? "none"}`),
+          `DEBUG: filterAttachments returned ${supportedAttachments.length} supported`,
+          ...supportedAttachments.map(a => `DEBUG ACCEPTED: ${a.Name} | ${a.ContentType} | ${a.ContentLength}b`),
+        ],
         ...trialOrderFields,
       })
       .select("id")
