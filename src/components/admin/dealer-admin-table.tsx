@@ -129,6 +129,7 @@ export function DealerAdminTable({
                 <TableHead>Name</TableHead>
                 <TableHead className="hidden md:table-cell">Ort</TableHead>
                 <TableHead className="hidden sm:table-cell">Format</TableHead>
+                <TableHead className="hidden lg:table-cell text-right">Mandanten</TableHead>
                 <TableHead className="text-right">Bestellungen</TableHead>
                 <TableHead className="hidden lg:table-cell">Letzte Bestellung</TableHead>
                 <TableHead className="hidden sm:table-cell">Status</TableHead>
@@ -157,6 +158,9 @@ export function DealerAdminTable({
                     <Badge variant="secondary" className="text-xs">
                       {FORMAT_LABELS[dealer.format_type]}
                     </Badge>
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell text-right tabular-nums">
+                    {dealer.tenant_count}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {dealer.order_count}

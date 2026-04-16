@@ -12,6 +12,7 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
+  RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -32,12 +33,15 @@ import { useCustomerCatalog } from "@/hooks/use-customer-catalog";
 import { CustomerFormDialog } from "@/components/customer-catalog/customer-form-dialog";
 import { CustomerDeleteDialog } from "@/components/customer-catalog/customer-delete-dialog";
 import { CustomerImportDialog } from "@/components/customer-catalog/customer-import-dialog";
+import { CatalogResetDialog } from "@/components/ui/catalog-reset-dialog";
 import type { CustomerCatalogItem } from "@/lib/types";
 import type { CreateCustomerInput, UpdateCustomerInput } from "@/lib/validations";
 
 interface CustomerCatalogPageProps {
   /** When provided, use admin API mode for this tenant. */
   adminTenantId?: string | null;
+  /** When provided (admin mode), show the reset-catalog button and use this name in dialogs. */
+  adminTenantName?: string | null;
   /** When true, hide the page-level heading (used when embedded in a sheet/tab). */
   compact?: boolean;
   /** When true, hide add/edit/delete/import buttons (read-only view for tenant_user). */
@@ -46,6 +50,7 @@ interface CustomerCatalogPageProps {
 
 export function CustomerCatalogPage({
   adminTenantId,
+  adminTenantName,
   compact = false,
   readOnly = false,
 }: CustomerCatalogPageProps) {
@@ -73,6 +78,7 @@ export function CustomerCatalogPage({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingCustomer, setDeletingCustomer] = useState<CustomerCatalogItem | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
 
   const totalPages = Math.ceil(total / pageSize);
 
@@ -144,6 +150,28 @@ export function CustomerCatalogPage({
     await exportCsv();
     toast.success("Kundenstamm wurde als CSV exportiert.");
   }, [exportCsv]);
+
+  const handleResetConfirm = useCallback(async () => {
+    if (!adminTenantId) return { ok: false, error: "Kein Mandant ausgewaehlt." };
+
+    try {
+      const res = await fetch(`/api/admin/tenants/${adminTenantId}/customers`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+
+      if (!res.ok || !json.success) {
+        return { ok: false, error: json.error ?? "Fehler beim Loeschen." };
+      }
+
+      const deleted = json.data?.deleted ?? 0;
+      toast.success(`${deleted} Kunden geloescht.`);
+      refetch();
+      return { ok: true, deleted };
+    } catch {
+      return { ok: false, error: "Netzwerkfehler beim Loeschen." };
+    }
+  }, [adminTenantId, refetch]);
 
   const handleDownloadSample = useCallback(() => {
     const BOM = "\uFEFF";
@@ -231,6 +259,18 @@ export function CustomerCatalogPage({
               <Plus className="mr-2 h-4 w-4" />
               Kunde hinzufuegen
             </Button>
+            {adminTenantId && total > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-destructive border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => setResetDialogOpen(true)}
+              >
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Gesamten Stamm loeschen
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -440,6 +480,17 @@ export function CustomerCatalogPage({
         onOpenChange={setImportOpen}
         onImport={handleImport}
       />
+
+      {adminTenantId && adminTenantName && (
+        <CatalogResetDialog
+          open={resetDialogOpen}
+          onOpenChange={setResetDialogOpen}
+          catalogType="Kundenstamm"
+          tenantName={adminTenantName}
+          recordCount={total}
+          onConfirm={handleResetConfirm}
+        />
+      )}
     </div>
   );
 }

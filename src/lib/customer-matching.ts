@@ -1,5 +1,6 @@
 /**
  * OPH-47: AI Customer Number Matching during Extraction.
+ * OPH-65: Tolerant customer number matching (whitespace, hyphens, leading zeros).
  *
  * Server-side utility that matches extracted sender information against the
  * tenant's customer catalog to find or verify the correct Kundennummer.
@@ -9,6 +10,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CanonicalSender } from "@/lib/types";
+import { normalizeArticleKey } from "@/lib/article-matching";
 
 /** Shape of a customer catalog row loaded from the database. */
 interface CustomerCatalogEntry {
@@ -168,6 +170,35 @@ export async function matchCustomerNumber(
           customer_number_source: "catalog_exact",
           customer_number_match_reason: `Katalog-Treffer (Kundennummer): ${entry.company_name}`,
         };
+      }
+    }
+
+    // --- OPH-65: Normalized customer number match ---
+    // Strip whitespace, hyphens, and leading zeros (always on for customer numbers).
+    // e.g. extracted "00108606" matches catalog "108606".
+    const senderCustNormalized = normalizeArticleKey(sender.customer_number, true);
+    if (senderCustNormalized.length > 0) {
+      const normalizedHits: CustomerCatalogEntry[] = [];
+      for (const entry of entries) {
+        const entryNormalized = normalizeArticleKey(entry.customer_number, true);
+        if (entryNormalized === senderCustNormalized) {
+          normalizedHits.push(entry);
+        }
+      }
+
+      if (normalizedHits.length === 1) {
+        return {
+          ...sender,
+          customer_number: normalizedHits[0].customer_number,
+          customer_number_source: "catalog_normalized",
+          customer_number_match_reason: `Normalisiert: ${sender.customer_number} → ${normalizedHits[0].customer_number} (${normalizedHits[0].company_name})`,
+        };
+      } else if (normalizedHits.length > 1) {
+        // Multiple collisions — ambiguous, skip normalized match
+        console.warn(
+          `OPH-65: Normalized customer number collision: "${sender.customer_number}" ` +
+          `normalizes to "${senderCustNormalized}" which matches ${normalizedHits.length} catalog entries. Skipping.`
+        );
       }
     }
   }

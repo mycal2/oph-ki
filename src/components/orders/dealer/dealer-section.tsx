@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Pencil, Check, Loader2 } from "lucide-react";
+import { Pencil, Check, Loader2, RotateCcw } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DealerBadge } from "./dealer-badge";
 import { DealerOverrideDialog } from "./dealer-override-dialog";
+import { DealerResetDialog } from "./dealer-reset-dialog";
 import { useDealerOverride } from "@/hooks/use-dealer-override";
-import type { RecognitionMethod, DealerOverrideResponse } from "@/lib/types";
+import type { RecognitionMethod, DealerOverrideResponse, DealerResetResponse } from "@/lib/types";
 
 interface DealerSectionProps {
   orderId: string;
@@ -19,10 +21,15 @@ interface DealerSectionProps {
   orderUpdatedAt?: string;
   /** Called after a successful override so the parent can update its state. */
   onDealerChanged?: (result: DealerOverrideResponse) => void;
+  /** OPH-66: Called after a successful dealer reset so the parent can update its state. */
+  onDealerReset?: (result: DealerResetResponse) => void;
+  /** OPH-66: Whether the current user is a platform admin (controls reset button visibility). */
+  isPlatformAdmin?: boolean;
 }
 
 /**
- * Combines the DealerBadge with a "Korrigieren" button that opens the override dialog.
+ * Combines the DealerBadge with a "Korrigieren" button that opens the override dialog
+ * and an optional "Zurücksetzen" button for platform admins (OPH-66).
  */
 export function DealerSection({
   orderId,
@@ -32,8 +39,11 @@ export function DealerSection({
   recognitionMethod,
   orderUpdatedAt,
   onDealerChanged,
+  onDealerReset,
+  isPlatformAdmin = false,
 }: DealerSectionProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [currentDealerName, setCurrentDealerName] = useState(dealerName);
   const [currentDealerId, setCurrentDealerId] = useState(dealerId);
   const [currentMethod, setCurrentMethod] =
@@ -67,6 +77,41 @@ export function DealerSection({
       handleOverrideSuccess(result);
     }
   }, [orderId, currentDealerId, orderUpdatedAt, override, handleOverrideSuccess]);
+
+  const handleResetSuccess = useCallback(
+    (result: DealerResetResponse) => {
+      setCurrentDealerId(null);
+      setCurrentDealerName(null);
+      setCurrentMethod("none");
+      setCurrentConfidence(0);
+      onDealerReset?.(result);
+
+      toast.success(
+        "Händler-Zuweisung zurückgesetzt. Bestellung neu extrahieren, um erneut zu erkennen.",
+        {
+          action: {
+            label: "Neu extrahieren",
+            onClick: async () => {
+              try {
+                const res = await fetch(`/api/orders/${orderId}/extract`, {
+                  method: "POST",
+                });
+                if (res.ok) {
+                  toast.success("Extraktion gestartet.");
+                } else {
+                  const json = await res.json();
+                  toast.error(json.error ?? "Extraktion fehlgeschlagen.");
+                }
+              } catch {
+                toast.error("Verbindungsfehler bei der Extraktion.");
+              }
+            },
+          },
+        }
+      );
+    },
+    [orderId, onDealerReset]
+  );
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
@@ -108,6 +153,20 @@ export function DealerSection({
         Korrigieren
       </Button>
 
+      {/* OPH-66: Reset button — only visible to platform admins */}
+      {isPlatformAdmin && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1 text-xs text-destructive/70 hover:text-destructive hover:bg-destructive/10"
+          onClick={() => setResetDialogOpen(true)}
+          aria-label="Händler zurücksetzen"
+        >
+          <RotateCcw className="h-3 w-3" />
+          Zurücksetzen
+        </Button>
+      )}
+
       <DealerOverrideDialog
         orderId={orderId}
         currentDealerId={currentDealerId}
@@ -116,6 +175,17 @@ export function DealerSection({
         onOpenChange={setDialogOpen}
         onOverrideSuccess={handleOverrideSuccess}
       />
+
+      {/* OPH-66: Reset dialog */}
+      {isPlatformAdmin && (
+        <DealerResetDialog
+          orderId={orderId}
+          orderUpdatedAt={orderUpdatedAt}
+          open={resetDialogOpen}
+          onOpenChange={setResetDialogOpen}
+          onResetSuccess={handleResetSuccess}
+        />
+      )}
     </div>
   );
 }

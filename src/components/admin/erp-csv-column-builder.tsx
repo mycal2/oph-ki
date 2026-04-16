@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ErpColumnMappingExtended, ErpTransformationStep } from "@/lib/types";
 import { ErpTransformationEditor } from "@/components/admin/erp-transformation-editor";
@@ -183,6 +184,9 @@ function ColumnRow({
   onMove: (index: number, direction: "up" | "down") => void;
   onUpdateTransformations: (index: number, transformations: ErpTransformationStep[]) => void;
 }) {
+  // OPH-60: Determine if this column uses a fixed value
+  const isFixed = column.fixed_value !== undefined && column.fixed_value !== null;
+
   return (
     <div className="rounded-lg border p-3 space-y-3">
       {/* Row header with ordering controls */}
@@ -245,22 +249,58 @@ function ColumnRow({
           />
         </div>
 
-        {/* Source field */}
-        <div className="space-y-1.5">
-          <Label className="text-xs">Quellfeld (Canonical JSON) *</Label>
-          <Input
-            value={column.source_field}
-            onChange={(e) => onUpdate(index, "source_field", e.target.value)}
-            placeholder="z.B. order.order_number"
-            className="h-8 text-xs font-mono"
-            list={`source-suggestions-${index}`}
-          />
-          <datalist id={`source-suggestions-${index}`}>
-            {SOURCE_FIELD_SUGGESTIONS.map((f) => (
-              <option key={f} value={f} />
-            ))}
-          </datalist>
-        </div>
+        {/* OPH-60: Source type — dynamic extraction or fixed value */}
+        {isFixed ? (
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <Label className="text-xs">Fester Wert</Label>
+              <Badge
+                variant="outline"
+                className="text-[10px] px-1 py-0 cursor-pointer hover:bg-muted"
+                onClick={() => {
+                  onUpdate(index, "fixed_value", null);
+                  onUpdate(index, "source_field", "");
+                }}
+              >
+                Zu Extraktion wechseln
+              </Badge>
+            </div>
+            <Input
+              value={column.fixed_value ?? ""}
+              onChange={(e) => onUpdate(index, "fixed_value", e.target.value)}
+              placeholder='z.B. 81, EUR, ...'
+              className="h-8 text-xs"
+            />
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <Label className="text-xs">Quellfeld (Canonical JSON) *</Label>
+              <Badge
+                variant="outline"
+                className="text-[10px] px-1 py-0 cursor-pointer hover:bg-muted"
+                onClick={() => {
+                  onUpdate(index, "fixed_value", "");
+                  onUpdate(index, "source_field", "");
+                }}
+              >
+                Fester Wert
+              </Badge>
+            </div>
+            <Input
+              value={column.source_field}
+              onChange={(e) => onUpdate(index, "source_field", e.target.value)}
+              placeholder="z.B. order.order_number"
+              className="h-8 text-xs font-mono"
+              list={`source-suggestions-${index}`}
+            />
+            <datalist id={`source-suggestions-${index}`}>
+              {SOURCE_FIELD_SUGGESTIONS.map((f) => (
+                <option key={f} value={f} />
+              ))}
+            </datalist>
+          </div>
+        )}
 
         {/* Required toggle */}
         <div className="flex items-center gap-2 pt-5">
@@ -275,11 +315,13 @@ function ColumnRow({
         </div>
       </div>
 
-      {/* Transformations */}
-      <ErpTransformationEditor
-        transformations={column.transformations}
-        onChange={(transforms) => onUpdateTransformations(index, transforms)}
-      />
+      {/* Transformations — hidden for fixed-value columns */}
+      {!isFixed && (
+        <ErpTransformationEditor
+          transformations={column.transformations}
+          onChange={(transforms) => onUpdateTransformations(index, transforms)}
+        />
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Plus,
   Upload,
@@ -12,10 +12,12 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
+  RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -31,13 +33,17 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useArticleCatalog } from "@/hooks/use-article-catalog";
 import { ArticleFormDialog } from "@/components/article-catalog/article-form-dialog";
 import { ArticleDeleteDialog } from "@/components/article-catalog/article-delete-dialog";
+import { ArticleBulkDeleteDialog } from "@/components/article-catalog/article-bulk-delete-dialog";
 import { ArticleImportDialog } from "@/components/article-catalog/article-import-dialog";
+import { CatalogResetDialog } from "@/components/ui/catalog-reset-dialog";
 import type { ArticleCatalogItem } from "@/lib/types";
 import type { CreateArticleInput, UpdateArticleInput } from "@/lib/validations";
 
 interface ArticleCatalogPageProps {
   /** When provided, use admin API mode for this tenant. */
   adminTenantId?: string | null;
+  /** When provided (admin mode), show the reset-catalog button and use this name in dialogs. */
+  adminTenantName?: string | null;
   /** When true, hide the page-level heading (used when embedded in a sheet/tab). */
   compact?: boolean;
   /** When true, hide add/edit/delete/import buttons (read-only view for tenant_user). */
@@ -46,6 +52,7 @@ interface ArticleCatalogPageProps {
 
 export function ArticleCatalogPage({
   adminTenantId,
+  adminTenantName,
   compact = false,
   readOnly = false,
 }: ArticleCatalogPageProps) {
@@ -62,6 +69,7 @@ export function ArticleCatalogPage({
     createArticle,
     updateArticle,
     deleteArticle,
+    bulkDeleteArticles,
     importFile,
     exportCsv,
     refetch,
@@ -73,6 +81,46 @@ export function ArticleCatalogPage({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingArticle, setDeletingArticle] = useState<ArticleCatalogItem | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+
+  // Selection state for bulk operations
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Clear selection when search changes
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [search]);
+
+  // Clear selection when page changes
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [page]);
+
+  const allVisibleSelected =
+    articles.length > 0 && articles.every((a) => selectedIds.has(a.id));
+
+  const someSelected = selectedIds.size > 0;
+
+  const toggleSelectAll = useCallback(() => {
+    if (allVisibleSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(articles.map((a) => a.id)));
+    }
+  }, [allVisibleSelected, articles]);
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
 
   const totalPages = Math.ceil(total / pageSize);
 
@@ -124,6 +172,24 @@ export function ArticleCatalogPage({
     return result;
   }, [deletingArticle, deleteArticle]);
 
+  const handleBulkDeleteConfirm = useCallback(async () => {
+    const ids = Array.from(selectedIds);
+    const result = await bulkDeleteArticles(ids);
+    if (result.ok) {
+      const deleted = result.deleted ?? ids.length;
+      const skipped = ids.length - deleted;
+      if (skipped > 0) {
+        toast.warning(
+          `${deleted} von ${ids.length} Artikeln gelöscht. ${skipped} konnten nicht gefunden werden.`
+        );
+      } else {
+        toast.success(`${deleted} Artikel gelöscht.`);
+      }
+      setSelectedIds(new Set());
+    }
+    return result;
+  }, [selectedIds, bulkDeleteArticles]);
+
   const handleImport = useCallback(
     async (file: File) => {
       const result = await importFile(file);
@@ -144,6 +210,29 @@ export function ArticleCatalogPage({
     await exportCsv();
     toast.success("Artikelstamm wurde als CSV exportiert.");
   }, [exportCsv]);
+
+  const handleResetConfirm = useCallback(async () => {
+    if (!adminTenantId) return { ok: false, error: "Kein Mandant ausgewaehlt." };
+
+    try {
+      const res = await fetch(`/api/admin/tenants/${adminTenantId}/articles`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+
+      if (!res.ok || !json.success) {
+        return { ok: false, error: json.error ?? "Fehler beim Loeschen." };
+      }
+
+      const deleted = json.data?.deleted ?? 0;
+      toast.success(`${deleted} Artikel geloescht.`);
+      refetch();
+      setSelectedIds(new Set());
+      return { ok: true, deleted };
+    } catch {
+      return { ok: false, error: "Netzwerkfehler beim Loeschen." };
+    }
+  }, [adminTenantId, refetch]);
 
   const handleDownloadSample = useCallback(() => {
     const BOM = "\uFEFF";
@@ -235,16 +324,49 @@ export function ArticleCatalogPage({
               <Plus className="mr-2 h-4 w-4" />
               Artikel hinzufuegen
             </Button>
+            {adminTenantId && total > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-destructive border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => setResetDialogOpen(true)}
+              >
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Gesamten Stamm loeschen
+              </Button>
+            )}
           </div>
         )}
       </div>
 
-      {/* Article count */}
+      {/* Article count & selection toolbar */}
       {!isLoading && total > 0 && (
-        <p className="text-sm text-muted-foreground">
-          {total} Artikel{total !== 1 ? "" : ""}
-          {search && ` fuer "${search}"`}
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            {someSelected ? (
+              <span className="font-medium text-foreground">
+                {selectedIds.size} Artikel ausgewaehlt
+              </span>
+            ) : (
+              <>
+                {total} Artikel{total !== 1 ? "" : ""}
+                {search && ` fuer "${search}"`}
+              </>
+            )}
+          </p>
+          {someSelected && !readOnly && (
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={() => setBulkDeleteOpen(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Auswahl loeschen
+            </Button>
+          )}
+        </div>
       )}
 
       {/* Loading state */}
@@ -299,6 +421,15 @@ export function ArticleCatalogPage({
             <Table>
               <TableHeader>
                 <TableRow>
+                  {!readOnly && (
+                    <TableHead className="w-[40px]">
+                      <Checkbox
+                        checked={allVisibleSelected}
+                        onCheckedChange={toggleSelectAll}
+                        aria-label="Alle sichtbaren Artikel auswaehlen"
+                      />
+                    </TableHead>
+                  )}
                   <TableHead className="min-w-[140px]">Herst.-Art.-Nr.</TableHead>
                   <TableHead className="min-w-[200px]">Artikelbezeichnung</TableHead>
                   <TableHead className="hidden md:table-cell">Kategorie</TableHead>
@@ -312,7 +443,19 @@ export function ArticleCatalogPage({
               </TableHeader>
               <TableBody>
                 {articles.map((article) => (
-                  <TableRow key={article.id}>
+                  <TableRow
+                    key={article.id}
+                    data-state={selectedIds.has(article.id) ? "selected" : undefined}
+                  >
+                    {!readOnly && (
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedIds.has(article.id)}
+                          onCheckedChange={() => toggleSelect(article.id)}
+                          aria-label={`Artikel ${article.article_number} auswaehlen`}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell className="font-medium">
                       {article.article_number}
                     </TableCell>
@@ -446,6 +589,24 @@ export function ArticleCatalogPage({
         onOpenChange={setImportOpen}
         onImport={handleImport}
       />
+
+      <ArticleBulkDeleteDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        count={selectedIds.size}
+        onConfirm={handleBulkDeleteConfirm}
+      />
+
+      {adminTenantId && adminTenantName && (
+        <CatalogResetDialog
+          open={resetDialogOpen}
+          onOpenChange={setResetDialogOpen}
+          catalogType="Artikelstamm"
+          tenantName={adminTenantName}
+          recordCount={total}
+          onConfirm={handleResetConfirm}
+        />
+      )}
     </div>
   );
 }

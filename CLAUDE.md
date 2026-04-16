@@ -1,4 +1,4 @@
-# AI Coding Starter Kit
+# OPH-KI Agentic workflow
 
 > A Next.js template with an AI-powered development workflow using specialized skills for Requirements, Architecture, Frontend, Backend, QA, and Deployment.
 
@@ -35,6 +35,10 @@ docs/
 4. `/backend` - Build APIs, database, RLS policies
 5. `/qa` - Test against acceptance criteria + security audit
 6. `/deploy` - Deploy to Vercel + production-ready checks
+
+### Operational Skills
+
+- `/dealerrule` - Generate structured extraction hints for dealer profiles. Analyzes example order documents (PDF, Excel, CSV) to create precise hints that guide the AI extraction engine. Also creates dealer documentation in `dealerrules/`.
 
 ## Feature Tracking
 

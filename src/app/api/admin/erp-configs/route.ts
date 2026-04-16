@@ -123,7 +123,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const { name, description, format, column_mappings, separator, quote_char, encoding, line_ending, decimal_separator, fallback_mode, xml_template, comment } = parsed.data;
+    const { name, description, format, column_mappings, separator, quote_char, encoding, line_ending, decimal_separator, fallback_mode, xml_template, header_column_mappings, empty_value_placeholder, split_output_mode, header_filename_template, lines_filename_template, zip_filename_template, comment } = parsed.data;
 
     // Check unique name
     const { data: existing } = await adminClient
@@ -154,14 +154,20 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         decimal_separator,
         fallback_mode,
         xml_template,
+        header_column_mappings: header_column_mappings ?? null,
+        empty_value_placeholder: empty_value_placeholder ?? "",
+        split_output_mode: split_output_mode ?? null,
+        header_filename_template: header_filename_template ?? null,
+        lines_filename_template: lines_filename_template ?? null,
+        zip_filename_template: zip_filename_template ?? null,
       })
       .select("id")
       .single();
 
     if (insertError || !config) {
-      console.error("Failed to create ERP config:", insertError?.message);
+      console.error("Failed to create ERP config:", insertError?.message, insertError?.details, insertError?.hint);
       return NextResponse.json(
-        { success: false, error: "ERP-Konfiguration konnte nicht erstellt werden." },
+        { success: false, error: `ERP-Konfiguration konnte nicht erstellt werden: ${insertError?.message ?? "Unbekannter Fehler"}` },
         { status: 500 }
       );
     }
@@ -173,6 +179,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       snapshot: {
         name, description, format, column_mappings, separator, quote_char,
         encoding, line_ending, decimal_separator, fallback_mode, xml_template,
+        header_column_mappings: header_column_mappings ?? null,
+        empty_value_placeholder: empty_value_placeholder ?? "",
+        split_output_mode: split_output_mode ?? null,
+        header_filename_template: header_filename_template ?? null,
+        lines_filename_template: lines_filename_template ?? null,
+        zip_filename_template: zip_filename_template ?? null,
       },
       comment: comment ?? "Erstellt",
       created_by: user.id,

@@ -145,7 +145,7 @@ export async function POST(
     // --- Fetch order and check concurrency ---
     let orderQuery = adminClient
       .from("orders")
-      .select("id, tenant_id, status, extraction_status, extraction_attempts, dealer_id, recognition_confidence, subject")
+      .select("id, tenant_id, status, extraction_status, extraction_attempts, dealer_id, recognition_confidence, subject, source, created_at")
       .eq("id", orderId);
 
     if (tenantId && !isPlatformAdmin) {
@@ -281,12 +281,14 @@ export async function POST(
       id: string | null;
       name: string | null;
       extractionHints: string | null;
+      /** OPH-65: Per-dealer toggle for leading-zero stripping in article matching. */
+      stripLeadingZeros: boolean;
     } | null = null;
 
     if (order.dealer_id) {
       const { data: dealer } = await adminClient
         .from("dealers")
-        .select("id, name, extraction_hints")
+        .select("id, name, extraction_hints, strip_leading_zeros_in_article_numbers")
         .eq("id", order.dealer_id as string)
         .single();
 
@@ -295,6 +297,7 @@ export async function POST(
           id: dealer.id as string,
           name: dealer.name as string,
           extractionHints: (dealer.extraction_hints as string) ?? null,
+          stripLeadingZeros: (dealer.strip_leading_zeros_in_article_numbers as boolean) ?? false,
         };
       }
     }
@@ -358,9 +361,20 @@ export async function POST(
           const senderCountry = result.extractedData.order.sender?.country?.toLowerCase().trim() ?? null;
           let bestMatch: { id: string; name: string; confidence: number } | null = null;
 
-          /** Split a name into significant words (2+ chars, strip punctuation). */
+          /** Company legal form stopwords — never count as meaningful name overlap. */
+          const COMPANY_STOPWORDS = new Set([
+            "gmbh", "co", "kg", "ag", "se", "ohg", "ug", "ev", "mbh",
+            "bv", "nv", "srl", "spa", "sas", "sa", "sarl", "saul", "sau",
+            "ltd", "llc", "inc", "corp", "plc", "pty",
+            "bvba", "sprl", "cvba", "vof", "stp",
+            "ab", "oy", "as", "aps",
+            "sro", "doo", "uab", "sia", "ou",
+            "dental", "dentale", "dentales",
+          ]);
+
+          /** Split a name into significant words (2+ chars, strip punctuation, remove stopwords). */
           const toWords = (s: string) =>
-            s.replace(/[&.,()]/g, " ").split(/\s+/).filter((w) => w.length > 1);
+            s.replace(/[&.,()]/g, " ").split(/\s+/).filter((w) => w.length > 1 && !COMPANY_STOPWORDS.has(w));
 
           /** Check if dealer address matches the sender address. */
           const addressMatches = (dealer: { city: unknown; country: unknown }): boolean => {
@@ -413,6 +427,9 @@ export async function POST(
               dealer_id: bestMatch.id,
               recognition_method: "ai_content",
               recognition_confidence: bestMatch.confidence,
+              // OPH-66: Clear dealer reset audit fields when a new dealer is assigned
+              dealer_reset_by: null,
+              dealer_reset_at: null,
             };
             // Also set dealer info in extracted data for consistency
             result.extractedData.order.dealer = {
@@ -445,6 +462,9 @@ export async function POST(
                 dealer_id: newDealer.id as string,
                 recognition_method: "ai_content",
                 recognition_confidence: 70,
+                // OPH-66: Clear dealer reset audit fields when a new dealer is assigned
+                dealer_reset_by: null,
+                dealer_reset_at: null,
               };
               result.extractedData.order.dealer = {
                 id: newDealer.id as string,
@@ -463,54 +483,73 @@ export async function POST(
       // can correctly interpret ambiguous/unlabeled columns.
       const resolvedDealerId = (aiDealerUpdate.dealer_id as string) ?? (order.dealer_id as string);
       let finalResult = result;
+      /** OPH-65: Resolved per-dealer leading-zero flag (may be updated during dealer discovery). */
+      let resolvedStripLeadingZeros = dealerInfo?.stripLeadingZeros ?? false;
 
-      if (resolvedDealerId && !columnMappingContext && fileContents.length > 0) {
-        const primaryMimeType = fileContents[0].mimeType;
-        const resolvedFormatType = mimeTypeToFormatType(primaryMimeType);
+      // --- Re-extract if AI matching discovered a dealer with hints or column mappings ---
+      // When the dealer wasn't known before extraction (no metadata-based recognition),
+      // AI matching may have identified the dealer from extracted content. If that dealer
+      // has extraction hints or column mappings, re-extract so the AI can use them.
+      if (resolvedDealerId && fileContents.length > 0) {
+        // Fetch dealer hints for the resolved dealer if not already loaded
+        let resolvedDealerInfo = dealerInfo;
+        if (!resolvedDealerInfo || resolvedDealerInfo.id !== resolvedDealerId) {
+          const { data: rDealer } = await adminClient
+            .from("dealers")
+            .select("id, name, extraction_hints, strip_leading_zeros_in_article_numbers")
+            .eq("id", resolvedDealerId)
+            .single();
+          if (rDealer) {
+            resolvedDealerInfo = {
+              id: rDealer.id as string,
+              name: rDealer.name as string,
+              extractionHints: (rDealer.extraction_hints as string) ?? null,
+              stripLeadingZeros: (rDealer.strip_leading_zeros_in_article_numbers as boolean) ?? false,
+            };
+            // OPH-65: Update the outer-scoped flag so article matching uses the resolved dealer's setting
+            resolvedStripLeadingZeros = resolvedDealerInfo.stripLeadingZeros;
+          }
+        }
 
-        if (resolvedFormatType) {
-          const resolvedProfile = await getColumnMappingProfile(
-            adminClient,
-            resolvedDealerId,
-            resolvedFormatType
+        // Fetch column mappings for the resolved dealer if not already loaded
+        let resolvedColumnCtx = columnMappingContext;
+        if (!resolvedColumnCtx) {
+          const primaryMimeType = fileContents[0].mimeType;
+          const resolvedFormatType = mimeTypeToFormatType(primaryMimeType);
+
+          if (resolvedFormatType) {
+            const resolvedProfile = await getColumnMappingProfile(
+              adminClient,
+              resolvedDealerId,
+              resolvedFormatType
+            );
+            if (resolvedProfile && resolvedProfile.mappings.length > 0) {
+              resolvedColumnCtx = formatColumnMappingForPrompt(resolvedProfile);
+            }
+          }
+        }
+
+        // Re-extract if we now have hints or column mappings that weren't used initially
+        const hasNewHints = !dealerInfo?.extractionHints && resolvedDealerInfo?.extractionHints;
+        const hasNewColumnMappings = !columnMappingContext && resolvedColumnCtx;
+
+        if (hasNewHints || hasNewColumnMappings) {
+          console.log(
+            `Re-extracting order ${orderId} with dealer context for ${resolvedDealerId} (hints=${!!resolvedDealerInfo?.extractionHints}, columns=${!!resolvedColumnCtx})`
           );
 
-          if (resolvedProfile && resolvedProfile.mappings.length > 0) {
-            const resolvedColumnCtx = formatColumnMappingForPrompt(resolvedProfile);
-            console.log(
-              `Re-extracting order ${orderId} with column mapping for dealer ${resolvedDealerId} (${resolvedFormatType})`
-            );
+          finalResult = await extractOrderData({
+            orderId,
+            files: fileContents,
+            dealer: resolvedDealerInfo,
+            mappingsContext,
+            columnMappingContext: resolvedColumnCtx,
+            emailSubject: orderSubject,
+          });
 
-            // Fetch dealer hints for the resolved dealer (may differ from initial)
-            let resolvedDealerInfo = dealerInfo;
-            if (!resolvedDealerInfo || resolvedDealerInfo.id !== resolvedDealerId) {
-              const { data: rDealer } = await adminClient
-                .from("dealers")
-                .select("id, name, extraction_hints")
-                .eq("id", resolvedDealerId)
-                .single();
-              if (rDealer) {
-                resolvedDealerInfo = {
-                  id: rDealer.id as string,
-                  name: rDealer.name as string,
-                  extractionHints: (rDealer.extraction_hints as string) ?? null,
-                };
-              }
-            }
-
-            finalResult = await extractOrderData({
-              orderId,
-              files: fileContents,
-              dealer: resolvedDealerInfo,
-              mappingsContext,
-              columnMappingContext: resolvedColumnCtx,
-              emailSubject: orderSubject,
-            });
-
-            // Preserve the AI-matched dealer info in the re-extracted data
-            if (aiDealerUpdate.dealer_id) {
-              finalResult.extractedData.order.dealer = result.extractedData.order.dealer;
-            }
+          // Preserve the AI-matched dealer info in the re-extracted data
+          if (aiDealerUpdate.dealer_id) {
+            finalResult.extractedData.order.dealer = result.extractedData.order.dealer;
           }
         }
       }
@@ -533,13 +572,14 @@ export async function POST(
       // unexpected abbreviations. Also marks truly unknown units with "(unbekannt)".
       finalExtractedData = normalizeUnits(finalExtractedData);
 
-      // --- OPH-40: Article number matching against tenant catalog ---
+      // --- OPH-40 + OPH-65: Article number matching against tenant catalog ---
       if (tenantId) {
         try {
           const matchedItems = await matchArticleNumbers(
             adminClient,
             finalExtractedData.order.line_items,
-            tenantId
+            tenantId,
+            { stripLeadingZeros: resolvedStripLeadingZeros }
           );
           finalExtractedData = {
             ...finalExtractedData,
@@ -658,6 +698,24 @@ export async function POST(
       const emlSubjectUpdate: Record<string, unknown> = {};
       if (!orderSubject && result.parsedEmailSubject) {
         emlSubjectUpdate.subject = result.parsedEmailSubject.slice(0, 500);
+      }
+
+      // --- Fallback: use email sending date as order_date when not extracted ---
+      // For email-inbound orders, if the AI couldn't find an order date in the
+      // content, fall back to the email ingestion timestamp (≈ email sending date).
+      if (
+        !finalExtractedData.order.order_date &&
+        (order.source as string) === "email_inbound" &&
+        order.created_at
+      ) {
+        const emailDate = new Date(order.created_at as string);
+        finalExtractedData = {
+          ...finalExtractedData,
+          order: {
+            ...finalExtractedData.order,
+            order_date: emailDate.toISOString().split("T")[0],
+          },
+        };
       }
 
       // --- Save extracted data ---

@@ -95,9 +95,12 @@ export async function GET(
         last_exported_at,
         has_unmapped_articles,
         subject,
+        dealer_reset_by,
+        dealer_reset_at,
         dealers ( id, name, street, postal_code, city, country ),
         uploader:user_profiles!orders_uploaded_by_fkey ( first_name, last_name ),
-        overrider:user_profiles!orders_dealer_overridden_by_fkey ( first_name, last_name )
+        overrider:user_profiles!orders_dealer_overridden_by_fkey ( first_name, last_name ),
+        resetter:user_profiles!orders_dealer_reset_by_fkey ( first_name, last_name )
       `)
       .eq("id", orderId);
 
@@ -135,6 +138,8 @@ export async function GET(
     const uploaderData = Array.isArray(rawUploader) ? (rawUploader[0] as { first_name: string; last_name: string } | undefined) ?? null : rawUploader as { first_name: string; last_name: string } | null;
     const rawOverrider = order.overrider as unknown;
     const overriderData = Array.isArray(rawOverrider) ? (rawOverrider[0] as { first_name: string; last_name: string } | undefined) ?? null : rawOverrider as { first_name: string; last_name: string } | null;
+    const rawResetter = order.resetter as unknown;
+    const resetterData = Array.isArray(rawResetter) ? (rawResetter[0] as { first_name: string; last_name: string } | undefined) ?? null : rawResetter as { first_name: string; last_name: string } | null;
 
     const result: OrderForReview = {
       id: order.id as string,
@@ -177,6 +182,12 @@ export async function GET(
       has_unmapped_articles: (order.has_unmapped_articles as boolean) ?? false,
       // OPH-25: Email subject
       subject: (order.subject as string | null) ?? null,
+      // OPH-66: Dealer reset fields
+      dealer_reset_by: (order.dealer_reset_by as string | null) ?? null,
+      dealer_reset_at: (order.dealer_reset_at as string | null) ?? null,
+      reset_by_name: resetterData
+        ? `${resetterData.first_name} ${resetterData.last_name}`.trim()
+        : null,
       // OPH-5: Review fields
       reviewed_data: (order.reviewed_data as CanonicalOrderData) ?? null,
       reviewed_at: (order.reviewed_at as string) ?? null,

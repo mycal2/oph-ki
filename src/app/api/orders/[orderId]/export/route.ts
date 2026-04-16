@@ -12,6 +12,8 @@ import {
   generateExportContent,
   validateRequiredFields,
 } from "@/lib/erp-transformations";
+import { generateSplitCsvZip, generateSplitCsvSeparate } from "@/lib/split-csv-export";
+import type { SplitCsvFilenameConfig } from "@/lib/split-csv-export";
 import { sendPlatformErrorNotification } from "@/lib/postmark";
 import type {
   AppMetadata,
@@ -64,7 +66,7 @@ export async function GET(
     const formatResult = exportFormatSchema.safeParse(rawFormat);
     if (!formatResult.success) {
       return NextResponse.json(
-        { success: false, error: "Ungültiges Format. Erlaubt: csv, xml, json" },
+        { success: false, error: "Ungültiges Format. Erlaubt: csv, xml, json, split_csv" },
         { status: 400 }
       );
     }
@@ -226,6 +228,7 @@ export async function GET(
     const lineEnding = (erpConfig?.line_ending as string) ?? "CRLF";
     const decimalSeparator = (erpConfig?.decimal_separator as string) ?? ".";
     const xmlTemplate = (erpConfig?.xml_template as string) ?? null;
+    const emptyValuePlaceholder = (erpConfig?.empty_value_placeholder as string) ?? "";
 
     // OPH-9 AC-8: Validate required fields before export
     const missingFields = validateRequiredFields(orderData.order.line_items, columnMappings, orderData);
@@ -239,6 +242,99 @@ export async function GET(
         },
         { status: 400 }
       );
+    }
+
+    // OPH-58: Split CSV generates a ZIP with two CSV files
+    if (effectiveFormat === "split_csv") {
+      const headerMappings = (erpConfig?.header_column_mappings as ErpColumnMappingExtended[]) ?? [];
+
+      if (headerMappings.length === 0) {
+        return NextResponse.json(
+          { success: false, error: "Keine Auftragskopf-Spalten konfiguriert für Split-CSV-Export." },
+          { status: 400 }
+        );
+      }
+
+      // Validate required fields in header mappings too
+      const headerMissing = validateRequiredFields(orderData.order.line_items, headerMappings, orderData);
+      if (headerMissing.length > 0) {
+        const fieldList = headerMissing.slice(0, 10).join(", ");
+        return NextResponse.json(
+          { success: false, error: `Pflichtfelder im Auftragskopf fehlen: ${fieldList}.` },
+          { status: 400 }
+        );
+      }
+
+      // OPH-61: Build filename configuration from ERP config
+      const filenameConfig: SplitCsvFilenameConfig = {
+        headerFilenameTemplate: (erpConfig?.header_filename_template as string) ?? null,
+        linesFilenameTemplate: (erpConfig?.lines_filename_template as string) ?? null,
+        zipFilenameTemplate: (erpConfig?.zip_filename_template as string) ?? null,
+      };
+
+      const splitOutputMode = (erpConfig?.split_output_mode as string) ?? "zip";
+      const splitCsvOptions = { separator, quoteChar, lineEnding, decimalSeparator, emptyValuePlaceholder };
+
+      // OPH-61: Handle "separate" mode — return the requested file (header or lines)
+      if (splitOutputMode === "separate") {
+        const fileType = request.nextUrl.searchParams.get("file") ?? "header";
+        const { headerFile, linesFile } = generateSplitCsvSeparate(
+          orderData, headerMappings, columnMappings, splitCsvOptions, filenameConfig
+        );
+
+        const file = fileType === "lines" ? linesFile : headerFile;
+
+        // Update order status + log on first file download (header)
+        if (fileType !== "lines") {
+          const now = new Date().toISOString();
+          await adminClient.from("orders").update({ status: "exported", last_exported_at: now }).eq("id", orderId);
+          await adminClient.from("export_logs").insert({
+            order_id: orderId, tenant_id: effectiveTenantId, user_id: user.id,
+            format: "split_csv", filename: `${headerFile.filename} + ${linesFile.filename}`, exported_at: now,
+          });
+          if (order.status !== "exported") {
+            await adminClient.from("order_edits").insert({
+              order_id: orderId, tenant_id: effectiveTenantId, user_id: user.id,
+              field_path: "status", old_value: JSON.stringify(order.status), new_value: JSON.stringify("exported"),
+            });
+          }
+        }
+
+        const headers = new Headers();
+        headers.set("Content-Type", "text/csv; charset=utf-8");
+        headers.set("Content-Disposition", contentDisposition(file.filename));
+        headers.set("Cache-Control", "no-store");
+        headers.set("X-Content-Type-Options", "nosniff");
+
+        return new NextResponse(file.content, { status: 200, headers });
+      }
+
+      // Default: ZIP mode
+      const { buffer, filename: zipFilename } = await generateSplitCsvZip(
+        orderData, headerMappings, columnMappings, splitCsvOptions, filenameConfig
+      );
+
+      // Update order status + log (same as single-file path)
+      const now = new Date().toISOString();
+      await adminClient.from("orders").update({ status: "exported", last_exported_at: now }).eq("id", orderId);
+      await adminClient.from("export_logs").insert({
+        order_id: orderId, tenant_id: effectiveTenantId, user_id: user.id,
+        format: "split_csv", filename: zipFilename, exported_at: now,
+      });
+      if (order.status !== "exported") {
+        await adminClient.from("order_edits").insert({
+          order_id: orderId, tenant_id: effectiveTenantId, user_id: user.id,
+          field_path: "status", old_value: JSON.stringify(order.status), new_value: JSON.stringify("exported"),
+        });
+      }
+
+      const headers = new Headers();
+      headers.set("Content-Type", "application/zip");
+      headers.set("Content-Disposition", contentDisposition(zipFilename));
+      headers.set("Cache-Control", "no-store");
+      headers.set("X-Content-Type-Options", "nosniff");
+
+      return new NextResponse(new Uint8Array(buffer), { status: 200, headers });
     }
 
     const filename = generateFilename(tenantSlug, orderData.order.order_number, effectiveFormat);
@@ -313,7 +409,8 @@ export async function GET(
 
     return new NextResponse(content, { status: 200, headers });
   } catch (error) {
-    console.error("Error in GET /api/orders/[orderId]/export:", error);
+    const exportErrMsg = error instanceof Error ? error.message : String(error);
+    console.error("Error in GET /api/orders/[orderId]/export:", exportErrMsg, error);
 
     // --- OPH-24: Send platform admin error notification ---
     const platformApiToken = process.env.POSTMARK_SERVER_API_TOKEN;
@@ -364,7 +461,7 @@ export async function GET(
     }
 
     return NextResponse.json(
-      { success: false, error: "Interner Serverfehler." },
+      { success: false, error: `Interner Serverfehler: ${exportErrMsg}` },
       { status: 500 }
     );
   }

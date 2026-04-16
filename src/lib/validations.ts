@@ -138,6 +138,16 @@ export const dealerOverrideSchema = z.object({
 export type DealerOverrideInput = z.infer<typeof dealerOverrideSchema>;
 
 /**
+ * OPH-66: Dealer reset validation schema.
+ */
+export const dealerResetSchema = z.object({
+  /** ISO timestamp for optimistic locking — prevents concurrent edit conflicts. */
+  updatedAt: z.string().optional(),
+});
+
+export type DealerResetInput = z.infer<typeof dealerResetSchema>;
+
+/**
  * OPH-5: Order Review validation schemas.
  */
 
@@ -161,8 +171,8 @@ const canonicalLineItemSchema = z.object({
   unit_price: z.number().nullable(),
   total_price: z.number().nullable(),
   currency: z.string().nullable(),
-  /** OPH-40: How the article_number was determined. */
-  article_number_source: z.enum(["extracted", "catalog_match", "manual"]).nullable().optional(),
+  /** OPH-40: How the article_number was determined. OPH-65 added "normalized_match". */
+  article_number_source: z.enum(["extracted", "catalog_match", "normalized_match", "manual"]).nullable().optional(),
   /** OPH-40: Human-readable reason for catalog match. */
   article_number_match_reason: z.string().nullable().optional(),
 });
@@ -177,6 +187,10 @@ const canonicalSenderSchema = z.object({
   email: z.string().nullable(),
   phone: z.string().nullable(),
   customer_number: z.string().nullable(),
+  /** OPH-47: How the customer_number was determined. OPH-65 added "catalog_normalized". */
+  customer_number_source: z.enum(["catalog_email", "catalog_exact", "catalog_normalized", "catalog_keyword", "catalog_fuzzy_name", "catalog_phone", "extracted"]).nullable().optional(),
+  /** OPH-47: Human-readable reason for the customer number match. */
+  customer_number_match_reason: z.string().nullable().optional(),
 });
 
 /** Schema for the order part of reviewed_data. */
@@ -231,8 +245,8 @@ export type ReviewApproveInput = z.infer<typeof reviewApproveSchema>;
  * OPH-6: Export validation schemas.
  */
 
-export const exportFormatSchema = z.enum(["csv", "xml", "json"], {
-  message: "Ungültiges Format. Erlaubt: csv, xml, json",
+export const exportFormatSchema = z.enum(["csv", "xml", "json", "split_csv"], {
+  message: "Ungültiges Format. Erlaubt: csv, xml, json, split_csv",
 });
 
 export type ExportFormatInput = z.infer<typeof exportFormatSchema>;
@@ -352,13 +366,14 @@ export const createDealerSchema = z.object({
   street: z.string().max(200).nullable().optional(),
   postal_code: z.string().max(20).nullable().optional(),
   city: z.string().max(100).nullable().optional(),
-  country: z.string().max(10).nullable().optional(),
+  country: z.string().max(100).nullable().optional(),
   known_domains: z.array(z.string().max(200)).max(50).default([]),
   known_sender_addresses: z.array(z.string().max(200)).max(50).default([]),
   subject_patterns: regexPatternArray.default([]),
   filename_patterns: regexPatternArray.default([]),
   extraction_hints: extractionHintsField,
   active: z.boolean().default(true),
+  strip_leading_zeros_in_article_numbers: z.boolean().default(false),
 });
 
 export const updateDealerSchema = z.object({
@@ -379,13 +394,14 @@ export const updateDealerSchema = z.object({
   street: z.string().max(200).nullable().optional(),
   postal_code: z.string().max(20).nullable().optional(),
   city: z.string().max(100).nullable().optional(),
-  country: z.string().max(10).nullable().optional(),
+  country: z.string().max(100).nullable().optional(),
   known_domains: z.array(z.string().max(200)).max(50).optional(),
   known_sender_addresses: z.array(z.string().max(200)).max(50).optional(),
   subject_patterns: regexPatternArray.optional(),
   filename_patterns: regexPatternArray.optional(),
   extraction_hints: extractionHintsField,
   active: z.boolean().optional(),
+  strip_leading_zeros_in_article_numbers: z.boolean().optional(),
 });
 
 export type CreateDealerInput = z.infer<typeof createDealerSchema>;
@@ -506,6 +522,17 @@ export const updateTenantSchema = z.object({
   monthly_fee: z.number().min(0, "Monatliche Gebühr darf nicht negativ sein.").nullable().optional(),
   /** OPH-52: Cost per processed order in EUR. */
   cost_per_order: z.number().min(0, "Kosten pro Bestellung dürfen nicht negativ sein.").nullable().optional(),
+  /** OPH-63: Whether email forwarding is active for this tenant. */
+  email_forwarding_enabled: z.boolean().optional(),
+  /** OPH-63: The email address to forward inbound order emails to. Null or empty clears it. */
+  email_forwarding_address: z
+    .union([
+      z.string().email("Bitte geben Sie eine gültige Weiterleitungs-E-Mail-Adresse ein."),
+      z.literal(""),
+      z.null(),
+    ])
+    .transform((val) => (val === "" ? null : val))
+    .optional(),
 });
 
 /** Invite user on behalf of a specific tenant (platform admin). */
@@ -606,7 +633,8 @@ const erpColumnMappingExtendedSchema = z.object({
   source_field: z
     .string()
     .max(200, "Quellfeld darf maximal 200 Zeichen lang sein.")
-    .trim(),
+    .trim()
+    .default(""),
   target_column_name: z
     .string()
     .min(1, "Ausgabe-Spaltenname ist erforderlich.")
@@ -617,6 +645,12 @@ const erpColumnMappingExtendedSchema = z.object({
     .array(erpTransformationStepSchema)
     .max(10, "Maximal 10 Transformationen pro Spalte.")
     .default([]),
+  /** OPH-60: Fixed constant value. When set, the column always outputs this value. */
+  fixed_value: z
+    .string()
+    .max(500, "Fester Wert darf maximal 500 Zeichen lang sein.")
+    .nullable()
+    .optional(),
 });
 
 export const erpConfigSaveSchema = z.object({
@@ -630,8 +664,8 @@ export const erpConfigSaveSchema = z.object({
     .max(1000, "Beschreibung darf maximal 1000 Zeichen lang sein.")
     .nullable()
     .default(null),
-  format: z.enum(["csv", "xml", "json"], {
-    message: "Ungültiges Format. Erlaubt: csv, xml, json",
+  format: z.enum(["csv", "xml", "json", "split_csv"], {
+    message: "Ungültiges Format. Erlaubt: csv, xml, json, split_csv",
   }),
   column_mappings: z
     .array(erpColumnMappingExtendedSchema)
@@ -656,6 +690,41 @@ export const erpConfigSaveSchema = z.object({
     .max(50000, "XML-Template darf maximal 50000 Zeichen lang sein.")
     .nullable()
     .default(null),
+  /** OPH-58: Column mappings for the header CSV in split_csv format. */
+  header_column_mappings: z
+    .array(erpColumnMappingExtendedSchema)
+    .max(200, "Maximal 200 Auftragskopf-Spalten erlaubt.")
+    .nullable()
+    .optional(),
+  /** OPH-58: Value for unmapped columns (default "", "@" for split_csv). */
+  empty_value_placeholder: z
+    .string()
+    .max(10, "Platzhalter darf maximal 10 Zeichen lang sein.")
+    .optional()
+    .default(""),
+  /** OPH-61: Output mode for split_csv export. */
+  split_output_mode: z
+    .enum(["zip", "separate"], { message: "Ungültiger Ausgabemodus." })
+    .nullable()
+    .optional(),
+  /** OPH-61: Filename template for the header CSV. */
+  header_filename_template: z
+    .string()
+    .max(200, "Dateiname-Template darf maximal 200 Zeichen lang sein.")
+    .nullable()
+    .optional(),
+  /** OPH-61: Filename template for the lines CSV. */
+  lines_filename_template: z
+    .string()
+    .max(200, "Dateiname-Template darf maximal 200 Zeichen lang sein.")
+    .nullable()
+    .optional(),
+  /** OPH-61: Filename template for the ZIP archive. */
+  zip_filename_template: z
+    .string()
+    .max(200, "Dateiname-Template darf maximal 200 Zeichen lang sein.")
+    .nullable()
+    .optional(),
   comment: z
     .string()
     .max(500, "Kommentar darf maximal 500 Zeichen lang sein.")
@@ -867,6 +936,19 @@ export const updateArticleSchema = z.object({
 
 export type CreateArticleInput = z.infer<typeof createArticleSchema>;
 export type UpdateArticleInput = z.infer<typeof updateArticleSchema>;
+
+/**
+ * OPH-62: Article Catalog Bulk Delete validation schema.
+ */
+
+export const bulkDeleteArticlesSchema = z.object({
+  ids: z
+    .array(z.string().uuid("Ungueltige Artikel-ID."))
+    .min(1, "Mindestens eine Artikel-ID ist erforderlich.")
+    .max(10000, "Maximal 10.000 Artikel gleichzeitig loeschbar."),
+});
+
+export type BulkDeleteArticlesInput = z.infer<typeof bulkDeleteArticlesSchema>;
 
 /**
  * OPH-46: Manufacturer Customer Catalog validation schemas.

@@ -43,12 +43,14 @@ const FORMAT_LABELS: Record<ExportFormat, string> = {
   csv: "CSV",
   xml: "XML",
   json: "JSON",
+  split_csv: "Split CSV",
 };
 
 const FORMAT_DESCRIPTIONS: Record<ExportFormat, string> = {
   csv: "Komma-/Semikolon-getrennte Werte - für die meisten ERP-Systeme",
   xml: "Strukturiertes XML-Dokument",
   json: "Canonical JSON - für Entwickler und API-Integration",
+  split_csv: "Zwei CSV-Dateien (Auftragskopf + Positionen)",
 };
 
 /**

@@ -5,18 +5,25 @@ import type { ApiResponse } from "@/lib/types";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** OPH-59: Valid slot values. */
+function parseSlot(raw: string | null): "lines" | "header" {
+  return raw === "header" ? "header" : "lines";
+}
+
 /**
  * GET /api/admin/erp-configs/[configId]/output-format/download
  *
  * OPH-29: Downloads the original sample file from Supabase Storage.
+ * OPH-59: Supports ?slot=lines|header query param.
  * Platform admin only.
  */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ configId: string }> }
 ): Promise<NextResponse<ApiResponse> | NextResponse> {
   try {
     const { configId } = await params;
+    const slot = parseSlot(request.nextUrl.searchParams.get("slot"));
     const auth = await requirePlatformAdmin();
     if (isErrorResponse(auth)) return auth;
     const { user, adminClient } = auth;
@@ -35,6 +42,7 @@ export async function GET(
       .from("tenant_output_formats")
       .select("file_name, file_path")
       .eq("erp_config_id", configId)
+      .eq("slot", slot)
       .maybeSingle();
 
     if (fetchError || !format) {

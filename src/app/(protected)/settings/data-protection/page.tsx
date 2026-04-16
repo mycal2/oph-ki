@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Shield, Download, FileText, Loader2, Mail, CheckCircle2, XCircle } from "lucide-react";
+import { Shield, Download, FileText, Loader2, Mail, CheckCircle2, XCircle, Forward } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -36,6 +36,8 @@ export default function DataProtectionSettingsPage() {
     emailResultsFormat: "standard_csv" | "tenant_format";
     emailResultsConfidenceEnabled: boolean;
     emailPostprocessEnabled: boolean;
+    emailForwardingEnabled: boolean;
+    emailForwardingAddress: string | null;
   } | null>(null);
 
   // Export state
@@ -61,6 +63,8 @@ export default function DataProtectionSettingsPage() {
         emailResultsFormat: json.data.emailResultsFormat,
         emailResultsConfidenceEnabled: json.data.emailResultsConfidenceEnabled,
         emailPostprocessEnabled: json.data.emailPostprocessEnabled,
+        emailForwardingEnabled: json.data.emailForwardingEnabled,
+        emailForwardingAddress: json.data.emailForwardingAddress,
       });
     } catch {
       setRetentionError("Verbindungsfehler beim Laden der Einstellungen.");
@@ -267,6 +271,50 @@ export default function DataProtectionSettingsPage() {
             ))}
             <p className="text-xs text-muted-foreground mt-2">
               Diese Einstellungen werden von Ihrem Plattform-Administrator verwaltet.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* OPH-63: E-Mail-Weiterleitung (read-only) */}
+      {emailSettings !== null && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Forward className="h-5 w-5" />
+              E-Mail-Weiterleitung
+            </CardTitle>
+            <CardDescription>
+              Automatische Weiterleitung eingehender Bestell-E-Mails an eine weitere Adresse.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center gap-2">
+              {emailSettings.emailForwardingEnabled ? (
+                <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+              ) : (
+                <XCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+              )}
+              <span className="text-sm">
+                <span className="font-medium">E-Mail-Weiterleitung</span>
+                <span className={emailSettings.emailForwardingEnabled ? "text-green-700 ml-1" : "text-muted-foreground ml-1"}>
+                  — {emailSettings.emailForwardingEnabled ? "Aktiv" : "Inaktiv"}
+                </span>
+              </span>
+            </div>
+            {emailSettings.emailForwardingEnabled && emailSettings.emailForwardingAddress && (
+              <div className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-sm">
+                  <span className="font-medium">Weiterleitungs-Adresse</span>
+                  <span className="text-muted-foreground ml-1">
+                    — {emailSettings.emailForwardingAddress}
+                  </span>
+                </span>
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground mt-2">
+              Diese Einstellung wird von Ihrem Plattform-Administrator verwaltet.
             </p>
           </CardContent>
         </Card>

@@ -60,49 +60,68 @@ export function useExport({ orderId }: UseExportOptions): UseExportReturn {
     [orderId]
   );
 
+  /** Triggers a single file download from a fetch response. */
+  const triggerDownload = async (res: Response, fallbackName: string): Promise<boolean> => {
+    if (!res.ok) {
+      try {
+        const json = (await res.json()) as ApiResponse;
+        setError(json.error ?? "Export fehlgeschlagen.");
+      } catch {
+        setError("Export fehlgeschlagen.");
+      }
+      return false;
+    }
+
+    const contentDisposition = res.headers.get("Content-Disposition");
+    let filename = fallbackName;
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename="(.+?)"/);
+      if (match) filename = match[1];
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    return true;
+  };
+
   const download = useCallback(
     async (format: ExportFormat): Promise<boolean> => {
       setIsDownloading(true);
       setError(null);
 
       try {
+        // OPH-61: For split_csv in "separate" mode, download two files sequentially
+        if (format === "split_csv" && preview?.splitOutputMode === "separate") {
+          // Download header file first
+          const headerRes = await fetch(
+            `/api/orders/${orderId}/export?format=split_csv&file=header`
+          );
+          const headerOk = await triggerDownload(headerRes, "Auftragskopf.csv");
+          if (!headerOk) return false;
+
+          // Small delay to avoid browser blocking the second download
+          await new Promise((resolve) => setTimeout(resolve, 500));
+
+          // Download lines file
+          const linesRes = await fetch(
+            `/api/orders/${orderId}/export?format=split_csv&file=lines`
+          );
+          const linesOk = await triggerDownload(linesRes, "Positionen.csv");
+          return linesOk;
+        }
+
+        // Standard single-file download (ZIP or other formats)
         const res = await fetch(
           `/api/orders/${orderId}/export?format=${format}`
         );
-
-        if (!res.ok) {
-          // Try to parse error JSON
-          try {
-            const json = (await res.json()) as ApiResponse;
-            setError(json.error ?? "Export fehlgeschlagen.");
-          } catch {
-            setError("Export fehlgeschlagen.");
-          }
-          return false;
-        }
-
-        // Get filename from Content-Disposition header
-        const contentDisposition = res.headers.get("Content-Disposition");
-        let filename = `export.${format}`;
-        if (contentDisposition) {
-          const match = contentDisposition.match(/filename="(.+?)"/);
-          if (match) {
-            filename = match[1];
-          }
-        }
-
-        // Create blob and trigger download
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-
-        return true;
+        return await triggerDownload(res, `export.${format}`);
       } catch {
         setError("Verbindungsfehler beim Export.");
         return false;
@@ -110,7 +129,7 @@ export function useExport({ orderId }: UseExportOptions): UseExportReturn {
         setIsDownloading(false);
       }
     },
-    [orderId]
+    [orderId, preview?.splitOutputMode]
   );
 
   const clearError = useCallback(() => {

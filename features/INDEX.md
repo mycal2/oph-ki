@@ -68,7 +68,17 @@
 | OPH-54 | Platform Admin Billing Report | In Review | [OPH-54-platform-billing-report.md](OPH-54-platform-billing-report.md) | 2026-03-24 |
 | OPH-55 | Sidebar Navigation Redesign | In Progress | [OPH-55-sidebar-navigation.md](OPH-55-sidebar-navigation.md) | 2026-03-24 |
 | OPH-56 | Collapsible Sub-Groups in Platform Sidebar | In Progress | [OPH-56-sidebar-platform-collapsible-groups.md](OPH-56-sidebar-platform-collapsible-groups.md) | 2026-03-25 |
+| OPH-57 | Tenant Count per Dealer in Händler-Verwaltung | In Review | [OPH-57-dealer-tenant-count.md](OPH-57-dealer-tenant-count.md) | 2026-03-25 |
+| OPH-58 | Split Multi-File ERP Export (Header + Lines CSV) | In Progress | [OPH-58-split-erp-export.md](OPH-58-split-erp-export.md) | 2026-03-25 |
+| OPH-59 | Split CSV Output Format Sample Upload | In Progress | [OPH-59-split-csv-output-format-sample.md](OPH-59-split-csv-output-format-sample.md) | 2026-03-25 |
+| OPH-60 | Fixed Value Column Mapping in ERP Config | In Review | [OPH-60-fixed-value-column-mapping.md](OPH-60-fixed-value-column-mapping.md) | 2026-03-30 |
+| OPH-61 | Configurable Output Filenames for Split CSV Export | In Progress | [OPH-61-split-csv-configurable-filenames.md](OPH-61-split-csv-configurable-filenames.md) | 2026-03-30 |
+| OPH-62 | Article Catalog Bulk Delete | In Review | [OPH-62-article-catalog-bulk-delete.md](OPH-62-article-catalog-bulk-delete.md) | 2026-03-31 |
+| OPH-63 | Per-Tenant Email Forwarding | Deployed | [OPH-63-per-tenant-email-forwarding.md](OPH-63-per-tenant-email-forwarding.md) | 2026-04-09 |
+| OPH-64 | Admin: Reset Artikelstamm / Kundenstamm for Tenant | In Progress | [OPH-64-admin-catalog-reset.md](OPH-64-admin-catalog-reset.md) | 2026-04-14 |
+| OPH-65 | Tolerant Article Number Matching (Whitespace, Hyphens, Optional Leading Zeros) | In Progress | [OPH-65-tolerant-article-matching.md](OPH-65-tolerant-article-matching.md) | 2026-04-15 |
+| OPH-66 | Reset Dealer Recognition on an Order | In Progress | [OPH-66-reset-dealer-on-order.md](OPH-66-reset-dealer-on-order.md) | 2026-04-15 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-57
+## Next Available ID: OPH-67

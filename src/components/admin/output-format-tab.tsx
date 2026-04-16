@@ -33,6 +33,8 @@ import type { OutputFormatParseResponse, TenantOutputFormat } from "@/lib/types"
 
 interface OutputFormatTabProps {
   configId: string;
+  /** OPH-59: Which template slot this upload manages. Defaults to "lines". */
+  slot?: "lines" | "header";
   /** OPH-30: Callback when the saved output format changes (saved, replaced, or deleted). */
   onFormatChange?: (format: TenantOutputFormat | null) => void;
 }
@@ -43,8 +45,9 @@ const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 /**
  * Admin tab for uploading and managing tenant output format samples.
  * Provides file upload, schema preview, and format management (replace/delete/download).
+ * OPH-59: Supports slot parameter for split_csv header/lines samples.
  */
-export function OutputFormatTab({ configId, onFormatChange }: OutputFormatTabProps) {
+export function OutputFormatTab({ configId, slot = "lines", onFormatChange }: OutputFormatTabProps) {
   const {
     format,
     isLoading,
@@ -56,7 +59,7 @@ export function OutputFormatTab({ configId, onFormatChange }: OutputFormatTabPro
     saveFormat,
     deleteFormat,
     clearMutationError,
-  } = useOutputFormat(configId);
+  } = useOutputFormat(configId, slot);
 
   // OPH-30: Notify parent when the saved format changes
   useEffect(() => {
@@ -145,8 +148,8 @@ export function OutputFormatTab({ configId, onFormatChange }: OutputFormatTabPro
   }, [deleteFormat]);
 
   const handleDownloadOriginal = useCallback(() => {
-    window.open(`/api/admin/erp-configs/${configId}/output-format/download`, "_blank");
-  }, [configId]);
+    window.open(`/api/admin/erp-configs/${configId}/output-format/download?slot=${slot}`, "_blank");
+  }, [configId, slot]);
 
   const handleReplace = useCallback(() => {
     fileInputRef.current?.click();

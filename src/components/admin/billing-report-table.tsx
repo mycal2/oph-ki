@@ -17,6 +17,7 @@ import type {
 
 interface BillingReportTableProps {
   report: BillingReportResponse;
+  includeLineItems: boolean;
   includePrices: boolean;
 }
 
@@ -34,7 +35,7 @@ function formatCurrency(value: number | null): string {
   });
 }
 
-export function BillingReportTable({ report, includePrices }: BillingReportTableProps) {
+export function BillingReportTable({ report, includeLineItems, includePrices }: BillingReportTableProps) {
   const isMulti = report.mode === "multi-tenant";
   const { totals, monthCount } = report;
 
@@ -45,7 +46,9 @@ export function BillingReportTable({ report, includePrices }: BillingReportTable
           <TableRow>
             <TableHead>{isMulti ? "Mandant" : "Datum"}</TableHead>
             <TableHead className="text-right">Bestellungen</TableHead>
-            <TableHead className="text-right">Bestellpositionen</TableHead>
+            {includeLineItems && (
+              <TableHead className="text-right">Bestellpositionen</TableHead>
+            )}
             {includePrices && isMulti && (
               <>
                 <TableHead className="text-right">Preis pro Bestellung</TableHead>
@@ -85,7 +88,9 @@ export function BillingReportTable({ report, includePrices }: BillingReportTable
                 <TableRow key={r.tenantId}>
                   <TableCell className="font-medium">{r.tenantName}</TableCell>
                   <TableCell className="text-right">{r.orderCount}</TableCell>
-                  <TableCell className="text-right">{r.lineItemCount}</TableCell>
+                  {includeLineItems && (
+                    <TableCell className="text-right">{r.lineItemCount}</TableCell>
+                  )}
                   {includePrices && (
                     <>
                       <TableCell className="text-right">
@@ -107,7 +112,9 @@ export function BillingReportTable({ report, includePrices }: BillingReportTable
                 <TableRow key={r.date ?? idx}>
                   <TableCell className="font-medium">{formatDateDE(r.date)}</TableCell>
                   <TableCell className="text-right">{r.orderCount}</TableCell>
-                  <TableCell className="text-right">{r.lineItemCount}</TableCell>
+                  {includeLineItems && (
+                    <TableCell className="text-right">{r.lineItemCount}</TableCell>
+                  )}
                   {includePrices && (
                     <>
                       <TableCell className="text-right">{"\u2014"}</TableCell>
@@ -127,7 +134,9 @@ export function BillingReportTable({ report, includePrices }: BillingReportTable
           <TableRow className="font-bold">
             <TableCell>Gesamt</TableCell>
             <TableCell className="text-right">{totals.orderCount}</TableCell>
-            <TableCell className="text-right">{totals.lineItemCount}</TableCell>
+            {includeLineItems && (
+              <TableCell className="text-right">{totals.lineItemCount}</TableCell>
+            )}
             {includePrices && isMulti && (
               <>
                 <TableCell className="text-right" />

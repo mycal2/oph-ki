@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import crypto from "crypto";
 import { requirePlatformAdmin, isErrorResponse } from "@/lib/admin-auth";
 import { recognizeDealer } from "@/lib/dealer-recognition";
-import { filterAttachments } from "@/lib/postmark";
+import { filterAttachments, sendForwardedEmail } from "@/lib/postmark";
 import type { PostmarkInboundPayload } from "@/lib/postmark";
 import type { ApiResponse } from "@/lib/types";
 
@@ -222,6 +222,53 @@ export async function POST(
           );
         }
       });
+    }
+
+    // 9. OPH-63: Forward the original email to the tenant's configured forwarding address
+    {
+      const serverApiToken = process.env.POSTMARK_SERVER_API_TOKEN;
+      if (serverApiToken) {
+        const { data: tenantConfig } = await adminClient
+          .from("tenants")
+          .select("name, status, email_forwarding_enabled, email_forwarding_address")
+          .eq("id", entry.tenant_id)
+          .single();
+
+        const shouldForward =
+          tenantConfig &&
+          tenantConfig.status !== "trial" &&
+          tenantConfig.email_forwarding_enabled &&
+          typeof tenantConfig.email_forwarding_address === "string" &&
+          (tenantConfig.email_forwarding_address as string).trim().length > 0;
+
+        if (shouldForward && tenantConfig) {
+          const forwardingAddress = tenantConfig.email_forwarding_address as string;
+          const originalSubject = payload.Subject || "";
+          const originalBodyText = payload.TextBody || "";
+          const receivedAt = payload.Date || new Date().toISOString();
+          const tenantName = tenantConfig.name as string;
+          const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+          after(async () => {
+            try {
+              await sendForwardedEmail({
+                serverApiToken,
+                toEmail: forwardingAddress,
+                originalSenderEmail: entry.sender_email || "",
+                originalSenderName: entry.sender_name || "",
+                originalSubject,
+                originalBodyText,
+                receivedAt,
+                tenantName,
+                siteUrl,
+                attachments: supportedAttachments,
+              });
+            } catch (err) {
+              console.error("OPH-63: Failed to forward reprocessed email:", err);
+            }
+          });
+        }
+      }
     }
 
     return NextResponse.json({

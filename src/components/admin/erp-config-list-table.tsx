@@ -38,6 +38,7 @@ const FORMAT_LABELS: Record<ExportFormat, string> = {
   csv: "CSV",
   xml: "XML",
   json: "JSON",
+  split_csv: "Split CSV",
 };
 
 const FALLBACK_LABELS: Record<ErpFallbackMode, { label: string; className: string }> = {

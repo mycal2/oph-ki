@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Loader2, MoreHorizontal, Power, PowerOff, UserPlus, Clock, Info, AlertTriangle, Mail, MailPlus, KeyRound } from "lucide-react";
+import { Loader2, MoreHorizontal, Power, PowerOff, UserPlus, Clock, Info, AlertTriangle, Mail, MailPlus, KeyRound, Forward } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -152,6 +152,9 @@ export function TenantFormSheet({
   const [emailResultsFormat, setEmailResultsFormat] = useState<"standard_csv" | "tenant_format">("standard_csv");
   const [emailResultsConfidence, setEmailResultsConfidence] = useState(true);
   const [emailPostprocess, setEmailPostprocess] = useState(false);
+  // OPH-63: Email forwarding
+  const [emailForwardingEnabled, setEmailForwardingEnabled] = useState(false);
+  const [emailForwardingAddress, setEmailForwardingAddress] = useState("");
   // OPH-28: ERP config selector
   const [erpConfigId, setErpConfigId] = useState<string | null>(null);
   const [erpConfigs, setErpConfigs] = useState<
@@ -198,6 +201,8 @@ export function TenantFormSheet({
     setEmailResultsFormat("standard_csv");
     setEmailResultsConfidence(true);
     setEmailPostprocess(false);
+    setEmailForwardingEnabled(false);
+    setEmailForwardingAddress("");
     setErpConfigId(null);
     setUsers([]);
     setActiveTab("profile");
@@ -222,6 +227,8 @@ export function TenantFormSheet({
     setEmailResultsFormat(tenant.email_results_format);
     setEmailResultsConfidence(tenant.email_results_confidence_enabled);
     setEmailPostprocess(tenant.email_postprocess_enabled);
+    setEmailForwardingEnabled(tenant.email_forwarding_enabled);
+    setEmailForwardingAddress(tenant.email_forwarding_address ?? "");
     setErpConfigId(tenant.erp_config_id ?? null);
     setTenantName(tenant.name);
   }, []);
@@ -310,6 +317,8 @@ export function TenantFormSheet({
         email_results_format: emailResultsFormat,
         email_results_confidence_enabled: emailResultsConfidence,
         email_postprocess_enabled: emailPostprocess,
+        email_forwarding_enabled: emailForwardingEnabled,
+        email_forwarding_address: emailForwardingAddress || null,
         erp_config_id: erpConfigId,
       };
       const result = await onSave(data, false);
@@ -688,6 +697,51 @@ export function TenantFormSheet({
                           <p className="text-xs text-muted-foreground">Zukünftiger Nachbearbeitungsschritt. Keine Auswirkung.</p>
                         </div>
                         <Switch id="email-postprocess" checked={emailPostprocess} onCheckedChange={setEmailPostprocess} />
+                      </div>
+                    </div>
+
+                    {/* OPH-63: Email forwarding section */}
+                    <div className="rounded-lg border p-4 space-y-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Forward className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">E-Mail-Weiterleitung</span>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label htmlFor="email-forwarding-sheet" className="text-sm">
+                            E-Mail-Weiterleitung
+                          </Label>
+                          <p className="text-xs text-muted-foreground">
+                            Eingehende Bestell-E-Mails an eine weitere Adresse weiterleiten.
+                          </p>
+                        </div>
+                        <Switch
+                          id="email-forwarding-sheet"
+                          checked={emailForwardingEnabled}
+                          onCheckedChange={setEmailForwardingEnabled}
+                          aria-label="E-Mail-Weiterleitung aktivieren"
+                        />
+                      </div>
+
+                      <div className={`space-y-2 ${!emailForwardingEnabled ? "opacity-50" : ""}`}>
+                        <Label htmlFor="email-forwarding-address-sheet" className="text-sm">
+                          Weiterleitungs-Adresse
+                        </Label>
+                        <Input
+                          id="email-forwarding-address-sheet"
+                          type="email"
+                          value={emailForwardingAddress}
+                          onChange={(e) => setEmailForwardingAddress(e.target.value)}
+                          placeholder="weiterleitung@beispiel.de"
+                          disabled={!emailForwardingEnabled}
+                          aria-label="Weiterleitungs-E-Mail-Adresse"
+                        />
+                        {!emailForwardingEnabled && (
+                          <p className="text-xs text-muted-foreground">
+                            Aktivieren Sie die Weiterleitung, um eine Adresse zu konfigurieren.
+                          </p>
+                        )}
                       </div>
                     </div>
                   </TabsContent>

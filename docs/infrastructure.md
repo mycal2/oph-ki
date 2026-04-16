@@ -79,6 +79,7 @@ All env vars are scoped per branch in Vercel. "Preview" deployments require bran
 | `NEXT_PUBLIC_SITE_URL` | Public | App URL for the environment |
 | `POSTMARK_SERVER_API_TOKEN` | Server | Postmark server API token |
 | `POSTMARK_SENDER_EMAIL` | Server | From address for outbound emails |
+| `POSTMARK_MESSAGE_STREAM` | Server | Postmark message stream ID (default: "outbound") |
 | `POSTMARK_INBOUND_WEBHOOK_TOKEN` | Server | Secret for inbound webhook auth |
 | `INBOUND_EMAIL_DOMAIN` | Server | Domain for inbound email forwarding |
 

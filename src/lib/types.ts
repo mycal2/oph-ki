@@ -42,6 +42,10 @@ export interface Tenant {
   monthly_fee: number | null;
   /** OPH-52: Cost per processed order in EUR. */
   cost_per_order: number | null;
+  /** OPH-63: Whether email forwarding is active for this tenant. */
+  email_forwarding_enabled: boolean;
+  /** OPH-63: The email address to forward inbound order emails to. */
+  email_forwarding_address: string | null;
 }
 
 export interface UserProfile {
@@ -160,6 +164,8 @@ export interface Dealer {
   format_type: DealerFormatType;
   extraction_hints: string | null;
   active: boolean;
+  /** OPH-65: Strip leading zeros from digit runs during article number matching for this dealer. */
+  strip_leading_zeros_in_article_numbers: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -206,6 +212,12 @@ export interface OrderWithDealer extends Order {
   has_unmapped_articles: boolean;
   /** OPH-25: Email subject stored on the order (from Postmark, .eml parsing, or manual input). */
   subject: string | null;
+  /** OPH-66: Who reset the dealer assignment (null if never reset or cleared on new assignment). */
+  dealer_reset_by: string | null;
+  /** OPH-66: When the dealer assignment was reset. */
+  dealer_reset_at: string | null;
+  /** OPH-66: Display name of the user who reset the dealer. */
+  reset_by_name: string | null;
 }
 
 /** Lightweight order summary for the orders list page. */
@@ -237,6 +249,16 @@ export interface DealerOverrideResponse {
   updatedAt: string;
 }
 
+/** Response from DELETE /api/orders/[orderId]/dealer (OPH-66: dealer reset) */
+export interface DealerResetResponse {
+  orderId: string;
+  resetBy: string;
+  resetByName: string;
+  resetAt: string;
+  /** The order's actual updated_at after the reset (for optimistic locking). */
+  updatedAt: string;
+}
+
 /**
  * OPH-4: AI Extraction types.
  */
@@ -262,7 +284,7 @@ export interface CanonicalLineItem {
   total_price: number | null;
   currency: string | null;
   /** OPH-40: How the article_number was determined. */
-  article_number_source?: "extracted" | "catalog_match" | "manual" | null;
+  article_number_source?: "extracted" | "catalog_match" | "normalized_match" | "manual" | null;
   /** OPH-40: Human-readable reason for catalog match (German). */
   article_number_match_reason?: string | null;
 }
@@ -276,8 +298,8 @@ export interface CanonicalSender {
   email: string | null;
   phone: string | null;
   customer_number: string | null;
-  /** OPH-47: How the customer_number was determined. */
-  customer_number_source?: "catalog_email" | "catalog_exact" | "catalog_keyword" | "catalog_fuzzy_name" | "catalog_phone" | "extracted" | null;
+  /** OPH-47: How the customer_number was determined. OPH-65 added "catalog_normalized". */
+  customer_number_source?: "catalog_email" | "catalog_exact" | "catalog_normalized" | "catalog_keyword" | "catalog_fuzzy_name" | "catalog_phone" | "extracted" | null;
   /** OPH-47: Human-readable reason for the customer number match (German). */
   customer_number_match_reason?: string | null;
 }
@@ -365,7 +387,7 @@ export interface OrderForReview extends OrderWithDealer {
  * OPH-6: ERP-Export & Download types.
  */
 
-export type ExportFormat = "csv" | "xml" | "json";
+export type ExportFormat = "csv" | "xml" | "json" | "split_csv";
 
 /** Column mapping entry for ERP export configuration. */
 export interface ErpColumnMapping {
@@ -418,6 +440,8 @@ export interface ExportPreviewResponse {
   tenantDefaultFormat?: ExportFormat;
   /** OPH-28: Confidence score for the output format, if configured. */
   confidenceScore?: ConfidenceScoreData;
+  /** OPH-61: Output mode for split_csv ("zip" or "separate"). */
+  splitOutputMode?: "zip" | "separate";
 }
 
 /** Response metadata after an export download. */
@@ -524,6 +548,7 @@ export interface DealerAdminListItem {
   active: boolean;
   order_count: number;
   last_order_at: string | null;
+  tenant_count: number;
   created_at: string;
 }
 
@@ -615,6 +640,8 @@ export interface ErpColumnMappingExtended {
   target_column_name: string;
   required: boolean;
   transformations: ErpTransformationStep[];
+  /** OPH-60: Fixed constant value. When set, the column always outputs this value (ignoring source_field). */
+  fixed_value?: string | null;
 }
 
 /** OPH-29: Full ERP config as used in the admin UI. */
@@ -631,6 +658,18 @@ export interface ErpConfigAdmin {
   decimal_separator: ErpDecimalSeparator;
   fallback_mode: ErpFallbackMode;
   xml_template: string | null;
+  /** OPH-58: Column mappings for the header CSV in split_csv format. */
+  header_column_mappings: ErpColumnMappingExtended[] | null;
+  /** OPH-58: Value used for unmapped columns (default "", "@" for split_csv). */
+  empty_value_placeholder: string;
+  /** OPH-61: Output mode for split_csv ("zip" or "separate"). */
+  split_output_mode: "zip" | "separate" | null;
+  /** OPH-61: Filename template for the header CSV. */
+  header_filename_template: string | null;
+  /** OPH-61: Filename template for the lines CSV. */
+  lines_filename_template: string | null;
+  /** OPH-61: Filename template for the ZIP archive. */
+  zip_filename_template: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -686,6 +725,18 @@ export interface ErpConfigSavePayload {
   decimal_separator: ErpDecimalSeparator;
   fallback_mode: ErpFallbackMode;
   xml_template: string | null;
+  /** OPH-58: Column mappings for the header CSV in split_csv format. */
+  header_column_mappings?: ErpColumnMappingExtended[] | null;
+  /** OPH-58: Value used for unmapped columns (default "", "@" for split_csv). */
+  empty_value_placeholder?: string;
+  /** OPH-61: Output mode for split_csv ("zip" or "separate"). */
+  split_output_mode?: "zip" | "separate" | null;
+  /** OPH-61: Filename template for the header CSV. */
+  header_filename_template?: string | null;
+  /** OPH-61: Filename template for the lines CSV. */
+  lines_filename_template?: string | null;
+  /** OPH-61: Filename template for the ZIP archive. */
+  zip_filename_template?: string | null;
   comment?: string;
 }
 
@@ -810,6 +861,10 @@ export interface DataRetentionSettings {
   emailResultsFormat: "standard_csv" | "tenant_format";
   emailResultsConfidenceEnabled: boolean;
   emailPostprocessEnabled: boolean;
+  /** OPH-63: Whether email forwarding is active. */
+  emailForwardingEnabled: boolean;
+  /** OPH-63: The email address to forward inbound order emails to. */
+  emailForwardingAddress: string | null;
 }
 
 /** Response from DELETE /api/orders/[orderId]. */
@@ -851,6 +906,8 @@ export interface TenantOutputFormat {
   tenant_id: string | null;
   /** OPH-29: Output format linked to a shared ERP config. */
   erp_config_id: string | null;
+  /** OPH-59: Which template slot this sample belongs to. */
+  slot: "lines" | "header";
   file_name: string;
   file_path: string;
   file_type: OutputFormatFileType;
