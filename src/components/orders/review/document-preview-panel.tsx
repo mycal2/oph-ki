@@ -104,6 +104,7 @@ export function DocumentPreviewPanel({ orderId }: DocumentPreviewPanelProps) {
 
   const activeFile = files[activeFileIndex];
   const isPdf = activeFile?.mimeType === "application/pdf";
+  const isImage = /^image\/(jpeg|jpg|png|webp|tiff|bmp)$/.test(activeFile?.mimeType ?? "");
 
   return (
     <Card className={cn("h-full flex flex-col", stickyClasses)}>
@@ -156,6 +157,15 @@ export function DocumentPreviewPanel({ orderId }: DocumentPreviewPanelProps) {
             className="w-full h-[500px] lg:h-full min-h-[400px] rounded-md border"
             title={`Vorschau: ${activeFile.filename}`}
           />
+        ) : isImage ? (
+          <div className="w-full h-[500px] lg:h-full min-h-[400px] rounded-md border overflow-auto bg-muted/20 flex items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={activeFile.signedUrl}
+              alt={activeFile.filename}
+              className="max-w-full max-h-full object-contain"
+            />
+          </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-12 text-center border rounded-md bg-muted/30">
             <FileText className="h-10 w-10 text-muted-foreground/50 mb-3" />

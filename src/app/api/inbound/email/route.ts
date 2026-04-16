@@ -288,15 +288,6 @@ export async function POST(
       console.info("Attachment warnings for email from", senderEmail, ":", warnings);
     }
 
-    // OPH-69 DEBUG: Log what filterAttachments returned (temporary)
-    console.info("OPH-69 DEBUG: filterAttachments result:", {
-      totalAttachments: (payload.Attachments ?? []).length,
-      supportedCount: supportedAttachments.length,
-      supportedNames: supportedAttachments.map(a => `${a.Name} (${a.ContentType}, ${a.ContentLength}b, CID=${a.ContentID ?? "none"})`),
-      warningsCount: warnings.length,
-      rawAttachments: (payload.Attachments ?? []).map(a => ({ Name: a.Name, ContentType: a.ContentType, ContentLength: a.ContentLength, ContentID: a.ContentID ?? "none" })),
-    });
-
     // 9. Create order record (include ingestion warnings if any)
     // Generate a preview token for every email-ingested order so the
     // confirmation email can link to the public preview page.
@@ -320,14 +311,7 @@ export async function POST(
         subject: payload.Subject ? payload.Subject.slice(0, 500) : null,
         preview_token: previewToken,
         preview_token_expires_at: tokenExpiresAt.toISOString(),
-        ingestion_notes: [
-          ...warnings,
-          // OPH-69 DEBUG (temporary): Write attachment metadata to DB for diagnosis
-          `DEBUG: ${(payload.Attachments ?? []).length} attachments from Postmark`,
-          ...(payload.Attachments ?? []).map(a => `DEBUG ATT: ${a.Name} | ${a.ContentType} | ${a.ContentLength}b | CID=${a.ContentID ?? "none"}`),
-          `DEBUG: filterAttachments returned ${supportedAttachments.length} supported`,
-          ...supportedAttachments.map(a => `DEBUG ACCEPTED: ${a.Name} | ${a.ContentType} | ${a.ContentLength}b`),
-        ],
+        ...(warnings.length > 0 ? { ingestion_notes: warnings } : {}),
         ...trialOrderFields,
       })
       .select("id")
@@ -347,9 +331,7 @@ export async function POST(
     let primaryFilename: string | null = null;
     let primaryStoragePath: string | null = null;
 
-    console.info("OPH-69 DEBUG: About to upload", supportedAttachments.length, "attachments for order", orderId);
     for (const attachment of supportedAttachments) {
-      console.info("OPH-69 DEBUG: Uploading attachment:", attachment.Name, attachment.ContentType, attachment.ContentLength, "bytes, Content length:", attachment.Content?.length ?? "MISSING");
       const buffer = Buffer.from(attachment.Content, "base64");
       const sanitizedName = attachment.Name.replace(/[^a-z0-9._-]/gi, "_");
       const storagePath = `${tenant.id}/${orderId}/${sanitizedName}`;
@@ -366,8 +348,6 @@ export async function POST(
 
       if (uploadError) {
         console.error(`Failed to upload attachment ${attachment.Name}:`, uploadError.message);
-        // OPH-69 DEBUG: Write upload error to DB
-        await adminClient.from("orders").update({ ingestion_notes: [...(warnings), `DEBUG UPLOAD ERROR: ${attachment.Name} → ${uploadError.message}`, `DEBUG: buffer size=${buffer.length}, path=${storagePath}`] }).eq("id", orderId);
         continue;
       }
 
@@ -384,11 +364,6 @@ export async function POST(
 
       if (fileRecordError) {
         console.error(`Failed to insert order_files record for ${attachment.Name}:`, fileRecordError.message);
-        // OPH-69 DEBUG: Write DB insert error
-        await adminClient.from("orders").update({ ingestion_notes: [...(warnings), `DEBUG DB ERROR: ${attachment.Name} → ${fileRecordError.message}`] }).eq("id", orderId);
-      } else {
-        // OPH-69 DEBUG: Confirm successful save
-        await adminClient.from("orders").update({ ingestion_notes: [...(warnings), `DEBUG UPLOAD OK: ${attachment.Name} saved at ${storagePath}, ${buffer.length} bytes`] }).eq("id", orderId);
       }
 
       if (!primaryFilename) {
