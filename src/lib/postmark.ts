@@ -245,9 +245,13 @@ export function filterAttachments(
   const candidateImages: PostmarkInboundPayload["Attachments"] = [];
 
   for (const att of imageAttachments) {
-    // Rule 1: ContentID reject — inline HTML images (signatures, logos)
-    if (att.ContentID && att.ContentID.trim().length > 0) {
-      // Discard silently — no warning (too noisy)
+    // Rule 1: ContentID check — inline HTML images (signatures, logos)
+    // Images with ContentID are typically inline decorative images (logos, icons).
+    // However, forwarded emails often assign ContentID to legitimate photo attachments.
+    // To avoid discarding real order photos: only reject if the image is also small (< 50 KB).
+    // Large images with ContentID are likely real content (photos, screenshots).
+    if (att.ContentID && att.ContentID.trim().length > 0 && att.ContentLength < MIN_IMAGE_SIZE_WITH_FILES) {
+      // Small inline image — discard silently (too noisy to warn)
       continue;
     }
 
