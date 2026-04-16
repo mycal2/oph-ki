@@ -178,3 +178,92 @@ export async function POST(
     );
   }
 }
+
+/**
+ * DELETE /api/admin/tenants/[id]/customers
+ *
+ * Platform admin: deletes ALL customers for a specific tenant (full catalog reset).
+ * Returns: { success: true, data: { deleted: number } }
+ */
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+): Promise<NextResponse> {
+  try {
+    const { id: tenantId } = await params;
+
+    if (!UUID_REGEX.test(tenantId)) {
+      return NextResponse.json(
+        { success: false, error: "Ungueltige Mandanten-ID." },
+        { status: 400 }
+      );
+    }
+
+    const auth = await requirePlatformAdmin();
+    if (isErrorResponse(auth)) return auth;
+    const { adminClient } = auth;
+
+    // Verify tenant exists
+    const { data: tenant, error: tenantError } = await adminClient
+      .from("tenants")
+      .select("id")
+      .eq("id", tenantId)
+      .single();
+
+    if (tenantError || !tenant) {
+      return NextResponse.json(
+        { success: false, error: "Mandant nicht gefunden." },
+        { status: 404 }
+      );
+    }
+
+    // Check current count to guard against empty catalog
+    const { count, error: countError } = await adminClient
+      .from("customer_catalog")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenantId);
+
+    if (countError) {
+      console.error("Error counting customers for reset:", countError.message);
+      return NextResponse.json(
+        { success: false, error: "Kundenstamm konnte nicht geprueft werden." },
+        { status: 500 }
+      );
+    }
+
+    if ((count ?? 0) === 0) {
+      return NextResponse.json(
+        { success: false, error: "Der Kundenstamm ist bereits leer." },
+        { status: 400 }
+      );
+    }
+
+    // Delete all customers for this tenant
+    const { data: deletedRows, error: deleteError } = await adminClient
+      .from("customer_catalog")
+      .delete()
+      .eq("tenant_id", tenantId)
+      .select("id");
+
+    if (deleteError) {
+      console.error("Error resetting customer catalog:", deleteError.message);
+      return NextResponse.json(
+        { success: false, error: "Kundenstamm konnte nicht geloescht werden." },
+        { status: 500 }
+      );
+    }
+
+    const deleted = deletedRows?.length ?? 0;
+
+    return NextResponse.json({
+      success: true,
+      data: { deleted },
+    });
+  } catch (error) {
+    console.error("Unexpected error in DELETE /api/admin/tenants/[id]/customers:", error);
+    return NextResponse.json(
+      { success: false, error: "Interner Serverfehler." },
+      { status: 500 }
+    );
+  }
+}

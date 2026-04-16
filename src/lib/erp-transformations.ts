@@ -133,11 +133,21 @@ export function normalizeMapping(mapping: ErpColumnMappingExtended): ErpColumnMa
 }
 
 /**
+ * OPH-60: Checks whether a mapping is configured as a fixed-value column.
+ * Fixed-value columns always output their configured constant regardless of order data.
+ */
+export function isFixedValueMapping(mapping: ErpColumnMappingExtended): boolean {
+  return mapping.fixed_value !== undefined && mapping.fixed_value !== null;
+}
+
+/**
  * Gets a transformed value for a mapping, applying column-level transformations
  * and decimal separator formatting.
  *
  * Resolves both line-item fields (e.g. "article_number", "items[].quantity")
  * and order-level fields (e.g. "order.order_number", "order.dealer.name").
+ *
+ * OPH-60: If the mapping has a fixed_value, returns it as-is (no transformations).
  */
 export function getTransformedValue(
   item: CanonicalLineItem,
@@ -145,6 +155,11 @@ export function getTransformedValue(
   decimalSeparator: string,
   orderData?: CanonicalOrderData
 ): string {
+  // OPH-60: Fixed-value columns return the constant directly (no transformations)
+  if (isFixedValueMapping(mapping)) {
+    return mapping.fixed_value!;
+  }
+
   const normalized = normalizeMapping(mapping);
   let value: string;
 
@@ -220,9 +235,18 @@ export function generateXmlContent(
     try {
       const template = Handlebars.compile(xmlTemplate, { strict: false });
 
+      // OPH-60: Inject fixed values from column mappings into the Handlebars context
+      const fixedValues: Record<string, string> = {};
+      for (const m of mappings) {
+        if (isFixedValueMapping(m)) {
+          fixedValues[m.target_column_name] = m.fixed_value!;
+        }
+      }
+
       const context = {
         order: orderData.order,
         extraction_metadata: orderData.extraction_metadata,
+        fixed: fixedValues,
       };
 
       return { content: template(context), warnings };
@@ -283,7 +307,8 @@ export function validateRequiredFields(
   mappings: ErpColumnMappingExtended[],
   orderData?: CanonicalOrderData
 ): string[] {
-  const requiredMappings = mappings.filter((m) => (m.required ?? false));
+  // OPH-60: Fixed-value columns are always filled — exclude from required validation
+  const requiredMappings = mappings.filter((m) => (m.required ?? false) && !isFixedValueMapping(m));
   if (requiredMappings.length === 0) return [];
 
   const errors: string[] = [];
@@ -371,6 +396,10 @@ export function generateExportContent(
       const content = JSON.stringify(orderData, null, 2);
       return { content, contentType: "application/json; charset=utf-8", warnings };
     }
+
+    case "split_csv":
+      // Handled separately in the export route via generateSplitCsvZip
+      throw new Error("split_csv format must be handled via generateSplitCsvZip, not generateExportContent");
 
     default:
       throw new Error(`Unsupported format: ${format}`);

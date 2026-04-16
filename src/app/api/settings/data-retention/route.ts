@@ -54,7 +54,7 @@ export async function GET(): Promise<NextResponse<ApiResponse<DataRetentionSetti
     const adminClient = createAdminClient();
     const { data: tenant, error: tenantError } = await adminClient
       .from("tenants")
-      .select("data_retention_days, email_confirmation_enabled, email_results_enabled, email_results_format, email_results_confidence_enabled, email_postprocess_enabled")
+      .select("data_retention_days, email_confirmation_enabled, email_results_enabled, email_results_format, email_results_confidence_enabled, email_postprocess_enabled, email_forwarding_enabled, email_forwarding_address")
       .eq("id", tenantId)
       .single();
 
@@ -74,6 +74,8 @@ export async function GET(): Promise<NextResponse<ApiResponse<DataRetentionSetti
         emailResultsFormat: tenant.email_results_format as "standard_csv" | "tenant_format",
         emailResultsConfidenceEnabled: tenant.email_results_confidence_enabled as boolean,
         emailPostprocessEnabled: tenant.email_postprocess_enabled as boolean,
+        emailForwardingEnabled: tenant.email_forwarding_enabled as boolean,
+        emailForwardingAddress: (tenant.email_forwarding_address as string | null) ?? null,
       },
     });
   } catch (error) {
@@ -163,7 +165,7 @@ export async function PATCH(
       .from("tenants")
       .update({ data_retention_days: dataRetentionDays })
       .eq("id", tenantId)
-      .select("data_retention_days, email_confirmation_enabled, email_results_enabled, email_results_format, email_results_confidence_enabled, email_postprocess_enabled")
+      .select("data_retention_days, email_confirmation_enabled, email_results_enabled, email_results_format, email_results_confidence_enabled, email_postprocess_enabled, email_forwarding_enabled, email_forwarding_address")
       .single();
 
     if (updateError || !updated) {
@@ -183,6 +185,8 @@ export async function PATCH(
         emailResultsFormat: updated.email_results_format as "standard_csv" | "tenant_format",
         emailResultsConfidenceEnabled: updated.email_results_confidence_enabled as boolean,
         emailPostprocessEnabled: updated.email_postprocess_enabled as boolean,
+        emailForwardingEnabled: updated.email_forwarding_enabled as boolean,
+        emailForwardingAddress: (updated.email_forwarding_address as string | null) ?? null,
       },
     });
   } catch (error) {

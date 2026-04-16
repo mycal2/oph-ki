@@ -240,6 +240,11 @@ export async function GET(
       console.error("Error calculating confidence score for preview:", scoreError);
     }
 
+    // OPH-61: Include split output mode for split_csv configs
+    const splitOutputMode = effectiveFormat === "split_csv"
+      ? ((erpConfig?.split_output_mode as string) ?? "zip") as "zip" | "separate"
+      : undefined;
+
     if (effectiveFormat === "csv") {
       const headers = columnMappings.map((m) => m.target_column_name);
       const rows = previewItems.map((item) =>
@@ -249,6 +254,19 @@ export async function GET(
       return NextResponse.json({
         success: true,
         data: { format: effectiveFormat, headers, rows, totalRows, filename, usingDefaultConfig, tenantDefaultFormat, confidenceScore },
+      });
+    }
+
+    if (effectiveFormat === "split_csv") {
+      // Preview the lines (Positionen) CSV portion
+      const headers = columnMappings.map((m) => m.target_column_name);
+      const rows = previewItems.map((item) =>
+        columnMappings.map((m) => getTransformedValue(item, m, decimalSeparator, orderData))
+      );
+
+      return NextResponse.json({
+        success: true,
+        data: { format: effectiveFormat, headers, rows, totalRows, filename, usingDefaultConfig, tenantDefaultFormat, confidenceScore, splitOutputMode },
       });
     }
 
@@ -276,12 +294,14 @@ export async function GET(
         usingDefaultConfig,
         tenantDefaultFormat,
         confidenceScore,
+        splitOutputMode,
       },
     });
   } catch (error) {
-    console.error("Error in GET /api/orders/[orderId]/export/preview:", error);
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("Error in GET /api/orders/[orderId]/export/preview:", msg, error);
     return NextResponse.json(
-      { success: false, error: "Interner Serverfehler." },
+      { success: false, error: `Interner Serverfehler: ${msg}` },
       { status: 500 }
     );
   }

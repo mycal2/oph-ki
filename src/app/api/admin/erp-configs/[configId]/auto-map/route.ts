@@ -153,15 +153,21 @@ Return exactly one entry per target column, in the same order as the input.`;
 // Route handler
 // ---------------------------------------------------------------------------
 
+/** OPH-59: Valid slot values. */
+function parseSlot(raw: unknown): "lines" | "header" {
+  return raw === "header" ? "header" : "lines";
+}
+
 /**
  * POST /api/admin/erp-configs/[configId]/auto-map
  *
  * OPH-45: Uses Claude AI to suggest field mappings from the detected output
  * format schema columns to canonical order data fields.
- * Platform admin only. No request body needed -- reads detected_schema from DB.
+ * OPH-59: Supports optional { slot: "lines" | "header" } in request body.
+ * Platform admin only.
  */
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ configId: string }> }
 ): Promise<NextResponse> {
   try {
@@ -180,6 +186,15 @@ export async function POST(
       );
     }
 
+    // OPH-59: Read optional slot from request body
+    let slot: "lines" | "header" = "lines";
+    try {
+      const body = await request.json();
+      slot = parseSlot(body?.slot);
+    } catch {
+      // No body or invalid JSON — use default slot
+    }
+
     // Verify config exists
     const { data: config, error: configError } = await adminClient
       .from("erp_configs")
@@ -194,11 +209,12 @@ export async function POST(
       );
     }
 
-    // Read detected_schema from the output format
+    // Read detected_schema from the output format for the specific slot
     const { data: outputFormat, error: formatError } = await adminClient
       .from("tenant_output_formats")
       .select("detected_schema")
       .eq("erp_config_id", configId)
+      .eq("slot", slot)
       .maybeSingle();
 
     if (formatError) {

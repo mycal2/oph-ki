@@ -31,6 +31,7 @@ export default function AdminReportsPage() {
     to: new Date(),
   });
   const [selectedTenantIds, setSelectedTenantIds] = useState<string[]>([]);
+  const [includeLineItems, setIncludeLineItems] = useState(true);
   const [includePrices, setIncludePrices] = useState(false);
 
   // Tenant list for the multi-select
@@ -94,31 +95,31 @@ export default function AdminReportsPage() {
     if (!report) return;
     setExportingCsv(true);
     try {
-      exportCsv(report, includePrices, getSelectedTenantNames());
+      exportCsv(report, includeLineItems, includePrices, getSelectedTenantNames());
     } finally {
       setExportingCsv(false);
     }
-  }, [report, includePrices, getSelectedTenantNames]);
+  }, [report, includeLineItems, includePrices, getSelectedTenantNames]);
 
   const handleExportXls = useCallback(async () => {
     if (!report) return;
     setExportingXls(true);
     try {
-      await exportXls(report, includePrices, getSelectedTenantNames());
+      await exportXls(report, includeLineItems, includePrices, getSelectedTenantNames());
     } finally {
       setExportingXls(false);
     }
-  }, [report, includePrices, getSelectedTenantNames]);
+  }, [report, includeLineItems, includePrices, getSelectedTenantNames]);
 
   const handleExportPdf = useCallback(async () => {
     if (!report) return;
     setExportingPdf(true);
     try {
-      await exportPdf(report, includePrices, getSelectedTenantNames());
+      await exportPdf(report, includeLineItems, includePrices, getSelectedTenantNames());
     } finally {
       setExportingPdf(false);
     }
-  }, [report, includePrices, getSelectedTenantNames]);
+  }, [report, includeLineItems, includePrices, getSelectedTenantNames]);
 
   // Loading role
   if (isLoadingRole) {
@@ -178,6 +179,20 @@ export default function AdminReportsPage() {
                 disabled={isLoading}
                 isLoading={tenantsLoading}
               />
+            </div>
+
+            {/* Include Line Items Toggle */}
+            <div className="flex items-center gap-2 pb-0.5">
+              <Switch
+                id="include-line-items"
+                checked={includeLineItems}
+                onCheckedChange={setIncludeLineItems}
+                disabled={isLoading}
+                aria-label="Bestellpositionen anzeigen"
+              />
+              <Label htmlFor="include-line-items" className="cursor-pointer">
+                Bestellpositionen
+              </Label>
             </div>
 
             {/* Include Prices Toggle */}
@@ -247,7 +262,7 @@ export default function AdminReportsPage() {
       {/* Report Table */}
       {hasData && (
         <>
-          <BillingReportTable report={report} includePrices={includePrices} />
+          <BillingReportTable report={report} includeLineItems={includeLineItems} includePrices={includePrices} />
 
           {/* Export Row */}
           <div className="flex flex-wrap gap-3">

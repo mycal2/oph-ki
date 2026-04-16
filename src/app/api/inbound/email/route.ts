@@ -8,6 +8,7 @@ import {
   extractSlugFromEmail,
   filterAttachments,
   sendConfirmationEmail,
+  sendForwardedEmail,
   sendQuarantineNotification,
   sendPlatformErrorNotification,
   postmarkInboundPayloadSchema,
@@ -87,8 +88,18 @@ export async function POST(
 
     const adminClient = createAdminClient();
 
-    // 4. Look up tenant by "To" address slug
-    const toAddress = payload.ToFull?.[0]?.Email ?? payload.To;
+    // 4. Look up tenant by envelope recipient or "To" address slug
+    // Prefer OriginalRecipient (SMTP envelope) — more reliable when emails
+    // are forwarded by Exchange/M365, which preserves the original To header.
+    const inboundDomain = process.env.INBOUND_EMAIL_DOMAIN;
+    const originalRecipient = payload.OriginalRecipient;
+    let toAddress = payload.ToFull?.[0]?.Email ?? payload.To;
+
+    // If OriginalRecipient is on our inbound domain, prefer it over the To header
+    if (originalRecipient && inboundDomain && originalRecipient.endsWith(`@${inboundDomain}`)) {
+      toAddress = originalRecipient;
+    }
+
     const slug = extractSlugFromEmail(toAddress);
 
     if (!slug) {
@@ -99,7 +110,7 @@ export async function POST(
 
     const { data: tenant, error: tenantError } = await adminClient
       .from("tenants")
-      .select("id, name, slug, status, contact_email, allowed_email_domains, email_confirmation_enabled")
+      .select("id, name, slug, status, contact_email, allowed_email_domains, email_confirmation_enabled, email_forwarding_enabled, email_forwarding_address")
       .eq("slug", slug)
       .single();
 
@@ -189,26 +200,25 @@ export async function POST(
 
     // 7. If not authorized → quarantine
     if (!isAuthorized) {
-      // Archive the raw email to storage
-      let storagePath: string | null = null;
-      try {
-        const emlBuffer = Buffer.from(rawBody, "utf-8");
-        const sanitizedSubject = (payload.Subject || "no-subject")
-          .replace(/[^a-z0-9-]/gi, "_")
-          .slice(0, 50);
-        const targetPath = `${tenant.id}/quarantine/${Date.now()}_${sanitizedSubject}.json`;
-        const { error: archiveError } = await adminClient.storage
-          .from("order-files")
-          .upload(targetPath, emlBuffer, {
-            contentType: "application/json",
-          });
-        if (archiveError) {
-          console.error("Failed to archive quarantined email:", archiveError.message);
-        } else {
-          storagePath = targetPath;
-        }
-      } catch (err) {
-        console.error("Failed to archive quarantined email:", err);
+      // Archive the raw email to storage — MUST succeed for reprocessing to work
+      const emlBuffer = Buffer.from(rawBody, "utf-8");
+      const sanitizedSubject = (payload.Subject || "no-subject")
+        .replace(/[^a-z0-9-]/gi, "_")
+        .slice(0, 50);
+      const targetPath = `${tenant.id}/quarantine/${Date.now()}_${sanitizedSubject}.json`;
+      const { error: archiveError } = await adminClient.storage
+        .from("order-files")
+        .upload(targetPath, emlBuffer, {
+          contentType: "text/plain",
+        });
+
+      if (archiveError) {
+        // Fail loudly so Postmark retries the webhook
+        console.error("Failed to archive quarantined email — returning 500 for retry:", archiveError.message);
+        return NextResponse.json(
+          { success: false, error: "E-Mail-Archivierung fehlgeschlagen." },
+          { status: 500 }
+        );
       }
 
       // Insert into quarantine table
@@ -220,7 +230,7 @@ export async function POST(
           sender_name: senderName || null,
           subject: payload.Subject || null,
           message_id: messageId,
-          storage_path: storagePath,
+          storage_path: targetPath,
           review_status: "pending",
         });
 
@@ -443,7 +453,7 @@ export async function POST(
       await adminClient.storage
         .from("order-files")
         .upload(archivePath, Buffer.from(rawBody, "utf-8"), {
-          contentType: "application/json",
+          contentType: "text/plain",
         });
     } catch (err) {
       console.error("Failed to archive original email:", err);
@@ -550,6 +560,47 @@ export async function POST(
             });
           } catch (err) {
             console.error("Failed to send confirmation email:", err);
+          }
+        });
+      }
+    }
+
+    // 16. OPH-63: Forward the original email to the tenant's configured forwarding address
+    // Only for non-trial, active tenants with forwarding enabled and a valid address.
+    {
+      const serverApiToken = process.env.POSTMARK_SERVER_API_TOKEN;
+      const shouldForward =
+        !isTrial &&
+        tenant.email_forwarding_enabled &&
+        typeof tenant.email_forwarding_address === "string" &&
+        tenant.email_forwarding_address.trim().length > 0;
+
+      if (serverApiToken && shouldForward) {
+        // Capture the values we need inside the after() callback
+        const forwardingAddress = tenant.email_forwarding_address as string;
+        const originalSubject = payload.Subject || "";
+        const originalBodyText = payload.TextBody || "";
+        const receivedAt = payload.Date || new Date().toISOString();
+        const originalAttachments = supportedAttachments;
+        const tenantName = tenant.name;
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+        after(async () => {
+          try {
+            await sendForwardedEmail({
+              serverApiToken,
+              toEmail: forwardingAddress,
+              originalSenderEmail: senderEmail,
+              originalSenderName: senderName,
+              originalSubject,
+              originalBodyText,
+              receivedAt,
+              tenantName,
+              siteUrl,
+              attachments: originalAttachments,
+            });
+          } catch (err) {
+            console.error("OPH-63: Failed to forward email:", err);
           }
         });
       }

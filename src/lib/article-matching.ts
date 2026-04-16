@@ -1,5 +1,6 @@
 /**
  * OPH-40: AI Article Number Matching during Extraction.
+ * OPH-65: Tolerant Article Number Matching (whitespace, hyphens, optional leading zeros).
  *
  * Server-side utility that matches extracted line items (with empty article_number)
  * against the tenant's article catalog using GTIN, keywords, and fuzzy name matching.
@@ -11,11 +12,74 @@ import type { CanonicalLineItem } from "@/lib/types";
 /** Minimum similarity score (0-1) for fuzzy name matching to be accepted. */
 const FUZZY_MATCH_THRESHOLD = 0.6;
 
+/**
+ * OPH-65: Normalize an article/customer number key for tolerant comparison.
+ *
+ * Steps:
+ *   1. Lowercase + trim (existing behavior)
+ *   2. Strip all whitespace and hyphens (universal — always applied)
+ *   3. Optionally strip leading zeros from each digit run (per-dealer opt-in)
+ *
+ * The function is pure, O(n), and avoids regex allocations in hot loops.
+ * Exported so customer-matching.ts can reuse it.
+ *
+ * @param value - The raw article/customer number string.
+ * @param stripLeadingZeros - When true, "016" becomes "16". Default false.
+ * @returns The normalized key for comparison.
+ */
+export function normalizeArticleKey(value: string, stripLeadingZeros = false): string {
+  // Step 1: lowercase + trim
+  let result = value.toLowerCase().trim();
+
+  // Step 2: strip whitespace and hyphens
+  // Using a single pass instead of two regex calls for performance in hot loops
+  let cleaned = "";
+  for (let i = 0; i < result.length; i++) {
+    const ch = result[i];
+    if (ch !== " " && ch !== "-" && ch !== "\t" && ch !== "\n" && ch !== "\r") {
+      cleaned += ch;
+    }
+  }
+  result = cleaned;
+
+  // Step 3 (optional): strip leading zeros from each digit run
+  // "801hp016" → "801hp16" (only the leading zeros within consecutive digit sequences)
+  if (stripLeadingZeros && result.length > 0) {
+    let stripped = "";
+    let i = 0;
+    while (i < result.length) {
+      if (result[i] >= "0" && result[i] <= "9") {
+        // We're at the start of a digit run — skip leading zeros
+        while (i < result.length && result[i] === "0") {
+          i++;
+        }
+        // Check if the entire digit run was zeros — keep at least one "0"
+        if (i === result.length || result[i] < "0" || result[i] > "9") {
+          // All zeros (or trailing zeros at end) — keep one zero
+          stripped += "0";
+        }
+        // Now copy the remaining non-zero digits of this run
+        while (i < result.length && result[i] >= "0" && result[i] <= "9") {
+          stripped += result[i];
+          i++;
+        }
+      } else {
+        stripped += result[i];
+        i++;
+      }
+    }
+    result = stripped;
+  }
+
+  return result;
+}
+
 /** Shape of a catalog row loaded from the database. */
 interface CatalogEntry {
   article_number: string;
   name: string;
   gtin: string | null;
+  ref_no: string | null;
   keywords: string | null;
   packaging: string | null;
   size1: string | null;
@@ -83,6 +147,16 @@ interface MatchCandidate {
   reason: string;
 }
 
+/** Options for article number matching (OPH-65). */
+interface MatchArticleNumbersOptions {
+  /**
+   * Per-dealer flag: when true, leading zeros in digit runs are stripped
+   * during normalized matching (e.g. "016" matches "16").
+   * Default: false.
+   */
+  stripLeadingZeros?: boolean;
+}
+
 /**
  * Match extracted line items against the tenant's article catalog.
  *
@@ -93,17 +167,24 @@ interface MatchCandidate {
  * 4. Fuzzy name match (description vs catalog name + keywords)
  * 5. Packaging tie-breaker if multiple equal-score candidates
  *
+ * OPH-65: When an item already has an article_number, matching now uses:
+ * 1. Exact match (lowercase + trim) — source = "extracted" (unchanged)
+ * 2. Normalized match (strip whitespace/hyphens ± leading zeros) — source = "normalized_match"
+ * 3. REF number / keyword match — source = "catalog_match"
+ *
  * Items that already have an article_number get source="extracted".
  */
 export async function matchArticleNumbers(
   adminClient: SupabaseClient,
   lineItems: CanonicalLineItem[],
-  tenantId: string
+  tenantId: string,
+  options: MatchArticleNumbersOptions = {}
 ): Promise<CanonicalLineItem[]> {
+  const { stripLeadingZeros = false } = options;
   // Load entire catalog for this tenant
   const { data: catalog, error } = await adminClient
     .from("article_catalog")
-    .select("article_number, name, gtin, keywords, packaging, size1, size2")
+    .select("article_number, name, gtin, ref_no, keywords, packaging, size1, size2")
     .eq("tenant_id", tenantId)
     .limit(10000);
 
@@ -124,6 +205,7 @@ export async function matchArticleNumbers(
     article_number: row.article_number as string,
     name: row.name as string,
     gtin: (row.gtin as string | null) ?? null,
+    ref_no: (row.ref_no as string | null) ?? null,
     keywords: (row.keywords as string | null) ?? null,
     packaging: (row.packaging as string | null) ?? null,
     size1: (row.size1 as string | null) ?? null,
@@ -139,28 +221,20 @@ export async function matchArticleNumbers(
     return kw;
   });
 
+  // OPH-65: Pre-compute normalized keys for catalog entries (avoid re-computing per line item)
+  const catalogNormalizedKeys = catalogEntries.map((entry) =>
+    normalizeArticleKey(entry.article_number, stripLeadingZeros)
+  );
+
   return lineItems.map((item) => {
-    // Already has article_number from extraction: check if it matches a catalog keyword
-    // (the extracted "article number" might actually be a dealer code, not the manufacturer's)
+    // Already has article_number from extraction: check if it matches a catalog entry
+    // (the extracted "article number" might actually be a REF number or dealer code)
     if (item.article_number) {
       const extractedLower = item.article_number.trim().toLowerCase();
 
-      // Check if the extracted article_number is a keyword in any catalog entry
       for (let i = 0; i < catalogEntries.length; i++) {
         const entry = catalogEntries[i];
         const entryKeywords = catalogKeywords[i];
-
-        // Exact keyword match: the extracted article_number is actually a dealer alias
-        if (entryKeywords.includes(extractedLower)) {
-          return {
-            ...item,
-            article_number: entry.article_number,
-            // Move the original extracted value to dealer_article_number (if not already set)
-            dealer_article_number: item.dealer_article_number || item.article_number,
-            article_number_source: "catalog_match" as const,
-            article_number_match_reason: `Alias-Übereinstimmung: Extrahierte Nr. '${item.article_number}' gefunden in Suchbegriffen von '${entry.article_number}'`,
-          };
-        }
 
         // Exact article_number match: the extracted number IS the manufacturer article number
         if (extractedLower === entry.article_number.trim().toLowerCase()) {
@@ -169,9 +243,67 @@ export async function matchArticleNumbers(
             article_number_source: "extracted" as const,
           };
         }
+
+        // REF number match: the extracted value matches a catalog ref_no
+        // (e.g., Dentalair orders with Meisinger REF numbers instead of article numbers)
+        if (entry.ref_no && extractedLower === entry.ref_no.trim().toLowerCase()) {
+          return {
+            ...item,
+            article_number: entry.article_number,
+            dealer_article_number: item.dealer_article_number || item.article_number,
+            article_number_source: "catalog_match" as const,
+            article_number_match_reason: `Ref.-Nr.-Übereinstimmung: Extrahierte Nr. '${item.article_number}' = Ref.-Nr. von '${entry.article_number}'`,
+          };
+        }
+
+        // Exact keyword match: the extracted article_number is actually a dealer alias
+        if (entryKeywords.includes(extractedLower)) {
+          return {
+            ...item,
+            article_number: entry.article_number,
+            dealer_article_number: item.dealer_article_number || item.article_number,
+            article_number_source: "catalog_match" as const,
+            article_number_match_reason: `Alias-Übereinstimmung: Extrahierte Nr. '${item.article_number}' gefunden in Suchbegriffen von '${entry.article_number}'`,
+          };
+        }
       }
 
-      // No exact catalog match found — fall through to fuzzy matching below
+      // --- OPH-65: Normalized-match pass ---
+      // Strip whitespace/hyphens (± leading zeros) and try again.
+      // Only runs when the exact pass above found no match.
+      const extractedNormalized = normalizeArticleKey(item.article_number, stripLeadingZeros);
+      if (extractedNormalized.length > 0) {
+        // Find all catalog entries whose normalized key matches
+        const normalizedHits: number[] = [];
+        for (let i = 0; i < catalogEntries.length; i++) {
+          if (catalogNormalizedKeys[i] === extractedNormalized) {
+            normalizedHits.push(i);
+          }
+        }
+
+        if (normalizedHits.length === 1) {
+          // Single normalized match — safe to use
+          const matchedEntry = catalogEntries[normalizedHits[0]];
+          return {
+            ...item,
+            article_number: matchedEntry.article_number,
+            dealer_article_number: item.dealer_article_number || item.article_number,
+            article_number_source: "normalized_match" as const,
+            article_number_match_reason: `Normalisiert: ${item.article_number} → ${matchedEntry.article_number}`,
+          };
+        } else if (normalizedHits.length > 1) {
+          // Multiple catalog entries collide under normalization — ambiguous.
+          // Log warning for admin to clean up the catalog; leave item unmatched.
+          const colliding = normalizedHits.map((idx) => catalogEntries[idx].article_number).join(", ");
+          console.warn(
+            `OPH-65: Normalized collision for tenant ${tenantId}: extracted "${item.article_number}" ` +
+            `normalizes to "${extractedNormalized}" which matches multiple catalog entries: [${colliding}]. ` +
+            `Skipping normalized match — catalog cleanup recommended.`
+          );
+        }
+      }
+
+      // No exact or normalized catalog match found — fall through to fuzzy matching below
       // (the extracted article_number might be unrecognized, so try matching by name)
     }
 
@@ -198,7 +330,20 @@ export async function matchArticleNumbers(
         }
       }
 
-      // 2. Dealer article number vs catalog keywords (exact, case-insensitive)
+      // 2. REF number match: check if dealer_article_number matches catalog ref_no
+      if (entry.ref_no && item.dealer_article_number) {
+        const dealerArt = item.dealer_article_number.trim().toLowerCase();
+        if (dealerArt === entry.ref_no.trim().toLowerCase()) {
+          candidates.push({
+            catalogEntry: entry,
+            score: 0.98,
+            reason: `Ref.-Nr.-Übereinstimmung: Händler-Art.-Nr. '${item.dealer_article_number}' = Ref.-Nr. von '${entry.article_number}'`,
+          });
+          continue;
+        }
+      }
+
+      // 3. Dealer article number vs catalog keywords (exact, case-insensitive)
       if (item.dealer_article_number && entryKeywords.length > 0) {
         const dealerArtLower = item.dealer_article_number.trim().toLowerCase();
         if (dealerArtLower && entryKeywords.includes(dealerArtLower)) {

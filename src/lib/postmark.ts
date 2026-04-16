@@ -27,6 +27,10 @@ async function postmarkFetchWithRetry(
 ): Promise<void> {
   let lastError: string | null = null;
 
+  // Use the configured Postmark message stream, or default to "outbound"
+  const messageStream = process.env.POSTMARK_MESSAGE_STREAM || "outbound";
+  const fullBody = { ...body, MessageStream: messageStream };
+
   for (let attempt = 0; attempt < POSTMARK_MAX_RETRIES; attempt++) {
     try {
       const response = await fetch("https://api.postmarkapp.com/email", {
@@ -36,7 +40,7 @@ async function postmarkFetchWithRetry(
           "Content-Type": "application/json",
           "X-Postmark-Server-Token": serverApiToken,
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify(fullBody),
       });
 
       if (response.ok) return; // Success
@@ -118,6 +122,8 @@ export const postmarkInboundPayloadSchema = z.object({
     ContentType: z.string(),
     ContentLength: z.number(),
   })).default([]),
+  // SMTP envelope recipient — more reliable than To header for forwarded emails
+  OriginalRecipient: z.string().default(""),
 }).passthrough();
 
 export type PostmarkInboundPayload = z.infer<typeof postmarkInboundPayloadSchema>;
@@ -1040,4 +1046,105 @@ export async function sendInviteEmail(params: {
     HtmlBody: htmlBody,
     TextBody: textBody,
   }, "Initial invite email");
+}
+
+/** Postmark outbound attachment size limit: 25 MB (in bytes). */
+const POSTMARK_OUTBOUND_MAX_BYTES = 25 * 1024 * 1024;
+
+/**
+ * OPH-63: Sends a forwarded copy of an inbound order email to the tenant's
+ * configured forwarding address.
+ *
+ * The forwarded email includes the original subject (prefixed with "[Fwd]"),
+ * a metadata header, the original body text, and all processed attachments.
+ * If total attachment size exceeds Postmark's 25 MB outbound limit, attachments
+ * are dropped and a note is added to the body.
+ */
+export async function sendForwardedEmail(params: {
+  serverApiToken: string;
+  toEmail: string;
+  originalSenderEmail: string;
+  originalSenderName: string;
+  originalSubject: string;
+  originalBodyText: string;
+  receivedAt: string;
+  tenantName: string;
+  siteUrl: string;
+  attachments: Array<{
+    Name: string;
+    Content: string;
+    ContentType: string;
+    ContentLength: number;
+  }>;
+}): Promise<void> {
+  const {
+    serverApiToken,
+    toEmail,
+    originalSenderEmail,
+    originalSenderName,
+    originalSubject,
+    originalBodyText,
+    receivedAt,
+    tenantName,
+    siteUrl,
+    attachments,
+  } = params;
+
+  const fromAddress = resolveSenderAddress(siteUrl);
+  if (!fromAddress) return;
+
+  // Build metadata header block
+  const metadataLines = [
+    "--- Weitergeleitete Bestellung ---",
+    `Absender: ${originalSenderName ? `${originalSenderName} <${originalSenderEmail}>` : originalSenderEmail}`,
+    `Empfangen: ${receivedAt}`,
+    `Mandant: ${tenantName}`,
+    "---",
+    "",
+  ];
+  const bodyText = metadataLines.join("\n") + (originalBodyText || "(Kein E-Mail-Text)");
+
+  // Calculate total attachment size (Content is Base64, so actual bytes ≈ ContentLength)
+  const totalAttachmentBytes = attachments.reduce(
+    (sum, att) => sum + att.ContentLength,
+    0
+  );
+
+  let emailAttachments: Array<{
+    Name: string;
+    Content: string;
+    ContentType: string;
+  }> = [];
+  let attachmentNote = "";
+
+  if (totalAttachmentBytes > POSTMARK_OUTBOUND_MAX_BYTES) {
+    attachmentNote =
+      "\n\n--- Hinweis ---\nAnhänge zu groß für Weiterleitung. Bitte im System einsehen.";
+  } else {
+    emailAttachments = attachments.map((att) => ({
+      Name: att.Name,
+      Content: att.Content,
+      ContentType: att.ContentType,
+    }));
+  }
+
+  const fullBody = bodyText + attachmentNote;
+
+  const postmarkBody: Record<string, unknown> = {
+    From: fromAddress,
+    To: toEmail,
+    ReplyTo: originalSenderEmail,
+    Subject: `[Fwd] ${originalSubject || "Bestellung"}`,
+    TextBody: fullBody,
+  };
+
+  if (emailAttachments.length > 0) {
+    postmarkBody.Attachments = emailAttachments;
+  }
+
+  await postmarkFetchWithRetry(
+    serverApiToken,
+    postmarkBody,
+    `Forward email to ${toEmail}`
+  );
 }

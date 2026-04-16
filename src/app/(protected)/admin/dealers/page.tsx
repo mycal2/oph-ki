@@ -144,6 +144,7 @@ export default function AdminDealersPage() {
         onFetchAuditLog={fetchAuditLog}
         onFetchTenantUsage={fetchTenantUsage}
         isMutating={isMutating}
+        mutationError={mutationError}
       />
     </div>
   );

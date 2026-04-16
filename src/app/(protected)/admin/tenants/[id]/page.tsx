@@ -378,11 +378,11 @@ export default function AdminTenantDetailPage({ params }: PageProps) {
         </TabsContent>
 
         <TabsContent value="articles" className="mt-6">
-          <ArticleCatalogPage adminTenantId={tenantId} />
+          <ArticleCatalogPage adminTenantId={tenantId} adminTenantName={tenant?.name} />
         </TabsContent>
 
         <TabsContent value="customers" className="mt-6">
-          <CustomerCatalogPage adminTenantId={tenantId} />
+          <CustomerCatalogPage adminTenantId={tenantId} adminTenantName={tenant?.name} />
         </TabsContent>
       </Tabs>
 

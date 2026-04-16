@@ -16,6 +16,12 @@ interface UseArticleCatalogOptions {
   pageSize?: number;
 }
 
+interface BulkDeleteResult {
+  ok: boolean;
+  deleted?: number;
+  error?: string;
+}
+
 interface UseArticleCatalogReturn {
   articles: ArticleCatalogItem[];
   total: number;
@@ -29,6 +35,7 @@ interface UseArticleCatalogReturn {
   createArticle: (data: CreateArticleInput) => Promise<{ ok: boolean; error?: string }>;
   updateArticle: (id: string, data: UpdateArticleInput) => Promise<{ ok: boolean; error?: string }>;
   deleteArticle: (id: string) => Promise<{ ok: boolean; error?: string }>;
+  bulkDeleteArticles: (ids: string[]) => Promise<BulkDeleteResult>;
   importFile: (file: File) => Promise<{ ok: boolean; data?: ArticleImportResult; error?: string }>;
   exportCsv: () => Promise<void>;
   refetch: () => void;
@@ -182,6 +189,33 @@ export function useArticleCatalog(options: UseArticleCatalogOptions = {}): UseAr
     [adminTenantId, fetchArticles]
   );
 
+  // Bulk delete articles
+  const bulkDeleteArticles = useCallback(
+    async (ids: string[]): Promise<BulkDeleteResult> => {
+      try {
+        const bulkUrl = adminTenantId
+          ? `/api/admin/tenants/${adminTenantId}/articles/bulk`
+          : "/api/articles/bulk";
+        const res = await fetch(bulkUrl, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids }),
+        });
+        const json: ApiResponse<{ deleted: number }> = await res.json();
+
+        if (!json.success) {
+          return { ok: false, error: json.error };
+        }
+
+        fetchArticles();
+        return { ok: true, deleted: json.data?.deleted ?? 0 };
+      } catch {
+        return { ok: false, error: "Netzwerkfehler beim Loeschen der Artikel." };
+      }
+    },
+    [adminTenantId, fetchArticles]
+  );
+
   // Import CSV/Excel file
   const importFile = useCallback(
     async (file: File): Promise<{ ok: boolean; data?: ArticleImportResult; error?: string }> => {
@@ -251,6 +285,7 @@ export function useArticleCatalog(options: UseArticleCatalogOptions = {}): UseAr
     createArticle,
     updateArticle,
     deleteArticle,
+    bulkDeleteArticles,
     importFile,
     exportCsv,
     refetch: fetchArticles,

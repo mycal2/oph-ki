@@ -18,6 +18,7 @@ import {
   Phone,
   User,
   Sparkles,
+  ArrowRightLeft,
 } from "lucide-react";
 import {
   Card,
@@ -297,7 +298,20 @@ export function ExtractionResultPreview({
                 {order.sender?.customer_number?.trim() ? (
                   <span className="inline-flex items-center gap-1">
                     {order.sender.customer_number.trim()}
-                    {order.sender.customer_number_source?.startsWith("catalog_") && (
+                    {order.sender.customer_number_source === "catalog_normalized" ? (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <ArrowRightLeft className="h-3 w-3 text-amber-500 shrink-0 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs">
+                            <p className="text-xs">
+                              {order.sender.customer_number_match_reason ?? "Kundennummer \u00fcber Normalisierung zugeordnet."}
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : order.sender.customer_number_source?.startsWith("catalog_") && (
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -495,6 +509,20 @@ export function ExtractionResultPreview({
                                     <TooltipContent side="top" className="max-w-xs">
                                       <p className="text-xs">
                                         {item.article_number_match_reason ?? "Automatisch aus dem Artikelkatalog zugeordnet."}
+                                      </p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                              {item.article_number_source === "normalized_match" && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <ArrowRightLeft className="h-3 w-3 text-amber-500 shrink-0 cursor-help" />
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-xs">
+                                      <p className="text-xs">
+                                        {item.article_number_match_reason ?? "Übereinstimmung über Normalisierung gefunden (Leerzeichen/Bindestriche entfernt)."}
                                       </p>
                                     </TooltipContent>
                                   </Tooltip>

@@ -122,6 +122,16 @@ export async function GET(
         decimal_separator: (config.decimal_separator as ErpConfigAdmin["decimal_separator"]) ?? ".",
         fallback_mode: (config.fallback_mode as ErpConfigAdmin["fallback_mode"]) ?? "block",
         xml_template: (config.xml_template as string) ?? null,
+        header_column_mappings: config.header_column_mappings
+          ? ((config.header_column_mappings as ErpConfigAdmin["column_mappings"]).map(
+              (m) => ({ ...m, transformations: m.transformations ?? [], required: m.required ?? false })
+            ))
+          : null,
+        empty_value_placeholder: (config.empty_value_placeholder as string) ?? "",
+        split_output_mode: (config.split_output_mode as ErpConfigAdmin["split_output_mode"]) ?? null,
+        header_filename_template: (config.header_filename_template as string) ?? null,
+        lines_filename_template: (config.lines_filename_template as string) ?? null,
+        zip_filename_template: (config.zip_filename_template as string) ?? null,
         created_at: config.created_at as string,
         updated_at: config.updated_at as string,
       },
@@ -247,6 +257,12 @@ export async function PUT(
         decimal_separator: data.decimal_separator,
         fallback_mode: data.fallback_mode,
         xml_template: data.xml_template,
+        header_column_mappings: data.header_column_mappings ?? null,
+        empty_value_placeholder: data.empty_value_placeholder ?? "",
+        split_output_mode: data.split_output_mode ?? null,
+        header_filename_template: data.header_filename_template ?? null,
+        lines_filename_template: data.lines_filename_template ?? null,
+        zip_filename_template: data.zip_filename_template ?? null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", configId);
@@ -279,6 +295,12 @@ export async function PUT(
         quote_char: data.quote_char, encoding: data.encoding,
         line_ending: data.line_ending, decimal_separator: data.decimal_separator,
         fallback_mode: data.fallback_mode, xml_template: data.xml_template,
+        header_column_mappings: data.header_column_mappings ?? null,
+        empty_value_placeholder: data.empty_value_placeholder ?? "",
+        split_output_mode: data.split_output_mode ?? null,
+        header_filename_template: data.header_filename_template ?? null,
+        lines_filename_template: data.lines_filename_template ?? null,
+        zip_filename_template: data.zip_filename_template ?? null,
       },
       comment: data.comment ?? null,
       created_by: user.id,
@@ -356,7 +378,13 @@ export async function DELETE(
       );
     }
 
-    // Delete config (cascades to versions and output formats)
+    // Delete related output formats first (FK may not cascade)
+    await adminClient
+      .from("tenant_output_formats")
+      .delete()
+      .eq("erp_config_id", configId);
+
+    // Delete config (versions cascade via FK)
     const { error: deleteError } = await adminClient
       .from("erp_configs")
       .delete()

@@ -50,6 +50,7 @@ interface DealerFormSheetProps {
   onFetchAuditLog: (id: string) => Promise<DealerAuditLogEntry[]>;
   onFetchTenantUsage?: (id: string) => Promise<DealerTenantUsage[]>;
   isMutating: boolean;
+  mutationError?: string | null;
 }
 
 const FORMAT_OPTIONS: { value: DealerFormatType; label: string }[] = [
@@ -82,6 +83,7 @@ export function DealerFormSheet({
   onFetchAuditLog,
   onFetchTenantUsage,
   isMutating,
+  mutationError,
 }: DealerFormSheetProps) {
   const isNew = !dealerId;
 
@@ -99,9 +101,11 @@ export function DealerFormSheet({
   const [filenamePatterns, setFilenamePatterns] = useState<string[]>([]);
   const [extractionHints, setExtractionHints] = useState("");
   const [active, setActive] = useState(true);
+  const [stripLeadingZeros, setStripLeadingZeros] = useState(false);
 
   // UI state
   const [isLoadingDealer, setIsLoadingDealer] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<DealerRuleConflict[]>([]);
   const [auditLog, setAuditLog] = useState<DealerAuditLogEntry[]>([]);
   const [isLoadingAudit, setIsLoadingAudit] = useState(false);
@@ -124,6 +128,8 @@ export function DealerFormSheet({
     setFilenamePatterns([]);
     setExtractionHints("");
     setActive(true);
+    setStripLeadingZeros(false);
+    setSaveError(null);
     setWarnings([]);
     setAuditLog([]);
     setTenantUsage([]);
@@ -145,6 +151,7 @@ export function DealerFormSheet({
     setFilenamePatterns(dealer.filename_patterns);
     setExtractionHints(dealer.extraction_hints ?? "");
     setActive(dealer.active);
+    setStripLeadingZeros(dealer.strip_leading_zeros_in_article_numbers ?? false);
   }, []);
 
   // Load dealer on open
@@ -189,6 +196,7 @@ export function DealerFormSheet({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaveError(null);
 
     const data = {
       name,
@@ -204,14 +212,18 @@ export function DealerFormSheet({
       filename_patterns: filenamePatterns,
       extraction_hints: extractionHints || null,
       active,
+      strip_leading_zeros_in_article_numbers: stripLeadingZeros,
     };
 
     const result = await onSave(data, isNew);
     if (result) {
+      setSaveError(null);
       setWarnings(result.warnings);
       if (result.warnings.length === 0) {
         onOpenChange(false);
       }
+    } else {
+      setSaveError("Speichern fehlgeschlagen. Bitte prüfe die Felder und versuche es erneut.");
     }
   };
 
@@ -238,6 +250,15 @@ export function DealerFormSheet({
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+            {/* Save Error */}
+            {(saveError || mutationError) && (
+              <div className="px-6 pt-4">
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>{mutationError || saveError}</AlertDescription>
+                </Alert>
+              </div>
+            )}
             {/* Warnings */}
             {warnings.length > 0 && (
               <div className="px-6 pt-4">
@@ -409,6 +430,25 @@ export function DealerFormSheet({
                       id="dealer-active"
                       checked={active}
                       onCheckedChange={setActive}
+                    />
+                  </div>
+
+                  <Separator />
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="dealer-strip-leading-zeros">
+                        Führende Nullen in Artikelnummern ignorieren
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Aktivieren wenn &quot;016&quot; und &quot;16&quot; dieselbe Artikelnummer sind (z.B. KARL STORZ).
+                      </p>
+                    </div>
+                    <Switch
+                      id="dealer-strip-leading-zeros"
+                      checked={stripLeadingZeros}
+                      onCheckedChange={setStripLeadingZeros}
+                      aria-label="Führende Nullen in Artikelnummern ignorieren"
                     />
                   </div>
                 </TabsContent>

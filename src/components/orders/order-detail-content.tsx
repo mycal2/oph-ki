@@ -14,7 +14,7 @@ import { EmailBodyPanel } from "./email-body-panel";
 import type { EmailBodyPanelHandle } from "./email-body-panel";
 import { useOrderPolling } from "@/hooks/use-order-polling";
 import { useCurrentUserRole } from "@/hooks/use-current-user-role";
-import type { OrderForReview, OrderWithDealer, DealerOverrideResponse, ApiResponse } from "@/lib/types";
+import type { OrderForReview, OrderWithDealer, DealerOverrideResponse, DealerResetResponse, ApiResponse } from "@/lib/types";
 
 interface OrderDetailContentProps {
   orderId: string;
@@ -77,6 +77,34 @@ export function OrderDetailContent({ orderId }: OrderDetailContentProps) {
           dealer_overridden_at: result.overriddenAt,
           overridden_by_name: result.overriddenByName,
           override_reason: result.overrideReason,
+          // OPH-66: Clear reset fields on new dealer assignment
+          dealer_reset_by: null,
+          dealer_reset_at: null,
+          reset_by_name: null,
+        });
+      }
+    },
+    [order]
+  );
+
+  // OPH-66: Handle dealer reset — clear all dealer fields in local state
+  const handleDealerReset = useCallback(
+    (result: DealerResetResponse) => {
+      if (order) {
+        setOrder({
+          ...order,
+          dealer_id: null,
+          dealer_name: null,
+          recognition_method: "none",
+          recognition_confidence: 0,
+          dealer_overridden_by: null,
+          dealer_overridden_at: null,
+          overridden_by_name: null,
+          override_reason: null,
+          dealer_reset_by: result.resetBy,
+          dealer_reset_at: result.resetAt,
+          reset_by_name: result.resetByName,
+          updated_at: result.updatedAt,
         });
       }
     },
@@ -238,6 +266,7 @@ export function OrderDetailContent({ orderId }: OrderDetailContentProps) {
         order={order}
         wasExported={!!order.last_exported_at}
         onDealerChanged={handleDealerChanged}
+        onDealerReset={handleDealerReset}
         onExported={handleExported}
         onDeleted={handleDeleted}
         userRole={role ?? undefined}

@@ -140,6 +140,8 @@ type PanelStatus = "idle" | "loading" | "done" | "error";
 interface AutoMappingPanelProps {
   configId: string;
   outputFormat: TenantOutputFormat;
+  /** OPH-59: Which template slot to auto-map. Defaults to "lines". */
+  slot?: "lines" | "header";
   /** Whether the field mapper already has mappings (to show overwrite dialog). */
   hasExistingMappings: boolean;
   /** Callback to apply confirmed mappings to the FieldMapperPanel. */
@@ -185,6 +187,7 @@ function ConfidenceBadge({ confidence }: { confidence: number }) {
 export function AutoMappingPanel({
   configId,
   outputFormat,
+  slot = "lines",
   hasExistingMappings,
   onApplyMappings,
   isSaving,
@@ -233,7 +236,11 @@ export function AutoMappingPanel({
     try {
       const res = await fetch(
         `/api/admin/erp-configs/${configId}/auto-map`,
-        { method: "POST" }
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slot }),
+        }
       );
       const json = (await res.json()) as ApiResponse<{
         mappings: AutoMappingResult[];

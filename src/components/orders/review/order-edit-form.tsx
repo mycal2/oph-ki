@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Plus, Trash2, AlertTriangle, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
+import { Plus, Trash2, AlertTriangle, ChevronDown, ChevronUp, Sparkles, ArrowRightLeft } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -217,7 +217,26 @@ export function OrderEditForm({ data, onChange }: OrderEditFormProps) {
               <Label htmlFor="review-customer-number" className="flex items-center gap-1">
                 Kundennummer{" "}
                 <span className="text-muted-foreground font-normal">(Kd.-Nr.)</span>
-                {order.sender?.customer_number_source?.startsWith("catalog_") && (
+                {order.sender?.customer_number_source === "catalog_normalized" ? (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] px-1.5 py-0 h-4 border-amber-300 text-amber-700 dark:text-amber-400 dark:border-amber-600 cursor-help gap-1"
+                        >
+                          <ArrowRightLeft className="h-2.5 w-2.5" />
+                          Normalisiert
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs">
+                        <p className="text-xs">
+                          {order.sender?.customer_number_match_reason ?? "Kundennummer \u00fcber Normalisierung zugeordnet."}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : order.sender?.customer_number_source?.startsWith("catalog_") && (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -427,6 +446,26 @@ function LineItemRow({ item, index, onChange, onRemove, parseNum }: LineItemRowP
                   <TooltipContent side="top" className="max-w-xs">
                     <p className="text-xs">
                       {item.article_number_match_reason ?? "Automatisch aus dem Artikelkatalog zugeordnet."}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            {item.article_number_source === "normalized_match" && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] px-1 py-0 gap-0.5 font-normal text-amber-700 border-amber-300 dark:text-amber-400 dark:border-amber-600 cursor-help"
+                    >
+                      <ArrowRightLeft className="h-2.5 w-2.5" />
+                      Normalisiert
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs">
+                    <p className="text-xs">
+                      {item.article_number_match_reason ?? "Übereinstimmung über Normalisierung gefunden (Leerzeichen/Bindestriche entfernt)."}
                     </p>
                   </TooltipContent>
                 </Tooltip>

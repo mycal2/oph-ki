@@ -21,7 +21,7 @@ import { RecognitionAuditLine } from "./dealer/recognition-audit-line";
 import { ExtractionStatusBadge } from "./extraction-status-badge";
 import { ExportButton } from "./export/export-button";
 import { DeleteOrderDialog } from "./delete-order-dialog";
-import type { OrderWithDealer, OrderStatus, DealerOverrideResponse, UserRole } from "@/lib/types";
+import type { OrderWithDealer, OrderStatus, DealerOverrideResponse, DealerResetResponse, UserRole } from "@/lib/types";
 
 interface OrderDetailHeaderProps {
   order: OrderWithDealer;
@@ -29,6 +29,8 @@ interface OrderDetailHeaderProps {
   wasExported?: boolean;
   /** Called after a successful dealer override with the full response. */
   onDealerChanged?: (result: DealerOverrideResponse) => void;
+  /** OPH-66: Called after a successful dealer reset. */
+  onDealerReset?: (result: DealerResetResponse) => void;
   /** Called after a successful export. */
   onExported?: () => void;
   /** Called after a successful order deletion. */
@@ -122,6 +124,7 @@ export function OrderDetailHeader({
   order,
   wasExported = false,
   onDealerChanged,
+  onDealerReset,
   onExported,
   onDeleted,
   userRole,
@@ -211,6 +214,8 @@ export function OrderDetailHeader({
             recognitionMethod={order.recognition_method}
             orderUpdatedAt={order.updated_at}
             onDealerChanged={onDealerChanged}
+            onDealerReset={onDealerReset}
+            isPlatformAdmin={userRole === "platform_admin"}
           />
           {(order.dealer_street || order.dealer_city || order.dealer_country) && (
             <p className="text-xs text-muted-foreground ml-0.5">
@@ -232,6 +237,8 @@ export function OrderDetailHeader({
           overriddenByName={order.overridden_by_name}
           overriddenAt={order.dealer_overridden_at}
           overrideReason={order.override_reason}
+          resetByName={order.reset_by_name}
+          resetAt={order.dealer_reset_at}
         />
       </CardContent>
 

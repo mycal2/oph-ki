@@ -5,7 +5,9 @@ import { erpConfigTestSchema } from "@/lib/validations";
 import {
   generateExportContent,
   validateRequiredFields,
+  isFixedValueMapping,
 } from "@/lib/erp-transformations";
+import { generateSplitCsvZip, interpolateFilename } from "@/lib/split-csv-export";
 import type {
   CanonicalOrderData,
   ErpColumnMappingExtended,
@@ -148,6 +150,9 @@ export async function POST(
       "order.billing_address.country",
     ]);
     for (const m of mappings) {
+      // OPH-60: Skip fixed-value columns — they don't use source_field
+      if (isFixedValueMapping(m)) continue;
+
       if (m.source_field.startsWith("order.")) {
         if (!knownOrderFields.has(m.source_field)) {
           warnings.push(`Unbekanntes Quellfeld: "${m.source_field}"`);
@@ -161,23 +166,61 @@ export async function POST(
     }
 
     // Generate export content
-    const { content, warnings: genWarnings } = generateExportContent(
-      orderData,
-      config.format,
-      mappings,
-      {
-        separator: config.separator,
-        quoteChar: config.quote_char,
-        lineEnding: config.line_ending,
-        decimalSeparator: config.decimal_separator,
-        xmlTemplate: config.xml_template,
-      }
-    );
+    let output: string;
 
-    warnings.push(...genWarnings);
+    if (config.format === "split_csv") {
+      // OPH-58: Split CSV test — generate both CSVs and show as combined text
+      const headerMappings = (config.header_column_mappings ?? []) as ErpColumnMappingExtended[];
+      const filenameConfig = {
+        headerFilenameTemplate: config.header_filename_template ?? null,
+        linesFilenameTemplate: config.lines_filename_template ?? null,
+        zipFilenameTemplate: config.zip_filename_template ?? null,
+      };
+      const { buffer } = await generateSplitCsvZip(
+        orderData,
+        headerMappings,
+        mappings,
+        {
+          separator: config.separator,
+          quoteChar: config.quote_char,
+          lineEnding: config.line_ending,
+          decimalSeparator: config.decimal_separator,
+          emptyValuePlaceholder: config.empty_value_placeholder ?? "",
+        },
+        filenameConfig
+      );
+      // OPH-61: Show configured filenames in test output
+      const outputMode = config.split_output_mode ?? "zip";
+      const headerFn = interpolateFilename(config.header_filename_template, orderData, "Auftragskopf_{timestamp}");
+      const linesFn = interpolateFilename(config.lines_filename_template, orderData, "Positionen_{timestamp}");
+      const zipFn = interpolateFilename(config.zip_filename_template, orderData, "Export_{order_number}_{timestamp}");
+
+      let fileInfo = `Auftragskopf: ${headerFn}.csv (${headerMappings.length} Spalten)\n`;
+      fileInfo += `Positionen: ${linesFn}.csv (${mappings.length} Spalten, ${orderData.order.line_items.length} Zeilen)`;
+      if (outputMode === "zip") {
+        output = `[ZIP: ${zipFn}.zip - ${buffer.byteLength} Bytes]\n\n${fileInfo}`;
+      } else {
+        output = `[Zwei CSV-Dateien]\n\n${fileInfo}`;
+      }
+    } else {
+      const { content, warnings: genWarnings } = generateExportContent(
+        orderData,
+        config.format,
+        mappings,
+        {
+          separator: config.separator,
+          quoteChar: config.quote_char,
+          lineEnding: config.line_ending,
+          decimalSeparator: config.decimal_separator,
+          xmlTemplate: config.xml_template,
+        }
+      );
+      output = content;
+      warnings.push(...genWarnings);
+    }
 
     const result: ErpConfigTestResult = {
-      output: content,
+      output,
       warnings,
       format: config.format,
     };

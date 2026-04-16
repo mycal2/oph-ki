@@ -8,6 +8,10 @@ interface RecognitionAuditLineProps {
   overriddenByName: string | null;
   overriddenAt: string | null;
   overrideReason?: string | null;
+  /** OPH-66: Display name of the user who reset the dealer. */
+  resetByName?: string | null;
+  /** OPH-66: ISO timestamp when the dealer was reset. */
+  resetAt?: string | null;
 }
 
 const METHOD_LABELS: Record<RecognitionMethod, string> = {
@@ -32,8 +36,8 @@ function formatDate(iso: string): string {
 }
 
 /**
- * Displays a compact audit line showing how the dealer was recognized
- * and whether it was manually overridden.
+ * Displays a compact audit line showing how the dealer was recognized,
+ * whether it was manually overridden, and whether it was reset (OPH-66).
  */
 export function RecognitionAuditLine({
   recognitionMethod,
@@ -41,6 +45,8 @@ export function RecognitionAuditLine({
   overriddenByName,
   overriddenAt,
   overrideReason,
+  resetByName,
+  resetAt,
 }: RecognitionAuditLineProps) {
   const parts: string[] = [];
 
@@ -51,6 +57,17 @@ export function RecognitionAuditLine({
     parts.push(
       `Manuell korrigiert von: ${overriddenByName} am ${formatDate(overriddenAt)}`
     );
+  }
+
+  // OPH-66: Show reset info when dealer_id is NULL and reset_at is set.
+  // If resetByName is missing (e.g. user was deleted), show date only.
+  const isResetState = recognitionMethod === "none" && resetAt;
+
+  if (isResetState) {
+    const resetText = resetByName
+      ? `Zurückgesetzt von ${resetByName} am ${formatDate(resetAt)}`
+      : `Zurückgesetzt am ${formatDate(resetAt)}`;
+    parts.push(resetText);
   }
 
   return (
