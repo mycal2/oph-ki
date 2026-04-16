@@ -83,6 +83,10 @@ export async function GET(
     const searchFilter = url.searchParams.get("search")?.trim() ?? "";
     const dateFrom = url.searchParams.get("dateFrom");
     const dateTo = url.searchParams.get("dateTo");
+    // OPH-18 fix: Server-side tenant filter for platform admins
+    const tenantIdFilter = isPlatformAdmin
+      ? url.searchParams.get("tenantId")
+      : null;
 
     const adminClient = createAdminClient();
 
@@ -91,7 +95,10 @@ export async function GET(
       .from("orders")
       .select("id", { count: "exact", head: true });
 
-    if (!isPlatformAdmin && tenantId) {
+    if (tenantIdFilter) {
+      // Platform admin filtering by specific tenant
+      countQuery = countQuery.eq("tenant_id", tenantIdFilter);
+    } else if (!isPlatformAdmin && tenantId) {
       countQuery = countQuery.eq("tenant_id", tenantId);
     }
     if (statusFilter) {
@@ -125,7 +132,9 @@ export async function GET(
       .order("created_at", { ascending: false })
       .range(offset, offset + pageSize - 1);
 
-    if (!isPlatformAdmin && tenantId) {
+    if (tenantIdFilter) {
+      dataQuery = dataQuery.eq("tenant_id", tenantIdFilter);
+    } else if (!isPlatformAdmin && tenantId) {
       dataQuery = dataQuery.eq("tenant_id", tenantId);
     }
     if (statusFilter) {
