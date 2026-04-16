@@ -360,76 +360,74 @@ export function OrdersList() {
       {/* Filter bar */}
       <OrdersFilterBar filters={filters} onFiltersChange={setFilters} />
 
-      {/* OPH-18: Admin-only tenant filter toolbar */}
-      {isPlatformAdmin && tenantOptions.length > 0 && (
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Building2 className="h-4 w-4" aria-hidden="true" />
-            <span className="hidden sm:inline">Mandant:</span>
-          </div>
-          <Select
-            value={filters.tenantId ?? ALL_TENANTS}
-            onValueChange={handleTenantChange}
-          >
-            <SelectTrigger
-              className="w-[220px]"
-              aria-label="Mandant filtern"
-            >
-              <SelectValue placeholder="Alle Mandanten" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_TENANTS}>Alle Mandanten</SelectItem>
-              {tenantOptions.map((t) => (
-                <SelectItem key={t.id} value={t.id}>
-                  {t.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {filters.tenantId && filters.tenantId !== ALL_TENANTS && (
-            <span className="text-xs text-muted-foreground">
-              {total}{" "}
-              {total === 1
-                ? "Bestellung"
-                : "Bestellungen"}
-            </span>
+      {/* OPH-18 + OPH-68: Tenant and dealer filter toolbar (same row) */}
+      {(isPlatformAdmin && tenantOptions.length > 0 || canFilterByDealer) && (
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Tenant filter — platform_admin only */}
+          {isPlatformAdmin && tenantOptions.length > 0 && (
+            <>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Building2 className="h-4 w-4" aria-hidden="true" />
+                <span className="hidden sm:inline">Mandant:</span>
+              </div>
+              <Select
+                value={filters.tenantId ?? ALL_TENANTS}
+                onValueChange={handleTenantChange}
+              >
+                <SelectTrigger
+                  className="w-[220px]"
+                  aria-label="Mandant filtern"
+                >
+                  <SelectValue placeholder="Alle Mandanten" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_TENANTS}>Alle Mandanten</SelectItem>
+                  {tenantOptions.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
           )}
-        </div>
-      )}
 
-      {/* OPH-68: Dealer filter for tenant_admin + platform_admin */}
-      {canFilterByDealer && (
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Store className="h-4 w-4" aria-hidden="true" />
-            <span className="hidden sm:inline">Händler:</span>
-          </div>
-          <Select
-            value={filters.dealerId ?? ALL_DEALERS}
-            onValueChange={handleDealerChange}
-            disabled={isDealerOptionsLoading}
-          >
-            <SelectTrigger
-              className="w-[220px]"
-              aria-label="Händler filtern"
-            >
-              <SelectValue placeholder="Alle Händler" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_DEALERS}>Alle Händler</SelectItem>
-              {dealerOptions.map((d) => (
-                <SelectItem key={d.id} value={d.id}>
-                  {d.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {filters.dealerId && filters.dealerId !== ALL_DEALERS && (
+          {/* Dealer filter — tenant_admin + platform_admin */}
+          {canFilterByDealer && (
+            <>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Store className="h-4 w-4" aria-hidden="true" />
+                <span className="hidden sm:inline">Händler:</span>
+              </div>
+              <Select
+                value={filters.dealerId ?? ALL_DEALERS}
+                onValueChange={handleDealerChange}
+                disabled={isDealerOptionsLoading}
+              >
+                <SelectTrigger
+                  className="w-[220px]"
+                  aria-label="Händler filtern"
+                >
+                  <SelectValue placeholder="Alle Händler" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_DEALERS}>Alle Händler</SelectItem>
+                  {dealerOptions.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>
+                      {d.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          )}
+
+          {/* Result count when either filter is active */}
+          {((filters.tenantId && filters.tenantId !== ALL_TENANTS) ||
+            (filters.dealerId && filters.dealerId !== ALL_DEALERS)) && (
             <span className="text-xs text-muted-foreground">
               {total}{" "}
-              {total === 1
-                ? "Bestellung"
-                : "Bestellungen"}
+              {total === 1 ? "Bestellung" : "Bestellungen"}
             </span>
           )}
         </div>
