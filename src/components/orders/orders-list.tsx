@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -106,20 +106,24 @@ export function OrdersList() {
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState<OrdersFilterState>(DEFAULT_FILTERS);
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; filename: string; fileCount: number } | null>(null);
-  const [selectedTenant, setSelectedTenant] = useState<string>(() => {
+  const [selectedTenant] = useState<string>(() => {
     if (typeof window === "undefined") return ALL_TENANTS;
     return sessionStorage.getItem(TENANT_FILTER_KEY) ?? ALL_TENANTS;
   });
+  const [filters, setFilters] = useState<OrdersFilterState>({
+    ...DEFAULT_FILTERS,
+    tenantId: selectedTenant,
+  });
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; filename: string; fileCount: number } | null>(null);
 
   const handleTenantChange = useCallback((value: string) => {
-    setSelectedTenant(value);
     if (value === ALL_TENANTS) {
       sessionStorage.removeItem(TENANT_FILTER_KEY);
     } else {
       sessionStorage.setItem(TENANT_FILTER_KEY, value);
     }
+    // OPH-18 fix: Server-side tenant filter — reset to page 1 and refetch
+    setFilters((prev) => ({ ...prev, page: 1, tenantId: value }));
   }, []);
 
   const { role, isPlatformAdmin, isLoading: isRoleLoading } = useCurrentUserRole();
@@ -145,6 +149,9 @@ export function OrdersList() {
         }
         if (currentFilters.dateTo) {
           params.set("dateTo", currentFilters.dateTo);
+        }
+        if (currentFilters.tenantId && currentFilters.tenantId !== ALL_TENANTS) {
+          params.set("tenantId", currentFilters.tenantId);
         }
 
         const res = await fetch(`/api/orders?${params.toString()}`);
@@ -204,8 +211,8 @@ export function OrdersList() {
     };
   }, [hasProcessingOrders, fetchOrders]);
 
-  // OPH-18: Fetch all tenant names for the filter dropdown (platform admins only)
-  const [tenantOptions, setTenantOptions] = useState<string[]>([]);
+  // OPH-18: Fetch all tenants for the filter dropdown (platform admins only)
+  const [tenantOptions, setTenantOptions] = useState<{ id: string; name: string }[]>([]);
   useEffect(() => {
     if (!isPlatformAdmin) return;
     (async () => {
@@ -213,25 +220,16 @@ export function OrdersList() {
         const res = await fetch("/api/admin/tenants");
         const json = await res.json();
         if (json.success && json.data) {
-          const names = (json.data as Array<{ name: string }>)
-            .map((t) => t.name)
-            .filter(Boolean)
-            .sort((a, b) => a.localeCompare(b, "de"));
-          setTenantOptions(names);
+          const tenants = (json.data as Array<{ id: string; name: string }>)
+            .filter((t) => t.name)
+            .sort((a, b) => a.name.localeCompare(b.name, "de"));
+          setTenantOptions(tenants);
         }
       } catch {
         // Silently fall back to no tenant filter
       }
     })();
   }, [isPlatformAdmin]);
-
-  // OPH-18: Client-side tenant filter (admins only, on top of server filters)
-  const filteredOrders = useMemo(() => {
-    if (!isPlatformAdmin || selectedTenant === ALL_TENANTS) {
-      return orders;
-    }
-    return orders.filter((o) => o.tenant_name === selectedTenant);
-  }, [orders, selectedTenant, isPlatformAdmin]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -315,7 +313,7 @@ export function OrdersList() {
             <span className="hidden sm:inline">Mandant:</span>
           </div>
           <Select
-            value={selectedTenant}
+            value={filters.tenantId ?? ALL_TENANTS}
             onValueChange={handleTenantChange}
           >
             <SelectTrigger
@@ -326,17 +324,17 @@ export function OrdersList() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL_TENANTS}>Alle Mandanten</SelectItem>
-              {tenantOptions.map((name) => (
-                <SelectItem key={name} value={name}>
-                  {name}
+              {tenantOptions.map((t) => (
+                <SelectItem key={t.id} value={t.id}>
+                  {t.name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          {selectedTenant !== ALL_TENANTS && (
+          {filters.tenantId && filters.tenantId !== ALL_TENANTS && (
             <span className="text-xs text-muted-foreground">
-              {filteredOrders.length}{" "}
-              {filteredOrders.length === 1
+              {total}{" "}
+              {total === 1
                 ? "Bestellung"
                 : "Bestellungen"}
             </span>
@@ -381,7 +379,7 @@ export function OrdersList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredOrders.length === 0 ? (
+                {orders.length === 0 ? (
                   <TableRow>
                     <TableCell
                       colSpan={(isPlatformAdmin ? 6 : 5) + (canDelete ? 1 : 0)}
@@ -393,7 +391,7 @@ export function OrdersList() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredOrders.map((order) => (
+                  orders.map((order) => (
                     <TableRow key={order.id} className="group">
                       <TableCell>
                         <Link
