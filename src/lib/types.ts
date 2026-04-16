@@ -832,6 +832,8 @@ export interface OrdersFilterState {
   dateFrom: string;
   dateTo: string;
   page: number;
+  /** OPH-18: Server-side tenant filter for platform admins (tenant UUID or "__all__"). */
+  tenantId?: string;
 }
 
 /**
