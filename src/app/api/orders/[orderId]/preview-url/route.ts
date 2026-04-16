@@ -122,8 +122,9 @@ export async function GET(
 
     for (const file of files) {
       const mimeType = file.mime_type as string;
-      // Only set download option for non-PDF files so PDFs render inline in the iframe
-      const urlOptions = mimeType === "application/pdf"
+      // Render PDFs and images inline; force download for other file types
+      const isInlineViewable = mimeType === "application/pdf" || mimeType.startsWith("image/");
+      const urlOptions = isInlineViewable
         ? undefined
         : { download: file.original_filename as string };
 
