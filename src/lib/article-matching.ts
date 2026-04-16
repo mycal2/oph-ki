@@ -181,16 +181,31 @@ export async function matchArticleNumbers(
   options: MatchArticleNumbersOptions = {}
 ): Promise<CanonicalLineItem[]> {
   const { stripLeadingZeros = false } = options;
-  // Load entire catalog for this tenant
-  const { data: catalog, error } = await adminClient
-    .from("article_catalog")
-    .select("article_number, name, gtin, ref_no, keywords, packaging, size1, size2")
-    .eq("tenant_id", tenantId)
-    .limit(10000);
+  // Load entire catalog for this tenant (paginated to bypass PostgREST row limit)
+  const PAGE_SIZE = 1000;
+  let catalog: Record<string, unknown>[] = [];
+  let offset = 0;
+  let hasMore = true;
 
-  if (error) {
-    console.error("Error loading article catalog for matching:", error.message);
-    return lineItems;
+  while (hasMore) {
+    const { data: page, error } = await adminClient
+      .from("article_catalog")
+      .select("article_number, name, gtin, ref_no, keywords, packaging, size1, size2")
+      .eq("tenant_id", tenantId)
+      .range(offset, offset + PAGE_SIZE - 1);
+
+    if (error) {
+      console.error("Error loading article catalog for matching:", error.message);
+      return lineItems;
+    }
+
+    if (page && page.length > 0) {
+      catalog = catalog.concat(page);
+      offset += page.length;
+      hasMore = page.length === PAGE_SIZE;
+    } else {
+      hasMore = false;
+    }
   }
 
   if (!catalog || catalog.length === 0) {
