@@ -366,6 +366,8 @@ export async function POST(
 
       if (uploadError) {
         console.error(`Failed to upload attachment ${attachment.Name}:`, uploadError.message);
+        // OPH-69 DEBUG: Write upload error to DB
+        await adminClient.from("orders").update({ ingestion_notes: [...(warnings), `DEBUG UPLOAD ERROR: ${attachment.Name} → ${uploadError.message}`, `DEBUG: buffer size=${buffer.length}, path=${storagePath}`] }).eq("id", orderId);
         continue;
       }
 
@@ -382,6 +384,11 @@ export async function POST(
 
       if (fileRecordError) {
         console.error(`Failed to insert order_files record for ${attachment.Name}:`, fileRecordError.message);
+        // OPH-69 DEBUG: Write DB insert error
+        await adminClient.from("orders").update({ ingestion_notes: [...(warnings), `DEBUG DB ERROR: ${attachment.Name} → ${fileRecordError.message}`] }).eq("id", orderId);
+      } else {
+        // OPH-69 DEBUG: Confirm successful save
+        await adminClient.from("orders").update({ ingestion_notes: [...(warnings), `DEBUG UPLOAD OK: ${attachment.Name} saved at ${storagePath}, ${buffer.length} bytes`] }).eq("id", orderId);
       }
 
       if (!primaryFilename) {
