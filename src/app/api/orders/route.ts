@@ -87,6 +87,8 @@ export async function GET(
     const tenantIdFilter = isPlatformAdmin
       ? url.searchParams.get("tenantId")
       : null;
+    // OPH-68: Server-side dealer filter (tenant_admin + platform_admin)
+    const dealerIdFilter = url.searchParams.get("dealerId");
 
     const adminClient = createAdminClient();
 
@@ -103,6 +105,9 @@ export async function GET(
     }
     if (statusFilter) {
       countQuery = countQuery.eq("status", statusFilter);
+    }
+    if (dealerIdFilter) {
+      countQuery = countQuery.eq("dealer_id", dealerIdFilter);
     }
     if (dateFrom) {
       countQuery = countQuery.gte("created_at", `${dateFrom}T00:00:00.000Z`);
@@ -139,6 +144,9 @@ export async function GET(
     }
     if (statusFilter) {
       dataQuery = dataQuery.eq("status", statusFilter);
+    }
+    if (dealerIdFilter) {
+      dataQuery = dataQuery.eq("dealer_id", dealerIdFilter);
     }
     if (dateFrom) {
       dataQuery = dataQuery.gte(
