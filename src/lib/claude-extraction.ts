@@ -173,9 +173,77 @@ export interface ExtractionResult {
   parsedEmailSubject?: string | null;
 }
 
+// ---------------------------------------------------------------------------
+// OPH-69: Image content block helpers for Claude's native vision support
+// ---------------------------------------------------------------------------
+
+/** Claude API accepted image media types for the base64 image source. */
+type ClaudeImageMediaType = "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+
+/** Image MIME types that map directly to Claude vision input. */
+const IMAGE_MIME_TYPES_FOR_EXTRACTION = new Set<string>([
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "image/tiff",
+  "image/bmp",
+]);
+
+/** File extensions that indicate an image (used for application/octet-stream fallback). */
+const IMAGE_EXTENSIONS_FOR_EXTRACTION = new Set<string>([
+  "jpg",
+  "jpeg",
+  "png",
+  "webp",
+  "tiff",
+  "tif",
+  "bmp",
+]);
+
+/**
+ * Determines whether a file should be sent to Claude as an image content block.
+ * Checks both MIME type and file extension to handle `application/octet-stream` edge cases.
+ */
+function isImageForExtraction(mimeType: string, ext: string): boolean {
+  if (IMAGE_MIME_TYPES_FOR_EXTRACTION.has(mimeType)) return true;
+  // Edge case: image sent as application/octet-stream — check extension
+  if (mimeType === "application/octet-stream" && IMAGE_EXTENSIONS_FOR_EXTRACTION.has(ext)) return true;
+  return false;
+}
+
+/**
+ * Resolves the Claude-compatible media type for an image file.
+ * TIFF and BMP are not natively declared in the SDK types but Claude can process them;
+ * we map them to the closest supported type (JPEG) since Claude's vision handles the
+ * actual format detection from the binary data.
+ *
+ * For files with `application/octet-stream` MIME type, infers from extension.
+ */
+function resolveImageMediaType(mimeType: string, ext: string): ClaudeImageMediaType {
+  // Direct SDK-supported types
+  if (mimeType === "image/jpeg" || mimeType === "image/jpg") return "image/jpeg";
+  if (mimeType === "image/png") return "image/png";
+  if (mimeType === "image/webp") return "image/webp";
+
+  // TIFF/BMP: Claude handles these via vision but SDK types don't declare them.
+  // Send as image/jpeg — Claude detects the actual format from the binary data.
+  if (mimeType === "image/tiff" || mimeType === "image/bmp") return "image/jpeg";
+
+  // application/octet-stream fallback — resolve from extension
+  const extLower = ext.toLowerCase();
+  if (extLower === "jpg" || extLower === "jpeg") return "image/jpeg";
+  if (extLower === "png") return "image/png";
+  if (extLower === "webp") return "image/webp";
+  if (extLower === "tiff" || extLower === "tif" || extLower === "bmp") return "image/jpeg";
+
+  // Default fallback
+  return "image/jpeg";
+}
+
 /**
  * Extracts order data from files using Claude API.
- * Handles PDF (multimodal), .eml (parsed), Excel (converted to text), and CSV.
+ * Handles PDF (multimodal), .eml (parsed), Excel (converted to text), CSV, and images (OPH-69).
  */
 export async function extractOrderData(
   input: ExtractionInput
@@ -241,6 +309,22 @@ export async function extractOrderData(
   for (const file of input.files) {
     sourceFiles.push(file.originalFilename);
     const ext = file.originalFilename.toLowerCase().split(".").pop() ?? "";
+
+    // OPH-69: Check if the file should be handled as an image content block.
+    // Check both MIME type and file extension to catch images served as
+    // application/octet-stream (edge case from spec).
+    if (isImageForExtraction(file.mimeType, ext)) {
+      const mediaType = resolveImageMediaType(file.mimeType, ext);
+      contentBlocks.push({
+        type: "image",
+        source: {
+          type: "base64",
+          media_type: mediaType,
+          data: file.content.toString("base64"),
+        },
+      });
+      continue;
+    }
 
     switch (ext) {
       case "pdf": {

@@ -88,6 +88,7 @@ Eine mandantenfähige SaaS-Plattform ("Order Intelligence Platform"), die Dental
 | P1 | OPH-66: Reset Dealer Recognition on an Order | Planned |
 | P1 | OPH-67: Tenant User Dashboard | Planned |
 | P1 | OPH-68: Dealer Filter Dropdown on Orders Page | Planned |
+| P1 | OPH-69: Image Extraction from Inbound Emails | Planned |
 
 ## Success Metrics
 - Bearbeitungszeit pro Bestellung: von ~15 Min. manuell auf < 3 Min. mit System

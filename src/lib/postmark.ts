@@ -121,6 +121,7 @@ export const postmarkInboundPayloadSchema = z.object({
     Content: z.string(),
     ContentType: z.string(),
     ContentLength: z.number(),
+    ContentID: z.string().optional(),
   })).default([]),
   // SMTP envelope recipient — more reliable than To header for forwarded emails
   OriginalRecipient: z.string().default(""),
@@ -138,9 +139,9 @@ export function extractSlugFromEmail(toAddress: string): string | null {
 }
 
 /**
- * Supported attachment MIME types for order processing.
+ * Supported document MIME types for order processing (non-image files).
  */
-const SUPPORTED_MIME_TYPES = new Set([
+const SUPPORTED_DOCUMENT_MIME_TYPES = new Set([
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   "application/vnd.ms-excel",
@@ -150,12 +151,58 @@ const SUPPORTED_MIME_TYPES = new Set([
   "text/plain",
 ]);
 
-/** Maximum attachment size in bytes (25 MB). */
+/**
+ * OPH-69: Accepted image MIME types for order processing.
+ * Phone photos, screenshots, and scanned documents.
+ */
+const ACCEPTED_IMAGE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "image/tiff",
+  "image/bmp",
+]);
+
+/**
+ * OPH-69: Image MIME types that are always rejected (decorative formats).
+ */
+const REJECTED_IMAGE_MIME_TYPES = new Set([
+  "image/gif",
+  "image/svg+xml",
+  "image/x-icon",
+  "image/vnd.microsoft.icon",
+]);
+
+/** Maximum attachment size in bytes (25 MB) for documents. */
 const MAX_ATTACHMENT_SIZE = 25 * 1024 * 1024;
+
+/** OPH-69: Maximum image size in bytes (10 MB). */
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+
+/** OPH-69: Minimum image size when other order files exist (50 KB). */
+const MIN_IMAGE_SIZE_WITH_FILES = 50 * 1024;
+
+/** OPH-69: Relaxed minimum image size when no other order files exist (10 KB). */
+const MIN_IMAGE_SIZE_WITHOUT_FILES = 10 * 1024;
+
+/** OPH-69: Maximum number of images kept per email. */
+const MAX_IMAGES_PER_EMAIL = 5;
+
+/**
+ * Checks whether a MIME type is an image type (accepted, rejected, or any image/*).
+ */
+function isImageMimeType(mimeType: string): boolean {
+  return mimeType.startsWith("image/");
+}
 
 /**
  * Filters Postmark attachments to only supported types and sizes.
  * Returns the supported attachments and any warnings for skipped ones.
+ *
+ * OPH-69: Extended with a two-pass image relevance filter:
+ *   Pass 1: Accept all document-type files (PDF, Excel, CSV, etc.) — existing behaviour.
+ *   Pass 2: Run image relevance filter (ContentID → MIME type → max size → min size → count cap).
  */
 export function filterAttachments(
   attachments: PostmarkInboundPayload["Attachments"]
@@ -165,8 +212,16 @@ export function filterAttachments(
 } {
   const supported: PostmarkInboundPayload["Attachments"] = [];
   const warnings: string[] = [];
+  const imageAttachments: PostmarkInboundPayload["Attachments"] = [];
 
+  // --- Pass 1: Document files (existing behaviour) ---
   for (const att of attachments) {
+    // Skip all image MIME types — they go to pass 2
+    if (isImageMimeType(att.ContentType)) {
+      imageAttachments.push(att);
+      continue;
+    }
+
     if (att.ContentLength > MAX_ATTACHMENT_SIZE) {
       warnings.push(
         `Anhang "${att.Name}" übersprungen: zu groß (${Math.round(att.ContentLength / 1024 / 1024)} MB, max 25 MB).`
@@ -174,7 +229,7 @@ export function filterAttachments(
       continue;
     }
 
-    if (!SUPPORTED_MIME_TYPES.has(att.ContentType)) {
+    if (!SUPPORTED_DOCUMENT_MIME_TYPES.has(att.ContentType)) {
       warnings.push(
         `Anhang "${att.Name}" übersprungen: nicht unterstütztes Format (${att.ContentType}).`
       );
@@ -182,6 +237,72 @@ export function filterAttachments(
     }
 
     supported.push(att);
+  }
+
+  // --- Pass 2: Image relevance filter (OPH-69) ---
+  const hasDocumentFiles = supported.length > 0;
+  const minImageSize = hasDocumentFiles ? MIN_IMAGE_SIZE_WITH_FILES : MIN_IMAGE_SIZE_WITHOUT_FILES;
+  const candidateImages: PostmarkInboundPayload["Attachments"] = [];
+
+  for (const att of imageAttachments) {
+    // Rule 1: ContentID reject — inline HTML images (signatures, logos)
+    if (att.ContentID && att.ContentID.trim().length > 0) {
+      // Discard silently — no warning (too noisy)
+      continue;
+    }
+
+    // Rule 2: MIME type reject — decorative image formats
+    if (REJECTED_IMAGE_MIME_TYPES.has(att.ContentType)) {
+      warnings.push(
+        `Bildanhang "${att.Name}" übersprungen: nicht unterstütztes Bildformat (${att.ContentType}).`
+      );
+      continue;
+    }
+
+    // Rule 3: MIME type accept check — must be an accepted image format
+    if (!ACCEPTED_IMAGE_MIME_TYPES.has(att.ContentType)) {
+      warnings.push(
+        `Bildanhang "${att.Name}" übersprungen: nicht unterstütztes Bildformat (${att.ContentType}).`
+      );
+      continue;
+    }
+
+    // Rule 4: Size maximum (10 MB per image)
+    if (att.ContentLength > MAX_IMAGE_SIZE) {
+      warnings.push(
+        `Bildanhang "${att.Name}" übersprungen: zu groß (${Math.round(att.ContentLength / 1024 / 1024)} MB, max 10 MB).`
+      );
+      continue;
+    }
+
+    // Rule 5: Size minimum (50 KB with other files, 10 KB without)
+    if (att.ContentLength < minImageSize) {
+      if (hasDocumentFiles) {
+        // Discard silently when other files exist (these are likely small decorative images)
+        continue;
+      }
+      // No other files and below 10 KB — discard with warning
+      warnings.push(
+        `Bildanhang "${att.Name}" übersprungen: zu klein (${Math.round(att.ContentLength / 1024)} KB, min ${Math.round(minImageSize / 1024)} KB).`
+      );
+      continue;
+    }
+
+    candidateImages.push(att);
+  }
+
+  // Rule 6: Image count cap — keep only the 5 largest by ContentLength
+  if (candidateImages.length > MAX_IMAGES_PER_EMAIL) {
+    // Sort descending by size (largest first)
+    candidateImages.sort((a, b) => b.ContentLength - a.ContentLength);
+    const kept = candidateImages.slice(0, MAX_IMAGES_PER_EMAIL);
+    const droppedCount = candidateImages.length - MAX_IMAGES_PER_EMAIL;
+    warnings.push(
+      `${droppedCount} weitere Bildanhänge übersprungen (max. ${MAX_IMAGES_PER_EMAIL} Bilder pro E-Mail).`
+    );
+    supported.push(...kept);
+  } else {
+    supported.push(...candidateImages);
   }
 
   return { supported, warnings };

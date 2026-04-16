@@ -80,7 +80,8 @@
 | OPH-66 | Reset Dealer Recognition on an Order | In Progress | [OPH-66-reset-dealer-on-order.md](OPH-66-reset-dealer-on-order.md) | 2026-04-15 |
 | OPH-67 | Tenant User Dashboard | Planned | [OPH-67-tenant-dashboard.md](OPH-67-tenant-dashboard.md) | 2026-04-16 |
 | OPH-68 | Dealer Filter Dropdown on Orders Page | In Progress | [OPH-68-dealer-filter-orders.md](OPH-68-dealer-filter-orders.md) | 2026-04-15 |
+| OPH-69 | Image Extraction from Inbound Emails | In Progress | [OPH-69-image-extraction-from-emails.md](OPH-69-image-extraction-from-emails.md) | 2026-04-16 |
 
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-69
+## Next Available ID: OPH-70
