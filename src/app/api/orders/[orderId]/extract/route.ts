@@ -145,7 +145,7 @@ export async function POST(
     // --- Fetch order and check concurrency ---
     let orderQuery = adminClient
       .from("orders")
-      .select("id, tenant_id, status, extraction_status, extraction_attempts, dealer_id, recognition_confidence, subject")
+      .select("id, tenant_id, status, extraction_status, extraction_attempts, dealer_id, recognition_confidence, subject, source, created_at")
       .eq("id", orderId);
 
     if (tenantId && !isPlatformAdmin) {
@@ -698,6 +698,24 @@ export async function POST(
       const emlSubjectUpdate: Record<string, unknown> = {};
       if (!orderSubject && result.parsedEmailSubject) {
         emlSubjectUpdate.subject = result.parsedEmailSubject.slice(0, 500);
+      }
+
+      // --- Fallback: use email sending date as order_date when not extracted ---
+      // For email-inbound orders, if the AI couldn't find an order date in the
+      // content, fall back to the email ingestion timestamp (≈ email sending date).
+      if (
+        !finalExtractedData.order.order_date &&
+        (order.source as string) === "email_inbound" &&
+        order.created_at
+      ) {
+        const emailDate = new Date(order.created_at as string);
+        finalExtractedData = {
+          ...finalExtractedData,
+          order: {
+            ...finalExtractedData.order,
+            order_date: emailDate.toISOString().split("T")[0],
+          },
+        };
       }
 
       // --- Save extracted data ---
