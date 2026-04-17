@@ -92,7 +92,8 @@
 | OPH-78 | Salesforce App: Checkout — Dealer Identification (SF-7) | In Progress | [OPH-78-salesforce-checkout-dealer.md](OPH-78-salesforce-checkout-dealer.md) | 2026-04-17 |
 | OPH-79 | Salesforce App: Checkout — Delivery & Notes (SF-8) | In Review | [OPH-79-salesforce-checkout-delivery-notes.md](OPH-79-salesforce-checkout-delivery-notes.md) | 2026-04-17 |
 | OPH-80 | Salesforce App: Order Submission (SF-9) | In Progress | [OPH-80-salesforce-order-submission.md](OPH-80-salesforce-order-submission.md) | 2026-04-17 |
-| OPH-81 | Salesforce App: Order History & Reorder (SF-10) | Planned | [OPH-81-salesforce-order-history.md](OPH-81-salesforce-order-history.md) | 2026-04-17 |
+| OPH-81 | Salesforce App: Order History & Reorder (SF-10) | In Progress | [OPH-81-salesforce-order-history.md](OPH-81-salesforce-order-history.md) | 2026-04-17 |
+| OPH-82 | Außendienstler Menu in Stammdaten Sidebar Section | In Review | [OPH-82-aussendienstler-stammdaten-sidebar.md](OPH-82-aussendienstler-stammdaten-sidebar.md) | 2026-04-17 |
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-82
+## Next Available ID: OPH-83

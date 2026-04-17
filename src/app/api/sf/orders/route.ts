@@ -7,11 +7,140 @@ import type {
   AppMetadata,
   ApiResponse,
   SalesforceOrderResponse,
+  SalesforceOrderListResponse,
+  SalesforceOrderListItem,
   CanonicalOrderData,
   CanonicalLineItem,
   CanonicalSender,
   CanonicalAddress,
+  OrderStatus,
 } from "@/lib/types";
+
+// ---------------------------------------------------------------------------
+// GET /api/sf/orders — Order history list for the current sales rep
+// ---------------------------------------------------------------------------
+
+/**
+ * OPH-81: GET /api/sf/orders?page=1
+ *
+ * Returns a paginated list of orders submitted by the current sales rep
+ * via the Salesforce App (source = "salesforce_app"). Sorted newest first.
+ * 20 items per page.
+ */
+export async function GET(
+  request: NextRequest
+): Promise<NextResponse<ApiResponse<SalesforceOrderListResponse>>> {
+  try {
+    // 1. Verify authentication
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: "Nicht authentifiziert." },
+        { status: 401 }
+      );
+    }
+
+    // 2. Check user/tenant status
+    const appMetadata = user.app_metadata as AppMetadata | undefined;
+
+    if (appMetadata?.user_status === "inactive") {
+      return NextResponse.json(
+        { success: false, error: "Ihr Konto ist deaktiviert." },
+        { status: 403 }
+      );
+    }
+
+    if (appMetadata?.tenant_status === "inactive") {
+      return NextResponse.json(
+        { success: false, error: "Ihr Mandant ist deaktiviert." },
+        { status: 403 }
+      );
+    }
+
+    if (appMetadata?.role !== "sales_rep") {
+      return NextResponse.json(
+        { success: false, error: "Nur Aussendienst-Mitarbeiter koennen Bestellungen einsehen." },
+        { status: 403 }
+      );
+    }
+
+    const tenantId = appMetadata?.tenant_id;
+    if (!tenantId) {
+      return NextResponse.json(
+        { success: false, error: "Kein Mandant zugewiesen." },
+        { status: 403 }
+      );
+    }
+
+    // 3. Parse pagination params
+    const url = new URL(request.url);
+    const pageParam = parseInt(url.searchParams.get("page") ?? "1", 10);
+    const page = Math.max(1, pageParam);
+    const pageSize = 20;
+    const offset = (page - 1) * pageSize;
+
+    // 4. Query orders
+    const adminClient = createAdminClient();
+    const { data: orders, count, error: queryError } = await adminClient
+      .from("orders")
+      .select("id, status, created_at, extracted_data, dealer_id", { count: "exact" })
+      .eq("tenant_id", tenantId)
+      .eq("uploaded_by", user.id)
+      .eq("source", "salesforce_app")
+      .order("created_at", { ascending: false })
+      .range(offset, offset + pageSize - 1);
+
+    if (queryError) {
+      console.error("Error fetching SF order history:", queryError.message);
+      return NextResponse.json(
+        { success: false, error: "Bestellungen konnten nicht geladen werden." },
+        { status: 500 }
+      );
+    }
+
+    // 5. Map to response format
+    const items: SalesforceOrderListItem[] = (orders ?? []).map((order) => {
+      const data = order.extracted_data as CanonicalOrderData | null;
+      const dealerName = data?.order?.dealer?.name ?? data?.order?.sender?.company_name ?? null;
+      const customerNumber = data?.order?.sender?.customer_number ?? null;
+      const lineItemCount = data?.order?.line_items?.length ?? 0;
+
+      return {
+        id: order.id as string,
+        status: order.status as OrderStatus,
+        createdAt: order.created_at as string,
+        dealerName,
+        customerNumber,
+        lineItemCount,
+      };
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        orders: items,
+        total: count ?? 0,
+        page,
+        pageSize,
+      },
+    });
+  } catch (error) {
+    console.error("Unexpected error in GET /api/sf/orders:", error);
+    return NextResponse.json(
+      { success: false, error: "Interner Serverfehler." },
+      { status: 500 }
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/sf/orders — Create a new order
+// ---------------------------------------------------------------------------
 
 /**
  * OPH-80: POST /api/sf/orders

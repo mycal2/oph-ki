@@ -29,9 +29,10 @@ export async function GET(
       const isLocal = process.env.NODE_ENV === "development";
 
       if (isLocal) {
-        // In development, redirect to the local sf route
+        // In development, redirect to the local sf route (not root, which would trigger sales_rep redirect)
         const origin = new URL(request.url).origin;
-        return NextResponse.redirect(`${origin}${next}`);
+        const sfNext = next === "/" ? `/sf/${slug}/` : `/sf/${slug}${next}`;
+        return NextResponse.redirect(`${origin}${sfNext}`);
       }
 
       // In production, redirect to the actual subdomain
