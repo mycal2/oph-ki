@@ -45,9 +45,12 @@ export async function POST(
 
     const appMetadata = user.app_metadata as AppMetadata | undefined;
 
-    if (appMetadata?.role !== "platform_admin") {
+    if (
+      appMetadata?.role !== "platform_admin" &&
+      appMetadata?.role !== "tenant_admin"
+    ) {
       return NextResponse.json(
-        { success: false, error: "Keine Berechtigung. Nur Platform-Admins." },
+        { success: false, error: "Keine Berechtigung. Nur Administratoren." },
         { status: 403 }
       );
     }

@@ -1,6 +1,6 @@
 # OPH-75: Salesforce App — Magic Link Authentication (SF-4)
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-04-17
 **Last Updated:** 2026-04-17
 **PRD:** [Salesforce App PRD](../docs/AD-PRD.md)
@@ -33,7 +33,104 @@
 ---
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Overview
+OPH-75 replaces the login placeholder with a real magic link flow. The user enters their email, Supabase sends a one-click login link pointing back to their subdomain (`{slug}.ids.online/auth/callback`), and after clicking the middleware-enforced security checks (OPH-73) handle the rest. No new security logic is needed — only a login form and an auth callback route.
+
+---
+
+### A) Component Structure
+
+```
+src/app/sf/[slug]/
+  login/
+    page.tsx                 ← MODIFY: Server component — queries tenant name, renders form
+  auth/
+    callback/
+      route.ts               ← NEW: Exchanges code → session, redirects to subdomain home
+
+src/components/salesforce/
+  salesforce-login-form.tsx  ← NEW: Client component — email input + loading + success state
+```
+
+**Login Page (server component):**
+```
++-------------------------------------------------------+
+|  [IDS.online Logo]            [Tenant Logo]            |
++-------------------------------------------------------+
+|                                                       |
+|         Willkommen bei [Tenant Name]                  |
+|                                                       |
+|  [Email-Adresse ............................  ]        |
+|  [          Magic Link senden          ]              |
+|                                                       |
+|  Wir senden Ihnen einen Anmelde-Link per E-Mail.      |
+|                                                       |
++-------------------------------------------------------+
+```
+After sending: replaces the form with "E-Mail gesendet — prüfen Sie Ihren Posteingang."
+
+---
+
+### B) Auth Flow
+
+```
+1. meisinger.ids.online/         (not logged in)
+   └── middleware → redirect → /login
+   └── middleware rewrite  → /sf/meisinger/login
+
+2. Sales rep enters email, taps "Magic Link senden"
+   └── signInWithOtp({ email, redirectTo: "https://meisinger.ids.online/auth/callback?next=/" })
+   └── Supabase sends email with magic link
+
+3. Sales rep taps link
+   └── meisinger.ids.online/auth/callback?code=xxx
+   └── middleware: /auth/callback is already public → no auth block
+   └── middleware rewrite → /sf/meisinger/auth/callback?code=xxx
+   └── Callback route: exchangeCodeForSession(code) → session cookie set
+   └── Redirect: https://meisinger.ids.online/
+
+4. meisinger.ids.online/         (now logged in)
+   └── middleware: role=sales_rep ✓, salesforce_slug=meisinger ✓
+   └── middleware rewrite → /sf/meisinger/ → Salesforce home
+```
+
+---
+
+### C) No Middleware Changes Needed
+
+All security is already enforced by OPH-73:
+
+| Check | Where |
+|---|---|
+| `/auth/callback` is a public route | `publicRoutes` in middleware |
+| `sales_rep` role required on subdomain | Middleware OPH-73 |
+| `salesforce_slug` must match subdomain | Middleware OPH-73 |
+| Inactive user blocked | Middleware `user_status` check |
+| Non-sales_rep on subdomain → OPH redirect | Middleware OPH-73 |
+
+---
+
+### D) Error States
+
+| Situation | Behavior |
+|---|---|
+| Email not in system | "Prüfen Sie Ihren Posteingang" shown (Supabase sends nothing — no enumeration) |
+| Wrong tenant / not sales_rep | Middleware redirects to login with `error=wrong_tenant` |
+| Expired magic link | Callback fails → login with `error=auth_callback_failed` |
+| Deactivated user | Middleware catches `user_status=inactive` → signs out → login error |
+
+---
+
+### E) Files Changed
+
+| File | Change |
+|---|---|
+| `src/app/sf/[slug]/login/page.tsx` | MODIFY: Replace placeholder, render `SalesforceLoginForm` with tenant name |
+| `src/app/sf/[slug]/auth/callback/route.ts` | NEW: Exchange code, redirect to `https://{slug}.ids.online/` |
+| `src/components/salesforce/salesforce-login-form.tsx` | NEW: Client form with email input, loading, sent, and error states |
+
+No database changes. No middleware changes. No new npm packages.
 
 ## QA Test Results
 _To be added by /qa_

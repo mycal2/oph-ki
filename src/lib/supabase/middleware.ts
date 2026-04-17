@@ -194,6 +194,15 @@ export async function updateSession(request: NextRequest) {
       }
     }
 
+    // OPH-74: /settings/aussendienstler -> tenant_admin or platform_admin only
+    if (url.pathname.startsWith("/settings/aussendienstler")) {
+      if (role !== "tenant_admin" && role !== "platform_admin") {
+        const redirectUrl = request.nextUrl.clone();
+        redirectUrl.pathname = "/dashboard";
+        return NextResponse.redirect(redirectUrl);
+      }
+    }
+
     // OPH-73: Salesforce App subdomain routing enforcement
     const userSalesforceSlug = (appMetadata as Record<string, unknown>)?.salesforce_slug as string | undefined;
 
