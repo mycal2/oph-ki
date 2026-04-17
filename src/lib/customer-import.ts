@@ -117,7 +117,12 @@ export function parseCustomerFile(buffer: Buffer, filename: string): CustomerPar
   }
 
   // Map headers to canonical field names
-  const rawHeaders = rawData[0].map((h) => String(h).trim());
+  // Strip BOM (\uFEFF) that may be present on the first header from UTF-8 CSV exports
+  const rawHeaders = rawData[0].map((h, i) => {
+    let val = String(h).trim();
+    if (i === 0) val = val.replace(/^\uFEFF/, "");
+    return val;
+  });
   const detectedHeaders = [...rawHeaders];
   const fieldIndexes: Record<string, number> = {};
 
