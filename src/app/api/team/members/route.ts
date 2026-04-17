@@ -6,10 +6,11 @@ import type { AppMetadata, ApiResponse, TeamMember } from "@/lib/types";
 /**
  * GET /api/team/members
  * List all team members for the current tenant.
+ * OPH-74: Supports optional ?role= query param to filter by role.
  * Requires authentication. RLS filters by tenant_id from JWT.
  * Uses admin client to fetch auth.users for last_sign_in_at + email.
  */
-export async function GET(): Promise<NextResponse<ApiResponse<TeamMember[]>>> {
+export async function GET(request: Request): Promise<NextResponse<ApiResponse<TeamMember[]>>> {
   try {
     // 1. Verify authentication
     const supabase = await createClient();
@@ -62,11 +63,22 @@ export async function GET(): Promise<NextResponse<ApiResponse<TeamMember[]>>> {
       );
     }
 
+    // OPH-74: Parse optional role filter from query params
+    const { searchParams } = new URL(request.url);
+    const roleFilter = searchParams.get("role");
+
     // 3. Fetch user profiles for this tenant (RLS filters automatically)
-    const { data: profiles, error: profilesError } = await supabase
+    let profileQuery = supabase
       .from("user_profiles")
       .select("id, tenant_id, role, first_name, last_name, status, created_at")
-      .eq("tenant_id", tenantId)
+      .eq("tenant_id", tenantId);
+
+    // OPH-74: Apply optional role filter
+    if (roleFilter) {
+      profileQuery = profileQuery.eq("role", roleFilter);
+    }
+
+    const { data: profiles, error: profilesError } = await profileQuery
       .order("created_at", { ascending: true })
       .limit(100);
 

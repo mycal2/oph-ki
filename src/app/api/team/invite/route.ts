@@ -131,13 +131,40 @@ export async function POST(
       );
     }
 
+    // OPH-74: For sales_rep invites, fetch tenant's salesforce_slug
+    // Block the invite if salesforce_slug is not configured — the user wouldn't be able to log in
+    let salesforceSlug: string | null = null;
+    if (role === "sales_rep") {
+      const { data: tenantData } = await adminClient
+        .from("tenants")
+        .select("salesforce_slug")
+        .eq("id", tenantId)
+        .single();
+      salesforceSlug = (tenantData?.salesforce_slug as string | null) ?? null;
+      if (!salesforceSlug) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Salesforce-Subdomain ist nicht konfiguriert. Bitte zuerst unter Einstellungen eine Subdomain hinterlegen.",
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     // Set app_metadata so getUser() returns tenant_id and role
+    // OPH-74: Include salesforce_slug for sales_rep users (needed by OPH-75 magic link auth)
+    const appMetadataUpdate: Record<string, unknown> = {
+      tenant_id: tenantId,
+      role,
+      user_status: "active",
+    };
+    if (role === "sales_rep" && salesforceSlug) {
+      appMetadataUpdate.salesforce_slug = salesforceSlug;
+    }
+
     await adminClient.auth.admin.updateUserById(invitedUserId, {
-      app_metadata: {
-        tenant_id: tenantId,
-        role,
-        user_status: "active",
-      },
+      app_metadata: appMetadataUpdate,
     });
 
     // Send invite email via Postmark

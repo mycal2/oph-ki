@@ -51,6 +51,8 @@ function getRoleLabel(role: UserRole): string {
       return "Administrator";
     case "tenant_user":
       return "Mitarbeiter";
+    case "sales_rep":
+      return "Außendienstler";
     case "platform_admin":
       return "Plattform-Admin";
     case "platform_viewer":
@@ -94,9 +96,11 @@ function formatDate(dateString: string | null): string {
 
 interface UsersTableProps {
   refreshKey?: number;
+  /** OPH-74: Optional role filter — only show users with this role. */
+  roleFilter?: UserRole;
 }
 
-export function UsersTable({ refreshKey }: UsersTableProps) {
+export function UsersTable({ refreshKey, roleFilter }: UsersTableProps) {
   const [users, setUsers] = useState<TeamMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [togglingUserId, setTogglingUserId] = useState<string | null>(null);
@@ -141,7 +145,10 @@ export function UsersTable({ refreshKey }: UsersTableProps) {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/team/members");
+      const url = roleFilter
+        ? `/api/team/members?role=${encodeURIComponent(roleFilter)}`
+        : "/api/team/members";
+      const response = await fetch(url);
       const result: ApiResponse<TeamMember[]> = await response.json();
 
       if (result.success && result.data) {
@@ -154,11 +161,11 @@ export function UsersTable({ refreshKey }: UsersTableProps) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [roleFilter]);
 
   useEffect(() => {
     loadUsers();
-  }, [loadUsers, refreshKey]);
+  }, [loadUsers, refreshKey, roleFilter]);
 
   async function handleToggleStatus(user: TeamMember) {
     const newStatus = user.status === "active" ? "inactive" : "active";
@@ -299,8 +306,9 @@ export function UsersTable({ refreshKey }: UsersTableProps) {
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />
         <p className="text-muted-foreground text-sm">
-          Noch keine Teammitglieder vorhanden. Laden Sie Ihren ersten
-          Mitarbeiter ein.
+          {roleFilter === "sales_rep"
+            ? "Noch keine Außendienstler vorhanden. Laden Sie Ihren ersten Außendienstler ein."
+            : "Noch keine Teammitglieder vorhanden. Laden Sie Ihren ersten Mitarbeiter ein."}
         </p>
       </div>
     );
@@ -347,9 +355,9 @@ export function UsersTable({ refreshKey }: UsersTableProps) {
 
                 // OPH-48: Pending user = never signed in (proxy for unconfirmed)
                 const isPending = user.last_sign_in_at === null;
-                // OPH-48: Can resend invite (platform_admin, not self, pending, active)
+                // OPH-48/74: Can resend invite (platform_admin or tenant_admin, not self, pending, active)
                 const canResendInvite =
-                  currentUserRole === "platform_admin" && !isSelf && isPending && user.status === "active";
+                  (currentUserRole === "platform_admin" || currentUserRole === "tenant_admin") && !isSelf && isPending && user.status === "active";
                 // OPH-48: Can reset password (platform_admin, not self, active, confirmed)
                 const canResetPassword =
                   currentUserRole === "platform_admin" && !isSelf && !isPending && user.status === "active";

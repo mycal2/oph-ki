@@ -46,7 +46,7 @@ export const inviteUserSchema = z.object({
     .string()
     .min(1, "E-Mail-Adresse ist erforderlich.")
     .email("Bitte geben Sie eine gültige E-Mail-Adresse ein."),
-  role: z.enum(["tenant_user", "tenant_admin"], {
+  role: z.enum(["tenant_user", "tenant_admin", "sales_rep"], {
     message: "Bitte wählen Sie eine gültige Rolle.",
   }),
 });

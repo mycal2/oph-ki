@@ -26,19 +26,33 @@ import type { ApiResponse } from "@/lib/types";
 
 interface InviteUserDialogProps {
   onInvited?: () => void;
+  /** OPH-74: Pre-select and lock the role (hides the role selector). */
+  fixedRole?: string;
+  /** OPH-74: Custom button label. */
+  buttonLabel?: string;
+  /** OPH-74: Custom dialog title. */
+  dialogTitle?: string;
+  /** OPH-74: Custom dialog description. */
+  dialogDescription?: string;
 }
 
-export function InviteUserDialog({ onInvited }: InviteUserDialogProps) {
+export function InviteUserDialog({
+  onInvited,
+  fixedRole,
+  buttonLabel,
+  dialogTitle,
+  dialogDescription,
+}: InviteUserDialogProps) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState("");
+  const [role, setRole] = useState(fixedRole ?? "");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   function resetForm() {
     setEmail("");
-    setRole("");
+    setRole(fixedRole ?? "");
     setError(null);
     setSuccess(false);
   }
@@ -86,15 +100,15 @@ export function InviteUserDialog({ onInvited }: InviteUserDialogProps) {
       <DialogTrigger asChild>
         <Button className="font-bold">
           <UserPlus className="h-4 w-4" />
-          Mitarbeiter einladen
+          {buttonLabel ?? "Mitarbeiter einladen"}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Mitarbeiter einladen</DialogTitle>
+          <DialogTitle>{dialogTitle ?? "Mitarbeiter einladen"}</DialogTitle>
           <DialogDescription>
-            Senden Sie eine Einladung per E-Mail. Der eingeladene Mitarbeiter
-            erhält einen Link, um sein Konto einzurichten.
+            {dialogDescription ??
+              "Senden Sie eine Einladung per E-Mail. Der eingeladene Mitarbeiter erhält einen Link, um sein Konto einzurichten."}
           </DialogDescription>
         </DialogHeader>
 
@@ -129,26 +143,29 @@ export function InviteUserDialog({ onInvited }: InviteUserDialogProps) {
                   aria-label="E-Mail-Adresse des einzuladenden Mitarbeiters"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="invite-role">Rolle</Label>
-                <Select value={role} onValueChange={setRole} required>
-                  <SelectTrigger id="invite-role" aria-label="Rolle auswählen">
-                    <SelectValue placeholder="Rolle auswählen" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="tenant_user">
-                      Mitarbeiter
-                    </SelectItem>
-                    <SelectItem value="tenant_admin">
-                      Administrator
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Administratoren können weitere Mitarbeiter einladen und
-                  verwalten.
-                </p>
-              </div>
+              {/* OPH-74: Hide role selector when fixedRole is provided */}
+              {!fixedRole && (
+                <div className="space-y-2">
+                  <Label htmlFor="invite-role">Rolle</Label>
+                  <Select value={role} onValueChange={setRole} required>
+                    <SelectTrigger id="invite-role" aria-label="Rolle auswählen">
+                      <SelectValue placeholder="Rolle auswählen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="tenant_user">
+                        Mitarbeiter
+                      </SelectItem>
+                      <SelectItem value="tenant_admin">
+                        Administrator
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Administratoren können weitere Mitarbeiter einladen und
+                    verwalten.
+                  </p>
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button
