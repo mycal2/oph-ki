@@ -123,6 +123,23 @@ export async function PATCH(
       updatePayload.trial_expires_at = expiresAt.toISOString();
     }
 
+    // OPH-73: Check salesforce_slug uniqueness before saving
+    if (input.salesforce_slug && input.salesforce_slug !== (current as Record<string, unknown>).salesforce_slug) {
+      const { data: existingSlug } = await adminClient
+        .from("tenants")
+        .select("id")
+        .eq("salesforce_slug", input.salesforce_slug)
+        .neq("id", id)
+        .maybeSingle();
+
+      if (existingSlug) {
+        return NextResponse.json(
+          { success: false, error: `Der Slug "${input.salesforce_slug}" wird bereits von einem anderen Mandanten verwendet.` },
+          { status: 409 }
+        );
+      }
+    }
+
     if (Object.keys(updatePayload).length === 0) {
       return NextResponse.json(
         { success: false, error: "Keine Änderungen angegeben." },

@@ -4,6 +4,14 @@ import { z } from "zod";
  * Zod validation schemas for OPH-1 API endpoints.
  */
 
+/** OPH-73: Reserved subdomain slugs that cannot be used as Salesforce App slugs. */
+export const RESERVED_SALESFORCE_SLUGS = new Set([
+  "www", "api", "app", "admin", "mail", "smtp", "ftp",
+  "staging", "dev", "test", "demo",
+  "oph-ki", "oph-ki-dev", "oph-ki-staging",
+  "salesforce", "login", "auth", "status",
+]);
+
 export const loginSchema = z.object({
   email: z
     .string()
@@ -533,6 +541,27 @@ export const updateTenantSchema = z.object({
     ])
     .transform((val) => (val === "" ? null : val))
     .optional(),
+  /** OPH-73: Whether the Salesforce App is enabled for this tenant. */
+  salesforce_enabled: z.boolean().optional(),
+  /** OPH-73: Subdomain slug for the Salesforce App. */
+  salesforce_slug: z
+    .union([
+      z.string()
+        .min(3, "Slug muss mindestens 3 Zeichen lang sein.")
+        .max(30, "Slug darf maximal 30 Zeichen lang sein.")
+        .regex(
+          /^[a-z0-9][a-z0-9-]*[a-z0-9]$/,
+          "Nur Kleinbuchstaben, Ziffern und Bindestriche erlaubt. Darf nicht mit Bindestrich beginnen oder enden."
+        )
+        .refine(
+          (val) => !RESERVED_SALESFORCE_SLUGS.has(val),
+          "Dieser Slug ist reserviert und kann nicht verwendet werden."
+        ),
+      z.literal(""),
+      z.null(),
+    ])
+    .transform((val) => (val === "" ? null : val))
+    .optional(),
 });
 
 /** Invite user on behalf of a specific tenant (platform admin). */
@@ -541,7 +570,7 @@ export const adminInviteUserSchema = z.object({
     .string()
     .min(1, "E-Mail-Adresse ist erforderlich.")
     .email("Bitte geben Sie eine gültige E-Mail-Adresse ein."),
-  role: z.enum(["tenant_user", "tenant_admin"], {
+  role: z.enum(["tenant_user", "tenant_admin", "sales_rep"], {
     message: "Bitte wählen Sie eine gültige Rolle.",
   }),
 });
