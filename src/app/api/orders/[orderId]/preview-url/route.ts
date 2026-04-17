@@ -123,12 +123,19 @@ export async function GET(
     for (const file of files) {
       const mimeType = file.mime_type as string;
       const filename = file.original_filename as string;
-      // Render PDFs, images, and text files inline; force download for other file types
+      const lowerFilename = filename.toLowerCase();
+      // Render PDFs, images, text files, and spreadsheets inline; force download for other file types
       const isInlineViewable =
         mimeType === "application/pdf" ||
         mimeType.startsWith("image/") ||
         mimeType === "text/plain" ||
-        filename === "email_body.txt";
+        filename === "email_body.txt" ||
+        mimeType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+        mimeType === "application/vnd.ms-excel" ||
+        mimeType === "text/csv" ||
+        lowerFilename.endsWith(".xlsx") ||
+        lowerFilename.endsWith(".xls") ||
+        lowerFilename.endsWith(".csv");
       const urlOptions = isInlineViewable
         ? undefined
         : { download: filename };
