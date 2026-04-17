@@ -97,10 +97,19 @@ export function parseArticleFile(buffer: Buffer, filename: string): ParseResult 
   const isExcel = /\.xlsx?$/i.test(filename);
 
   // Parse with xlsx (handles both CSV and Excel)
+  // For CSV files: detect delimiter (semicolon or comma) from the first line
+  const isCsv = /\.csv$/i.test(filename);
+  let FS: string | undefined;
+  if (isCsv) {
+    const firstLine = buffer.toString("utf-8").split(/\r?\n/)[0] ?? "";
+    // Use semicolon if it appears more often than comma in the header row
+    FS = (firstLine.split(";").length > firstLine.split(",").length) ? ";" : ",";
+  }
   const workbook = XLSX.read(buffer, {
     type: "buffer",
     codepage: 65001, // UTF-8
     raw: true,
+    FS,
   });
 
   const sheetName = workbook.SheetNames[0];
