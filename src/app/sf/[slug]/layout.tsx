@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SalesforceHeader } from "@/components/salesforce/salesforce-header";
+import { BasketProvider } from "@/components/salesforce/basket-provider";
 
 interface SalesforceLayoutProps {
   children: React.ReactNode;
@@ -31,16 +32,19 @@ export default async function SalesforceLayout({ children, params }: SalesforceL
   }
 
   return (
-    <div className="min-h-svh flex flex-col bg-background">
-      <SalesforceHeader
-        tenantName={tenant.name as string}
-        tenantLogoUrl={(tenant.logo_url as string | null) ?? null}
-      />
-      <main className="flex-1">
-        <div className="mx-auto max-w-lg px-4 py-6">
-          {children}
-        </div>
-      </main>
-    </div>
+    <BasketProvider>
+      <div className="min-h-svh flex flex-col bg-background">
+        <SalesforceHeader
+          tenantName={tenant.name as string}
+          tenantLogoUrl={(tenant.logo_url as string | null) ?? null}
+          slug={slug}
+        />
+        <main className="flex-1">
+          <div className="mx-auto max-w-lg px-4 py-6">
+            {children}
+          </div>
+        </main>
+      </div>
+    </BasketProvider>
   );
 }
