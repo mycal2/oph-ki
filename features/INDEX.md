@@ -84,4 +84,7 @@
 
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-70
+| OPH-70 | Inline Email Body Text Preview in Dokument-Vorschau | In Progress | [OPH-70-email-body-text-preview.md](OPH-70-email-body-text-preview.md) | 2026-04-16 |
+<!-- Add features above this line -->
+
+## Next Available ID: OPH-71
