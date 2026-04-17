@@ -73,12 +73,18 @@ export async function updateSession(request: NextRequest) {
     "/auth/callback",
     "/orders/preview", // OPH-16: Public magic-link preview page
   ];
-  const isPublicRoute = publicRoutes.some((route) =>
+  // Salesforce App login and auth callback are also public
+  const isSfPublicRoute =
+    url.pathname.match(/^\/sf\/[^/]+\/login/) !== null ||
+    url.pathname.match(/^\/sf\/[^/]+\/auth\/callback/) !== null;
+  const isPublicRoute = isSfPublicRoute || publicRoutes.some((route) =>
     url.pathname.startsWith(route)
   );
 
   // OPH-72: Block direct access to /sf/ from non-Salesforce hosts
-  if (url.pathname.startsWith("/sf") && !isSalesforceSubdomain) {
+  // Allow localhost for local development testing
+  const isLocalhost = hostname.startsWith("localhost:");
+  if (url.pathname.startsWith("/sf") && !isSalesforceSubdomain && !isLocalhost) {
     return NextResponse.rewrite(new URL("/not-found", request.url));
   }
 
@@ -126,7 +132,9 @@ export async function updateSession(request: NextRequest) {
   // --- Unauthenticated user handling ---
   if (!user && !isPublicRoute) {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/login";
+    // Salesforce paths redirect to the Salesforce login, not OPH login
+    const sfMatch = url.pathname.match(/^\/sf\/([^/]+)/);
+    redirectUrl.pathname = sfMatch ? `/sf/${sfMatch[1]}/login` : "/login";
     return NextResponse.redirect(redirectUrl);
   }
 
@@ -208,7 +216,8 @@ export async function updateSession(request: NextRequest) {
 
     if (role === "sales_rep") {
       // Sales reps on the OPH domain → redirect to their Salesforce subdomain
-      if (!isSalesforceSubdomain) {
+      // Skip all sales_rep redirects on localhost (allows testing both OPH and SF locally)
+      if (!isSalesforceSubdomain && !isLocalhost) {
         if (userSalesforceSlug) {
           return NextResponse.redirect(
             new URL(`https://${userSalesforceSlug}.ids.online/`)
