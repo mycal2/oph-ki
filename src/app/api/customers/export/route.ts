@@ -71,26 +71,38 @@ export async function GET(
 
 /**
  * Shared export logic: generates a CSV string from customer_catalog rows.
+ * Uses paginated fetching to bypass the Supabase PostgREST 1000-row default limit.
  */
 export async function generateCustomerExportCsv(
   tenantId: string,
   tenantName?: string
 ): Promise<NextResponse> {
   const adminClient = createAdminClient();
+  const PAGE_SIZE = 1000;
+  const customers: Record<string, unknown>[] = [];
+  let offset = 0;
 
-  const { data: customers, error: queryError } = await adminClient
-    .from("customer_catalog")
-    .select("customer_number, company_name, street, postal_code, city, country, email, phone, keywords, notes")
-    .eq("tenant_id", tenantId)
-    .order("customer_number", { ascending: true })
-    .limit(50000);
+  // Paginated fetch to get ALL customers (PostgREST caps at 1000 per request)
+  while (true) {
+    const { data, error } = await adminClient
+      .from("customer_catalog")
+      .select("customer_number, company_name, street, postal_code, city, country, email, phone, keywords, notes")
+      .eq("tenant_id", tenantId)
+      .order("customer_number", { ascending: true })
+      .range(offset, offset + PAGE_SIZE - 1);
 
-  if (queryError) {
-    console.error("Error exporting customers:", queryError.message);
-    return NextResponse.json(
-      { success: false, error: "Export fehlgeschlagen." },
-      { status: 500 }
-    );
+    if (error) {
+      console.error("Error exporting customers:", error.message);
+      return NextResponse.json(
+        { success: false, error: "Export fehlgeschlagen." },
+        { status: 500 }
+      );
+    }
+
+    if (!data || data.length === 0) break;
+    customers.push(...data);
+    if (data.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
   }
 
   /** Escape a CSV field: wrap in quotes if it contains semicolons, quotes, or newlines. */
@@ -103,7 +115,7 @@ export async function generateCustomerExportCsv(
   };
 
   const header = "Kundennummer;Firma;Strasse;PLZ;Stadt;Land;E-Mail;Telefon;Suchbegriffe;Notizen";
-  const rows = (customers ?? []).map((c) =>
+  const rows = customers.map((c) =>
     [
       esc(c.customer_number as string),
       esc(c.company_name as string),
