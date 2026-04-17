@@ -2,7 +2,7 @@
  * Shared TypeScript types for OPH-1: Multi-Tenant Auth & RBAC.
  */
 
-export type UserRole = "tenant_user" | "tenant_admin" | "platform_admin" | "platform_viewer";
+export type UserRole = "tenant_user" | "tenant_admin" | "platform_admin" | "platform_viewer" | "sales_rep";
 export type UserStatus = "active" | "inactive";
 export type TenantStatus = "active" | "inactive" | "trial";
 export type ErpType = "SAP" | "Dynamics365" | "Sage" | "Custom";
@@ -46,6 +46,10 @@ export interface Tenant {
   email_forwarding_enabled: boolean;
   /** OPH-63: The email address to forward inbound order emails to. */
   email_forwarding_address: string | null;
+  /** OPH-73: Whether the Salesforce App is enabled for this tenant. */
+  salesforce_enabled: boolean;
+  /** OPH-73: Unique subdomain slug for the Salesforce App (e.g. "meisinger" → meisinger.ids.online). */
+  salesforce_slug: string | null;
 }
 
 export interface UserProfile {
@@ -516,6 +520,10 @@ export interface TenantAdminListItem {
   monthly_fee: number | null;
   /** OPH-52: Cost per processed order in EUR. */
   cost_per_order: number | null;
+  /** OPH-73: Whether the Salesforce App is enabled. */
+  salesforce_enabled: boolean;
+  /** OPH-73: Salesforce App subdomain slug. */
+  salesforce_slug: string | null;
 }
 
 /** User belonging to a tenant, shown in the admin user tab. */

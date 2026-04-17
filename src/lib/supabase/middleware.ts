@@ -50,6 +50,19 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const url = request.nextUrl;
+  const hostname = request.headers.get("host") ?? "";
+
+  // OPH-73: Detect Salesforce App subdomain (*.ids.online)
+  // Extract the subdomain from the host header. Ignore known OPH domains.
+  const OPH_HOSTS = new Set([
+    "localhost:3003", "localhost:3000",
+    "oph-ki.ids.online", "oph-ki-dev.ids.online", "oph-ki-staging.ids.online",
+  ]);
+  const isSalesforceSubdomain = !OPH_HOSTS.has(hostname) &&
+    (hostname.endsWith(".ids.online") || hostname.match(/^localhost:\d+$/) !== null && false);
+  const salesforceSubdomain = isSalesforceSubdomain
+    ? hostname.replace(".ids.online", "").toLowerCase()
+    : null;
 
   // Public routes that do not require authentication
   const publicRoutes = [
@@ -174,6 +187,40 @@ export async function updateSession(request: NextRequest) {
         redirectUrl.pathname = "/dashboard";
         return NextResponse.redirect(redirectUrl);
       }
+    }
+
+    // OPH-73: Salesforce App subdomain routing enforcement
+    const userSalesforceSlug = (appMetadata as Record<string, unknown>)?.salesforce_slug as string | undefined;
+
+    if (role === "sales_rep") {
+      // Sales reps on the OPH domain → redirect to their Salesforce subdomain
+      if (!isSalesforceSubdomain) {
+        if (userSalesforceSlug) {
+          return NextResponse.redirect(
+            new URL(`https://${userSalesforceSlug}.ids.online/`)
+          );
+        }
+        // No slug configured → sign out with error
+        await supabase.auth.signOut();
+        const redirectUrl = request.nextUrl.clone();
+        redirectUrl.pathname = "/login";
+        redirectUrl.searchParams.set("error", "salesforce_not_configured");
+        return NextResponse.redirect(redirectUrl);
+      }
+
+      // Sales rep on a Salesforce subdomain that doesn't match their tenant's slug → reject
+      if (salesforceSubdomain && userSalesforceSlug !== salesforceSubdomain) {
+        await supabase.auth.signOut();
+        const redirectUrl = request.nextUrl.clone();
+        redirectUrl.pathname = "/login";
+        redirectUrl.searchParams.set("error", "wrong_tenant");
+        return NextResponse.redirect(redirectUrl);
+      }
+    } else if (isSalesforceSubdomain) {
+      // Non-sales_rep user on a Salesforce subdomain → redirect to OPH
+      return NextResponse.redirect(
+        new URL("https://oph-ki.ids.online/dashboard")
+      );
     }
   }
 
