@@ -63,25 +63,37 @@ export async function GET(
 
 /**
  * Shared export logic: generates a CSV string from article_catalog rows.
+ * Uses paginated fetching to bypass the Supabase PostgREST 1000-row default limit.
  */
 export async function generateArticleExportCsv(
   tenantId: string
 ): Promise<NextResponse> {
   const adminClient = createAdminClient();
+  const PAGE_SIZE = 1000;
+  const articles: Record<string, unknown>[] = [];
+  let offset = 0;
 
-  const { data: articles, error: queryError } = await adminClient
-    .from("article_catalog")
-    .select("article_number, name, category, color, packaging, size1, size2, ref_no, gtin, keywords")
-    .eq("tenant_id", tenantId)
-    .order("article_number", { ascending: true })
-    .limit(50000);
+  // Paginated fetch to get ALL articles (PostgREST caps at 1000 per request)
+  while (true) {
+    const { data, error } = await adminClient
+      .from("article_catalog")
+      .select("article_number, name, category, color, packaging, size1, size2, ref_no, gtin, keywords")
+      .eq("tenant_id", tenantId)
+      .order("article_number", { ascending: true })
+      .range(offset, offset + PAGE_SIZE - 1);
 
-  if (queryError) {
-    console.error("Error exporting articles:", queryError.message);
-    return NextResponse.json(
-      { success: false, error: "Export fehlgeschlagen." },
-      { status: 500 }
-    );
+    if (error) {
+      console.error("Error exporting articles:", error.message);
+      return NextResponse.json(
+        { success: false, error: "Export fehlgeschlagen." },
+        { status: 500 }
+      );
+    }
+
+    if (!data || data.length === 0) break;
+    articles.push(...data);
+    if (data.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
   }
 
   /** Escape a CSV field: wrap in quotes if it contains semicolons, quotes, or newlines. */
@@ -94,7 +106,7 @@ export async function generateArticleExportCsv(
   };
 
   const header = "Herst.-Art.-Nr.;Artikelbezeichnung;Kategorie;Farbe;Verpackungseinheit;Groesse 1;Groesse 2;Ref.-Nr.;GTIN;Suchbegriffe";
-  const rows = (articles ?? []).map((a) =>
+  const rows = articles.map((a) =>
     [
       esc(a.article_number as string),
       esc(a.name as string),
