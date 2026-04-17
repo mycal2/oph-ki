@@ -20,14 +20,18 @@ export async function GET(
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/";
 
+  // Detect environment suffix from host header (meisinger-dev.ids.online → "-dev")
+  const host = request.headers.get("host") ?? "";
+  const envSuffix = host.includes("-dev.ids.online") ? "-dev"
+    : host.includes("-staging.ids.online") ? "-staging"
+    : "";
+  const isLocal = process.env.NODE_ENV === "development";
+
   if (code) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      // Redirect back to the Salesforce subdomain
-      const isLocal = process.env.NODE_ENV === "development";
-
       if (isLocal) {
         // In development, redirect to the local sf route (not root, which would trigger sales_rep redirect)
         const origin = new URL(request.url).origin;
@@ -35,13 +39,12 @@ export async function GET(
         return NextResponse.redirect(`${origin}${sfNext}`);
       }
 
-      // In production, redirect to the actual subdomain
-      return NextResponse.redirect(`https://${slug}.ids.online${next}`);
+      // Redirect back to the Salesforce subdomain (environment-aware)
+      return NextResponse.redirect(`https://${slug}${envSuffix}.ids.online${next}`);
     }
   }
 
   // If code exchange fails, redirect to the login page with an error
-  const isLocal = process.env.NODE_ENV === "development";
   if (isLocal) {
     const origin = new URL(request.url).origin;
     return NextResponse.redirect(
@@ -50,6 +53,6 @@ export async function GET(
   }
 
   return NextResponse.redirect(
-    `https://${slug}.ids.online/login?error=auth_callback_failed`
+    `https://${slug}${envSuffix}.ids.online/login?error=auth_callback_failed`
   );
 }

@@ -63,10 +63,15 @@ export function SalesforceLoginForm({ tenantName, slug }: SalesforceLoginFormPro
       const supabase = createClient();
 
       // Determine the callback URL based on environment
+      // Supports environment-suffixed subdomains: meisinger-dev.ids.online
       const isLocal = window.location.hostname === "localhost";
+      const host = window.location.hostname;
+      const envSuffix = host.includes("-dev.ids.online") ? "-dev"
+        : host.includes("-staging.ids.online") ? "-staging"
+        : "";
       const callbackUrl = isLocal
         ? `${window.location.origin}/sf/${slug}/auth/callback?next=/`
-        : `https://${slug}.ids.online/auth/callback?next=/`;
+        : `https://${slug}${envSuffix}.ids.online/auth/callback?next=/`;
 
       const { error: otpError } = await supabase.auth.signInWithOtp({
         email: email.trim().toLowerCase(),
