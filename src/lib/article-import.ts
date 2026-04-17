@@ -89,41 +89,81 @@ export interface ParseResult {
 }
 
 /**
+ * Parse a single CSV line respecting quoted fields.
+ * Handles double-quote escaping ("") inside quoted fields.
+ */
+function parseCsvLine(line: string, delimiter: string): string[] {
+  const fields: string[] = [];
+  let current = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (i + 1 < line.length && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        current += ch;
+      }
+    } else {
+      if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === delimiter) {
+        fields.push(current);
+        current = "";
+      } else {
+        current += ch;
+      }
+    }
+  }
+  fields.push(current);
+  return fields;
+}
+
+/**
  * Parses an uploaded file buffer (CSV or Excel) into article rows.
  * Deduplicates by article_number (last row wins, per spec EC-2).
  */
 export function parseArticleFile(buffer: Buffer, filename: string): ParseResult {
   const errors: string[] = [];
-  const isExcel = /\.xlsx?$/i.test(filename);
 
-  // Parse with xlsx (handles both CSV and Excel)
-  // For CSV files: detect delimiter (semicolon or comma) from the first line
   const isCsv = /\.csv$/i.test(filename);
-  let FS: string | undefined;
+  let rawData: string[][];
+
   if (isCsv) {
-    const firstLine = buffer.toString("utf-8").split(/\r?\n/)[0] ?? "";
-    // Use semicolon if it appears more often than comma in the header row
-    FS = (firstLine.split(";").length > firstLine.split(",").length) ? ";" : ",";
-  }
-  const workbook = XLSX.read(buffer, {
-    type: "buffer",
-    codepage: 65001, // UTF-8
-    raw: true,
-    FS,
-  });
+    // Parse CSV ourselves to reliably handle semicolon delimiters
+    const content = buffer.toString("utf-8").replace(/^\uFEFF/, "");
+    const lines = content.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length === 0) {
+      return { rows: [], errors: ["Datei ist leer."], detectedHeaders: [] };
+    }
+    const firstLine = lines[0];
+    const delimiter = (firstLine.split(";").length > firstLine.split(",").length) ? ";" : ",";
+    rawData = lines.map(line => parseCsvLine(line, delimiter));
+  } else {
+    // Use xlsx for Excel files
+    const workbook = XLSX.read(buffer, {
+      type: "buffer",
+      codepage: 65001,
+      raw: true,
+    });
 
-  const sheetName = workbook.SheetNames[0];
-  if (!sheetName) {
-    return { rows: [], errors: ["Datei enthält keine Tabellenblätter."], detectedHeaders: [] };
-  }
+    const sheetName = workbook.SheetNames[0];
+    if (!sheetName) {
+      return { rows: [], errors: ["Datei enthält keine Tabellenblätter."], detectedHeaders: [] };
+    }
 
-  const sheet = workbook.Sheets[sheetName];
-  // Convert to array of arrays (first row = headers)
-  const rawData: string[][] = XLSX.utils.sheet_to_json(sheet, {
-    header: 1,
-    defval: "",
-    blankrows: false,
-  }) as string[][];
+    const sheet = workbook.Sheets[sheetName];
+    rawData = XLSX.utils.sheet_to_json(sheet, {
+      header: 1,
+      defval: "",
+      blankrows: false,
+    }) as string[][];
+  }
 
   if (rawData.length < 2) {
     return {
@@ -134,7 +174,7 @@ export function parseArticleFile(buffer: Buffer, filename: string): ParseResult 
   }
 
   // Map headers to canonical field names
-  // Strip BOM (\uFEFF) that may be present on the first header from UTF-8 CSV exports
+  // Strip BOM (\uFEFF) that may still be present on first header from Excel reads
   const rawHeaders = rawData[0].map((h, i) => {
     let val = String(h).trim();
     if (i === 0) val = val.replace(/^\uFEFF/, "");
