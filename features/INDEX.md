@@ -81,10 +81,8 @@
 | OPH-67 | Tenant User Dashboard | Planned | [OPH-67-tenant-dashboard.md](OPH-67-tenant-dashboard.md) | 2026-04-16 |
 | OPH-68 | Dealer Filter Dropdown on Orders Page | In Progress | [OPH-68-dealer-filter-orders.md](OPH-68-dealer-filter-orders.md) | 2026-04-15 |
 | OPH-69 | Image Extraction from Inbound Emails | In Progress | [OPH-69-image-extraction-from-emails.md](OPH-69-image-extraction-from-emails.md) | 2026-04-16 |
-
-<!-- Add features above this line -->
-
 | OPH-70 | Inline Email Body Text Preview in Dokument-Vorschau | In Progress | [OPH-70-email-body-text-preview.md](OPH-70-email-body-text-preview.md) | 2026-04-16 |
+| OPH-71 | Excel File Preview in Dokument-Vorschau | In Progress | [OPH-71-excel-preview.md](OPH-71-excel-preview.md) | 2026-04-17 |
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-71
+## Next Available ID: OPH-72
