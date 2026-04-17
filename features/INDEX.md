@@ -90,8 +90,8 @@
 | OPH-76 | Salesforce App: Article Search & Browse (SF-5) | In Progress | [OPH-76-salesforce-article-search.md](OPH-76-salesforce-article-search.md) | 2026-04-17 |
 | OPH-77 | Salesforce App: Shopping Basket (SF-6) | In Progress | [OPH-77-salesforce-shopping-basket.md](OPH-77-salesforce-shopping-basket.md) | 2026-04-17 |
 | OPH-78 | Salesforce App: Checkout — Dealer Identification (SF-7) | In Progress | [OPH-78-salesforce-checkout-dealer.md](OPH-78-salesforce-checkout-dealer.md) | 2026-04-17 |
-| OPH-79 | Salesforce App: Checkout — Delivery & Notes (SF-8) | Planned | [OPH-79-salesforce-checkout-delivery-notes.md](OPH-79-salesforce-checkout-delivery-notes.md) | 2026-04-17 |
-| OPH-80 | Salesforce App: Order Submission (SF-9) | Planned | [OPH-80-salesforce-order-submission.md](OPH-80-salesforce-order-submission.md) | 2026-04-17 |
+| OPH-79 | Salesforce App: Checkout — Delivery & Notes (SF-8) | In Review | [OPH-79-salesforce-checkout-delivery-notes.md](OPH-79-salesforce-checkout-delivery-notes.md) | 2026-04-17 |
+| OPH-80 | Salesforce App: Order Submission (SF-9) | In Progress | [OPH-80-salesforce-order-submission.md](OPH-80-salesforce-order-submission.md) | 2026-04-17 |
 | OPH-81 | Salesforce App: Order History & Reorder (SF-10) | Planned | [OPH-81-salesforce-order-history.md](OPH-81-salesforce-order-history.md) | 2026-04-17 |
 <!-- Add features above this line -->
 

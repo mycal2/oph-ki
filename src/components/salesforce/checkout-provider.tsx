@@ -22,6 +22,15 @@ export interface ManualDealerInfo {
   address: string;
 }
 
+/** OPH-79: Structured delivery address for alternate shipping location. */
+export interface DeliveryAddress {
+  companyName: string;
+  street: string;
+  zipCode: string;
+  city: string;
+  country: string;
+}
+
 /** All checkout state shared across steps OPH-78, OPH-79, OPH-80. */
 export interface CheckoutState {
   /** The method used to identify the dealer. */
@@ -31,7 +40,7 @@ export interface CheckoutState {
   /** Manual dealer info (if dealer is not in the system). */
   manualDealer: ManualDealerInfo | null;
   /** Delivery address (OPH-79). */
-  deliveryAddress: string;
+  deliveryAddress: DeliveryAddress | null;
   /** Order notes (OPH-79). */
   notes: string;
 }
@@ -46,7 +55,7 @@ export interface CheckoutContextValue extends CheckoutState {
   /** Clear the dealer identification (reset to initial state). */
   clearDealerIdentification: () => void;
   /** Set delivery address (OPH-79). */
-  setDeliveryAddress: (address: string) => void;
+  setDeliveryAddress: (address: DeliveryAddress | null) => void;
   /** Set notes (OPH-79). */
   setNotes: (notes: string) => void;
   /** Whether a dealer has been identified (any method). */
@@ -73,7 +82,7 @@ const INITIAL_STATE: CheckoutState = {
   identificationMethod: null,
   selectedCustomer: null,
   manualDealer: null,
-  deliveryAddress: "",
+  deliveryAddress: null,
   notes: "",
 };
 
@@ -123,7 +132,7 @@ export function CheckoutProvider({ children }: CheckoutProviderProps) {
     }));
   }, []);
 
-  const setDeliveryAddress = useCallback((address: string) => {
+  const setDeliveryAddress = useCallback((address: DeliveryAddress | null) => {
     setState((prev) => ({ ...prev, deliveryAddress: address }));
   }, []);
 
