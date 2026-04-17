@@ -2,7 +2,7 @@
 
 import { use, useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Power, PowerOff } from "lucide-react";
+import { ArrowLeft, Power, PowerOff, Info } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,10 @@ import { TenantProfileForm, TenantProfileFormSkeleton } from "@/components/admin
 import { TenantUsersTab } from "@/components/admin/tenant-users-tab";
 import { ArticleCatalogPage } from "@/components/article-catalog/article-catalog-page";
 import { CustomerCatalogPage } from "@/components/customer-catalog/customer-catalog-page";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Tenant, TenantStatus } from "@/lib/types";
 import type { UpdateTenantInput } from "@/lib/validations";
 
@@ -34,7 +38,7 @@ const STATUS_BADGES: Record<TenantStatus, { label: string; className: string }> 
   trial: { label: "Testphase", className: "bg-yellow-100 text-yellow-800" },
 };
 
-const VALID_TABS = ["profile", "users", "articles", "customers"] as const;
+const VALID_TABS = ["profile", "users", "articles", "customers", "salesforce"] as const;
 type TabValue = (typeof VALID_TABS)[number];
 
 interface PageProps {
@@ -63,6 +67,11 @@ export default function AdminTenantDetailPage({ params }: PageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // OPH-73: Salesforce App config state
+  const [salesforceEnabled, setSalesforceEnabled] = useState(false);
+  const [salesforceSlug, setSalesforceSlug] = useState("");
+  const [isSavingSalesforce, setIsSavingSalesforce] = useState(false);
+
   // Tab state from URL
   const tabParam = searchParams.get("tab");
   const activeTab: TabValue =
@@ -84,6 +93,8 @@ export default function AdminTenantDetailPage({ params }: PageProps) {
       const data = await fetchTenant(tenantId);
       if (data) {
         setTenant(data);
+        setSalesforceEnabled(data.salesforce_enabled);
+        setSalesforceSlug(data.salesforce_slug ?? "");
       } else {
         setError("not_found");
       }
@@ -184,6 +195,20 @@ export default function AdminTenantDetailPage({ params }: PageProps) {
     },
     [tenantId, resetPassword]
   );
+
+  // OPH-73: Save Salesforce config
+  const handleSaveSalesforce = useCallback(async () => {
+    setIsSavingSalesforce(true);
+    const result = await updateTenant(tenantId, {
+      salesforce_enabled: salesforceEnabled,
+      salesforce_slug: salesforceSlug || null,
+    });
+    if (result) {
+      setTenant(result);
+      toast.success("Salesforce-Konfiguration gespeichert.");
+    }
+    setIsSavingSalesforce(false);
+  }, [tenantId, salesforceEnabled, salesforceSlug, updateTenant]);
 
   // Loading state
   if (isLoadingRole || isLoading) {
@@ -353,6 +378,7 @@ export default function AdminTenantDetailPage({ params }: PageProps) {
           <TabsTrigger value="users">Benutzer</TabsTrigger>
           <TabsTrigger value="articles">Artikelstamm</TabsTrigger>
           <TabsTrigger value="customers">Kundenstamm</TabsTrigger>
+          <TabsTrigger value="salesforce">Salesforce</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile" className="mt-6">
@@ -383,6 +409,68 @@ export default function AdminTenantDetailPage({ params }: PageProps) {
 
         <TabsContent value="customers" className="mt-6">
           <CustomerCatalogPage adminTenantId={tenantId} adminTenantName={tenant?.name} />
+        </TabsContent>
+
+        <TabsContent value="salesforce" className="mt-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base">Salesforce App</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Ermöglicht dem Außendienst, Bestellungen direkt über eine mobile App einzugeben.
+                  </p>
+                </div>
+                <Switch
+                  checked={salesforceEnabled}
+                  onCheckedChange={setSalesforceEnabled}
+                />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className={`space-y-4 ${!salesforceEnabled ? "opacity-50 pointer-events-none" : ""}`}>
+                <div className="space-y-2">
+                  <Label htmlFor="salesforce-slug">Subdomain-Slug</Label>
+                  <Input
+                    id="salesforce-slug"
+                    value={salesforceSlug}
+                    onChange={(e) => setSalesforceSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                    placeholder="z.B. meisinger"
+                    disabled={!salesforceEnabled}
+                    maxLength={30}
+                  />
+                  {salesforceSlug.length > 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      URL: <span className="font-mono text-foreground">{salesforceSlug}.ids.online</span>
+                    </p>
+                  )}
+                  {salesforceSlug.length > 0 && salesforceSlug.length < 3 && (
+                    <p className="text-sm text-destructive">Mindestens 3 Zeichen erforderlich.</p>
+                  )}
+                </div>
+
+                {salesforceEnabled && salesforceSlug.length >= 3 && (
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertDescription>
+                      Außendienst-Benutzer können sich über{" "}
+                      <span className="font-mono font-medium">{salesforceSlug}.ids.online</span>{" "}
+                      per Magic Link einloggen. Benutzer werden im Tab &quot;Benutzer&quot; mit der Rolle &quot;Außendienst&quot; angelegt.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <Button
+                  onClick={handleSaveSalesforce}
+                  disabled={isSavingSalesforce || (salesforceEnabled && salesforceSlug.length > 0 && salesforceSlug.length < 3)}
+                >
+                  {isSavingSalesforce ? "Speichern..." : "Speichern"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 

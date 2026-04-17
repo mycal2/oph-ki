@@ -77,6 +77,11 @@ export async function updateSession(request: NextRequest) {
     url.pathname.startsWith(route)
   );
 
+  // OPH-72: Block direct access to /sf/ from non-Salesforce hosts
+  if (url.pathname.startsWith("/sf") && !isSalesforceSubdomain) {
+    return NextResponse.rewrite(new URL("/not-found", request.url));
+  }
+
   // API routes handle their own auth
   const isApiRoute = url.pathname.startsWith("/api/");
   if (isApiRoute) {
@@ -222,6 +227,22 @@ export async function updateSession(request: NextRequest) {
         new URL("https://oph-ki.ids.online/dashboard")
       );
     }
+  }
+
+  // OPH-72: Rewrite Salesforce subdomain requests to /sf/[slug]/...
+  // e.g. meisinger.ids.online/basket → /sf/meisinger/basket (internal rewrite)
+  // This runs after all auth checks so cookies are properly set.
+  if (isSalesforceSubdomain && salesforceSubdomain) {
+    const sfPath = url.pathname === "/" ? "" : url.pathname;
+    const rewriteUrl = request.nextUrl.clone();
+    rewriteUrl.pathname = `/sf/${salesforceSubdomain}${sfPath}`;
+
+    const response = NextResponse.rewrite(rewriteUrl);
+    // Carry over any cookies set by Supabase auth refresh
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      response.cookies.set(cookie.name, cookie.value);
+    });
+    return response;
   }
 
   return supabaseResponse;
