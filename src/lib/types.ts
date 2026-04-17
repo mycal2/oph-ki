@@ -752,7 +752,7 @@ export interface ErpConfigSavePayload {
  * OPH-10: Email Ingestion types.
  */
 
-export type OrderSource = "web_upload" | "email_inbound";
+export type OrderSource = "web_upload" | "email_inbound" | "salesforce_app";
 export type QuarantineReviewStatus = "pending" | "approved" | "rejected";
 
 /** Quarantined email entry for admin review. */
@@ -1140,4 +1140,14 @@ export interface AdminDashboardStats {
   lineDistribution: LineDistribution;
   /** Revenue KPI (filtered by selected period). */
   revenue: RevenueBreakdown;
+}
+
+// ---------------------------------------------------------------------------
+// OPH-80: Salesforce App Order Submission types
+// ---------------------------------------------------------------------------
+
+/** Response from POST /api/sf/orders (Salesforce App order submission). */
+export interface SalesforceOrderResponse {
+  orderId: string;
+  confidenceScore: number;
 }

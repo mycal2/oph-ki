@@ -1131,3 +1131,50 @@ export const billingReportSchema = z.object({
 );
 
 export type BillingReportInput = z.infer<typeof billingReportSchema>;
+
+// ---------------------------------------------------------------------------
+// OPH-80: Salesforce App Order Submission
+// ---------------------------------------------------------------------------
+
+const sfLineItemSchema = z.object({
+  articleId: z.string().min(1, "Artikel-ID fehlt."),
+  articleNumber: z.string().min(1, "Artikelnummer fehlt."),
+  name: z.string().min(1, "Artikelname fehlt."),
+  quantity: z.number().int().min(1, "Menge muss mindestens 1 sein."),
+});
+
+const sfDealerCustomerSchema = z.object({
+  method: z.literal("customer_number").or(z.literal("dropdown")),
+  customerId: z.string().min(1, "Kunden-ID fehlt."),
+  customerNumber: z.string().min(1, "Kundennummer fehlt."),
+  companyName: z.string().min(1, "Firmenname fehlt."),
+});
+
+const sfDealerManualSchema = z.object({
+  method: z.literal("manual"),
+  companyName: z.string().min(1, "Firmenname ist erforderlich."),
+  contactPerson: z.string().optional().default(""),
+  email: z.string().optional().default(""),
+  phone: z.string().optional().default(""),
+  address: z.string().optional().default(""),
+});
+
+const sfDeliveryAddressSchema = z.object({
+  companyName: z.string().max(255).optional().default(""),
+  street: z.string().max(255).optional().default(""),
+  zipCode: z.string().max(10).optional().default(""),
+  city: z.string().max(255).optional().default(""),
+  country: z.string().max(255).optional().default("Deutschland"),
+}).nullable().optional();
+
+/** Validation schema for POST /api/sf/orders (Salesforce App order submission). */
+export const sfOrderSubmitSchema = z.object({
+  lineItems: z
+    .array(sfLineItemSchema)
+    .min(1, "Mindestens ein Artikel muss im Warenkorb sein."),
+  dealer: z.discriminatedUnion("method", [sfDealerCustomerSchema, sfDealerManualSchema]),
+  deliveryAddress: sfDeliveryAddressSchema,
+  notes: z.string().max(500, "Bemerkungen duerfen maximal 500 Zeichen lang sein.").optional().default(""),
+});
+
+export type SfOrderSubmitInput = z.infer<typeof sfOrderSubmitSchema>;
