@@ -22,6 +22,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   ChevronDown,
+  Briefcase,
 } from "lucide-react";
 import {
   Sidebar,
@@ -262,8 +263,11 @@ function PlatformSubGroupItem({
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { isPlatformAdminOrViewer } = useCurrentUserRole();
+  const { role, isPlatformAdminOrViewer, salesforceEnabled } = useCurrentUserRole();
   const { setOpenMobile, isMobile } = useSidebar();
+
+  // OPH-74: Show Außendienst section for tenant admins when salesforce is enabled
+  const showAussendienst = role === "tenant_admin" && salesforceEnabled;
 
   function handleNavigate() {
     if (isMobile) {
@@ -303,6 +307,29 @@ export function AppSidebar() {
             </SidebarGroupContent>
           </SidebarGroup>
         ))}
+
+        {/* OPH-74: Außendienst section for tenant admins with Salesforce enabled */}
+        {showAussendienst && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Außendienst</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive("/settings/aussendienstler", pathname)}
+                    tooltip="Außendienstler"
+                  >
+                    <Link href="/settings/aussendienstler" onClick={handleNavigate}>
+                      <Briefcase />
+                      <span>Außendienstler</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {isPlatformAdminOrViewer && (
           <SidebarGroup>

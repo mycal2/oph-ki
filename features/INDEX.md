@@ -85,8 +85,8 @@
 | OPH-71 | Excel File Preview in Dokument-Vorschau | In Progress | [OPH-71-excel-preview.md](OPH-71-excel-preview.md) | 2026-04-17 |
 | OPH-72 | Salesforce App: Per-Tenant Subdomain Routing & Layout (SF-1) | In Progress | [OPH-72-salesforce-subdomain-routing.md](OPH-72-salesforce-subdomain-routing.md) | 2026-04-17 |
 | OPH-73 | Salesforce App: Sales Rep Role & Tenant Feature Flag (SF-2) | In Progress | [OPH-73-salesforce-role-feature-flag.md](OPH-73-salesforce-role-feature-flag.md) | 2026-04-17 |
-| OPH-74 | Salesforce App: Sales Rep User Management in OPH (SF-3) | Planned | [OPH-74-salesforce-user-management.md](OPH-74-salesforce-user-management.md) | 2026-04-17 |
-| OPH-75 | Salesforce App: Magic Link Authentication (SF-4) | Planned | [OPH-75-salesforce-magic-link-auth.md](OPH-75-salesforce-magic-link-auth.md) | 2026-04-17 |
+| OPH-74 | Salesforce App: Sales Rep User Management in OPH (SF-3) | In Review | [OPH-74-salesforce-user-management.md](OPH-74-salesforce-user-management.md) | 2026-04-17 |
+| OPH-75 | Salesforce App: Magic Link Authentication (SF-4) | In Progress | [OPH-75-salesforce-magic-link-auth.md](OPH-75-salesforce-magic-link-auth.md) | 2026-04-17 |
 | OPH-76 | Salesforce App: Article Search & Browse (SF-5) | Planned | [OPH-76-salesforce-article-search.md](OPH-76-salesforce-article-search.md) | 2026-04-17 |
 | OPH-77 | Salesforce App: Shopping Basket (SF-6) | Planned | [OPH-77-salesforce-shopping-basket.md](OPH-77-salesforce-shopping-basket.md) | 2026-04-17 |
 | OPH-78 | Salesforce App: Checkout — Dealer Identification (SF-7) | Planned | [OPH-78-salesforce-checkout-dealer.md](OPH-78-salesforce-checkout-dealer.md) | 2026-04-17 |

@@ -1,17 +1,61 @@
-import { Mail } from "lucide-react";
+import { Suspense } from "react";
+import { SalesforceLoginForm } from "@/components/salesforce/salesforce-login-form";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+
+interface SalesforceLoginPageProps {
+  params: Promise<{ slug: string }>;
+}
 
 /**
- * OPH-72: Salesforce App login page (placeholder).
- * Will become the magic link login in SF-4 (OPH-75).
+ * OPH-75: Salesforce App login page.
+ *
+ * Server component that resolves the tenant from the URL slug,
+ * then renders the magic link login form with tenant branding.
  */
-export default function SalesforceLoginPage() {
+export async function generateMetadata({ params }: SalesforceLoginPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const adminClient = createAdminClient();
+  const { data: tenant } = await adminClient
+    .from("tenants")
+    .select("name")
+    .eq("salesforce_slug", slug)
+    .eq("salesforce_enabled", true)
+    .single();
+
+  return {
+    title: tenant
+      ? `Anmelden | ${tenant.name}`
+      : "Anmelden | Salesforce App",
+    description: "Melden Sie sich mit einem Magic Link an.",
+  };
+}
+
+export default async function SalesforceLoginPage({ params }: SalesforceLoginPageProps) {
+  const { slug } = await params;
+
+  // Resolve tenant from slug to get the name for display
+  const adminClient = createAdminClient();
+  const { data: tenant } = await adminClient
+    .from("tenants")
+    .select("id, name, salesforce_enabled, salesforce_slug")
+    .eq("salesforce_slug", slug)
+    .eq("salesforce_enabled", true)
+    .single();
+
+  if (!tenant) {
+    notFound();
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center py-20 text-center">
-      <Mail className="h-12 w-12 text-muted-foreground/40 mb-4" />
-      <h1 className="text-xl font-semibold mb-2">Anmeldung</h1>
-      <p className="text-sm text-muted-foreground">
-        Magic-Link-Authentifizierung wird in Kürze freigeschaltet.
-      </p>
+    <div className="flex flex-col items-center justify-center py-12">
+      <Suspense>
+        <SalesforceLoginForm
+          tenantName={tenant.name as string}
+          slug={slug}
+        />
+      </Suspense>
     </div>
   );
 }
