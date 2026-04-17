@@ -87,8 +87,8 @@
 | OPH-73 | Salesforce App: Sales Rep Role & Tenant Feature Flag (SF-2) | In Progress | [OPH-73-salesforce-role-feature-flag.md](OPH-73-salesforce-role-feature-flag.md) | 2026-04-17 |
 | OPH-74 | Salesforce App: Sales Rep User Management in OPH (SF-3) | In Review | [OPH-74-salesforce-user-management.md](OPH-74-salesforce-user-management.md) | 2026-04-17 |
 | OPH-75 | Salesforce App: Magic Link Authentication (SF-4) | In Progress | [OPH-75-salesforce-magic-link-auth.md](OPH-75-salesforce-magic-link-auth.md) | 2026-04-17 |
-| OPH-76 | Salesforce App: Article Search & Browse (SF-5) | Planned | [OPH-76-salesforce-article-search.md](OPH-76-salesforce-article-search.md) | 2026-04-17 |
-| OPH-77 | Salesforce App: Shopping Basket (SF-6) | Planned | [OPH-77-salesforce-shopping-basket.md](OPH-77-salesforce-shopping-basket.md) | 2026-04-17 |
+| OPH-76 | Salesforce App: Article Search & Browse (SF-5) | In Progress | [OPH-76-salesforce-article-search.md](OPH-76-salesforce-article-search.md) | 2026-04-17 |
+| OPH-77 | Salesforce App: Shopping Basket (SF-6) | In Progress | [OPH-77-salesforce-shopping-basket.md](OPH-77-salesforce-shopping-basket.md) | 2026-04-17 |
 | OPH-78 | Salesforce App: Checkout — Dealer Identification (SF-7) | Planned | [OPH-78-salesforce-checkout-dealer.md](OPH-78-salesforce-checkout-dealer.md) | 2026-04-17 |
 | OPH-79 | Salesforce App: Checkout — Delivery & Notes (SF-8) | Planned | [OPH-79-salesforce-checkout-delivery-notes.md](OPH-79-salesforce-checkout-delivery-notes.md) | 2026-04-17 |
 | OPH-80 | Salesforce App: Order Submission (SF-9) | Planned | [OPH-80-salesforce-order-submission.md](OPH-80-salesforce-order-submission.md) | 2026-04-17 |

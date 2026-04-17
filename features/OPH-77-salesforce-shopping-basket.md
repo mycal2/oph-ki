@@ -1,6 +1,6 @@
 # OPH-77: Salesforce App — Shopping Basket (SF-6)
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-04-17
 **Last Updated:** 2026-04-17
 **PRD:** [Salesforce App PRD](../docs/AD-PRD.md)
@@ -36,7 +36,71 @@
 ---
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Overview
+The `useBasket` hook from OPH-76 already has all operations. The challenge is sharing state across the app (search adds items, header shows count, basket page shows list). The solution is converting the local hook into a React Context so all three read from the same state.
+
+---
+
+### A) Basket Context Architecture
+
+```
+sf/[slug]/layout.tsx      (server component — stays server-side for tenant resolution)
+  └── BasketProvider       (NEW client wrapper — holds shared basket state)
+       ├── SalesforceHeader  (MODIFY — reads itemCount, shows badge + link to /basket)
+       └── {children}        (search page + basket page both read from same context)
+```
+
+---
+
+### B) Component Structure
+
+```
+SalesforceHeader (MODIFY)
++-- IDS.online logo (left)
++-- [basket icon + count badge]  ← NEW, navigates to /basket
++-- Tenant logo + logout (right)
+
+sf/[slug]/basket/page.tsx (NEW)
++-- BasketView (NEW client component)
+    +-- "3 Artikel" total count
+    +-- Scrollable basket item list
+    |   +-- BasketItemRow: article number, name, [-][qty][+], [×] remove
+    +-- Empty state: "Ihr Warenkorb ist leer" + link back to search
+    +-- Sticky footer
+        +-- [Warenkorb leeren] (AlertDialog confirmation)
+        +-- [Zur Kasse →] (disabled when empty, links to /checkout in OPH-78)
+```
+
+---
+
+### C) Data Model
+
+In-memory React Context state only — no server calls, no database. Clears on tab close (acceptable for MVP per spec).
+
+```
+BasketItem: { article: ArticleCatalogItem, quantity: number }
+Basket: { items: BasketItem[], itemCount: number (sum of quantities) }
+```
+
+---
+
+### D) Files Changed
+
+| File | Change |
+|---|---|
+| `src/components/salesforce/basket-provider.tsx` | NEW: React Context holding basket state |
+| `src/hooks/use-basket.ts` | MODIFY: Convert from local state to context consumer |
+| `src/app/sf/[slug]/layout.tsx` | MODIFY: Wrap children with `<BasketProvider>` |
+| `src/components/salesforce/salesforce-header.tsx` | MODIFY: Add basket icon + count badge + link to `/basket` |
+| `src/app/sf/[slug]/basket/page.tsx` | NEW: Basket route |
+| `src/components/salesforce/basket-view.tsx` | NEW: Basket list, quantity controls, sticky footer |
+
+---
+
+### E) No New Dependencies
+
+React Context is built-in. All UI uses existing shadcn/ui: `Button`, `Badge`, `Input`, `AlertDialog`.
 
 ## QA Test Results
 _To be added by /qa_

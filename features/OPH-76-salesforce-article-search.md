@@ -1,6 +1,6 @@
 # OPH-76: Salesforce App — Article Search & Browse (SF-5)
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-04-17
 **Last Updated:** 2026-04-17
 **PRD:** [Salesforce App PRD](../docs/AD-PRD.md)
@@ -38,7 +38,64 @@
 ---
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Overview
+The Salesforce App home page (currently a placeholder) becomes a live article search page. The existing `/api/articles` endpoint is reused — it already handles auth, tenant scoping, and pagination for `sales_rep` users. One small extension: the current search covers 3 fields; spec requires all 8. The "Hinzufügen" button introduces a thin `useBasket` hook that OPH-77 will expand.
+
+---
+
+### A) Component Structure
+
+```
+sf/[slug]/page.tsx              ← MODIFY: Replace placeholder with <ArticleSearch />
+  +-- ArticleSearch             ← NEW: Mobile-first search client component
+      +-- Search bar (auto-focused)
+      +-- Hint ("Mindestens 2 Zeichen eingeben") shown for 0–1 chars
+      +-- Loading skeleton (while fetching)
+      +-- ArticleResultCard (one per result)
+      |     +-- Article number (bold) + name
+      |     +-- Packaging / size details (muted text)
+      |     +-- [Hinzufügen] button → calls useBasket().addToBasket(article)
+      +-- "Keine Artikel gefunden" (empty search result)
+      +-- "Noch keine Artikel vorhanden" (catalog is empty)
+      +-- "Weitere laden" button (pagination, > 20 results)
+```
+
+---
+
+### B) Files Changed
+
+| File | Change |
+|---|---|
+| `src/app/sf/[slug]/page.tsx` | MODIFY: Render `<ArticleSearch />` instead of placeholder |
+| `src/components/salesforce/article-search.tsx` | NEW: Mobile-first search UI with debounce + article result cards |
+| `src/hooks/use-basket.ts` | NEW: Thin basket interface stub — `addToBasket(article)` + `itemCount`. OPH-77 expands this. |
+| `src/app/api/articles/route.ts` | MODIFY: Extend search OR-filter to include `gtin`, `ref_no`, `packaging`, `size1`, `size2` |
+
+---
+
+### C) Basket Interface (stub for OPH-77)
+
+`useBasket()` returns `addToBasket(article)` and `itemCount`. In OPH-76 this is a simple localStorage/in-memory store. OPH-77 expands it with quantity management, display, and checkout — no changes needed to the article card.
+
+---
+
+### D) Search Behaviour
+
+| Input | Behaviour |
+|---|---|
+| 0–1 chars | No API call, hint shown |
+| 2+ chars | API call after 300ms debounce |
+| Typing | Loading skeleton shown |
+| 0 results | "Keine Artikel gefunden" |
+| Empty catalog | "Noch keine Artikel vorhanden" |
+| > 20 results | "Weitere laden" pagination button |
+
+---
+
+### E) No New Dependencies
+
+Debouncing via `useRef` + `setTimeout` (standard React). All UI: existing shadcn/ui `Input`, `Card`, `Button`, `Skeleton`.
 
 ## QA Test Results
 _To be added by /qa_
