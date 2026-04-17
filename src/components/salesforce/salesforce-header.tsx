@@ -2,21 +2,27 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { LogOut } from "lucide-react";
+import Link from "next/link";
+import { LogOut, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/client";
+import { useBasket } from "@/hooks/use-basket";
 
 interface SalesforceHeaderProps {
   tenantName: string;
   tenantLogoUrl: string | null;
+  slug: string;
 }
 
 /**
- * OPH-72: Mobile-first header for the Salesforce App.
- * Shows IDS.online logo (left) and tenant manufacturer logo (right).
+ * OPH-72 + OPH-77: Mobile-first header for the Salesforce App.
+ * Shows IDS.online logo (left), basket icon with count badge (center-right),
+ * and tenant manufacturer logo + logout (right).
  */
-export function SalesforceHeader({ tenantName, tenantLogoUrl }: SalesforceHeaderProps) {
+export function SalesforceHeader({ tenantName, tenantLogoUrl, slug }: SalesforceHeaderProps) {
   const [logoError, setLogoError] = useState(false);
+  const { itemCount } = useBasket();
 
   const handleLogout = async () => {
     const supabase = createClient();
@@ -39,8 +45,30 @@ export function SalesforceHeader({ tenantName, tenantLogoUrl }: SalesforceHeader
           />
         </div>
 
-        {/* Right: Tenant logo + logout */}
-        <div className="flex items-center gap-3">
+        {/* Right: Basket icon + Tenant logo + logout */}
+        <div className="flex items-center gap-2">
+          {/* Basket icon with count badge */}
+          <Link href={`/sf/${slug}/basket`} aria-label="Warenkorb anzeigen">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative h-9 w-9"
+              asChild
+            >
+              <span>
+                <ShoppingCart className="h-5 w-5" />
+                {itemCount > 0 && (
+                  <Badge
+                    variant="destructive"
+                    className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold"
+                  >
+                    {itemCount > 99 ? "99+" : itemCount}
+                  </Badge>
+                )}
+              </span>
+            </Button>
+          </Link>
+
           {tenantLogoUrl && !logoError && (
             <Image
               src={tenantLogoUrl}

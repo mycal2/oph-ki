@@ -76,11 +76,20 @@ export async function GET(
       .order("article_number", { ascending: true })
       .range(offset, offset + pageSize - 1);
 
-    // Apply text search if provided
+    // Apply text search if provided (OPH-76: search across all catalog fields)
     if (search.length > 0) {
       const escaped = search.replace(/%/g, "\\%").replace(/_/g, "\\_");
       query = query.or(
-        `article_number.ilike.%${escaped}%,name.ilike.%${escaped}%,keywords.ilike.%${escaped}%`
+        [
+          `article_number.ilike.%${escaped}%`,
+          `name.ilike.%${escaped}%`,
+          `keywords.ilike.%${escaped}%`,
+          `gtin.ilike.%${escaped}%`,
+          `ref_no.ilike.%${escaped}%`,
+          `packaging.ilike.%${escaped}%`,
+          `size1.ilike.%${escaped}%`,
+          `size2.ilike.%${escaped}%`,
+        ].join(",")
       );
     }
 

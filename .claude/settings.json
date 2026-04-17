@@ -123,7 +123,13 @@
       "Skill(dealerrule)",
       "Skill(dealerrule:*)",
       "Bash(gh repo:*)",
-      "Edit(/.claude/skills/dealerrule/**)"
+      "Edit(/.claude/skills/dealerrule/**)",
+      "Bash(awk -F: '{print $1}')",
+      "Bash(python3 -c ':*)",
+      "Bash(echo \"---EXIT $?---\")",
+      "Bash(grep -r \"order_date\\\\|sender_email\\\\|message_id\\\\|extraction_metadata\" /Users/michaelmollath/projects/oph-ki/supabase/migrations/*.sql)",
+      "Bash(grep -r \"extracted_data\\\\|extraction_status\\\\|extraction_attempts\\\\|extraction_error\" /Users/michaelmollath/projects/oph-ki/supabase/migrations/*.sql)",
+      "Bash(grep -r \"ALTER TABLE public.orders\" /Users/michaelmollath/projects/oph-ki/supabase/migrations/*.sql)"
     ],
     "additionalDirectories": [
       "/Users/michaelmollath/projects/ai-coding-starter-kit/src/app/api/orders/[orderId]",
