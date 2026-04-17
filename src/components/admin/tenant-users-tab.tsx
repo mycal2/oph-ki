@@ -49,6 +49,7 @@ const ROLE_LABELS: Record<UserRole, string> = {
   tenant_admin: "Administrator",
   platform_admin: "Platform-Admin",
   platform_viewer: "Platform-Viewer",
+  sales_rep: "Außendienst",
 };
 
 const STATUS_BADGES: Record<

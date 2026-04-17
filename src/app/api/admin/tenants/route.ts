@@ -19,7 +19,7 @@ export async function GET(): Promise<NextResponse> {
     // Fetch all tenants (OPH-16: trial dates, OPH-29: erp_config_id)
     const { data: tenants, error: tenantsError } = await adminClient
       .from("tenants")
-      .select("id, name, slug, status, erp_type, contact_email, created_at, trial_started_at, trial_expires_at, allowed_email_domains, erp_config_id, logo_url, billing_model, setup_fee, monthly_fee, cost_per_order")
+      .select("id, name, slug, status, erp_type, contact_email, created_at, trial_started_at, trial_expires_at, allowed_email_domains, erp_config_id, logo_url, billing_model, setup_fee, monthly_fee, cost_per_order, salesforce_enabled, salesforce_slug")
       .order("name", { ascending: true })
       .limit(1000);
 
@@ -96,6 +96,9 @@ export async function GET(): Promise<NextResponse> {
         setup_fee: (t.setup_fee as number | null) ?? null,
         monthly_fee: (t.monthly_fee as number | null) ?? null,
         cost_per_order: (t.cost_per_order as number | null) ?? null,
+        // OPH-73: Salesforce App
+        salesforce_enabled: (t.salesforce_enabled as boolean) ?? false,
+        salesforce_slug: (t.salesforce_slug as string | null) ?? null,
       };
     });
 

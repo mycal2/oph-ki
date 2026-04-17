@@ -80,6 +80,7 @@ const ROLE_LABELS: Record<UserRole, string> = {
   tenant_admin: "Administrator",
   platform_admin: "Platform-Admin",
   platform_viewer: "Platform-Viewer",
+  sales_rep: "Außendienst",
 };
 
 const STATUS_BADGES: Record<UserStatus, { label: string; className: string }> = {
@@ -155,6 +156,9 @@ export function TenantFormSheet({
   // OPH-63: Email forwarding
   const [emailForwardingEnabled, setEmailForwardingEnabled] = useState(false);
   const [emailForwardingAddress, setEmailForwardingAddress] = useState("");
+  // OPH-73: Salesforce App
+  const [salesforceEnabled, setSalesforceEnabled] = useState(false);
+  const [salesforceSlug, setSalesforceSlug] = useState("");
   // OPH-28: ERP config selector
   const [erpConfigId, setErpConfigId] = useState<string | null>(null);
   const [erpConfigs, setErpConfigs] = useState<
@@ -229,6 +233,8 @@ export function TenantFormSheet({
     setEmailPostprocess(tenant.email_postprocess_enabled);
     setEmailForwardingEnabled(tenant.email_forwarding_enabled);
     setEmailForwardingAddress(tenant.email_forwarding_address ?? "");
+    setSalesforceEnabled(tenant.salesforce_enabled);
+    setSalesforceSlug(tenant.salesforce_slug ?? "");
     setErpConfigId(tenant.erp_config_id ?? null);
     setTenantName(tenant.name);
   }, []);
@@ -319,6 +325,8 @@ export function TenantFormSheet({
         email_postprocess_enabled: emailPostprocess,
         email_forwarding_enabled: emailForwardingEnabled,
         email_forwarding_address: emailForwardingAddress || null,
+        salesforce_enabled: salesforceEnabled,
+        salesforce_slug: salesforceSlug || null,
         erp_config_id: erpConfigId,
       };
       const result = await onSave(data, false);
@@ -440,6 +448,11 @@ export function TenantFormSheet({
                     {!isNew && (
                       <TabsTrigger value="articles" className="flex-1">
                         Artikelstamm
+                      </TabsTrigger>
+                    )}
+                    {!isNew && (
+                      <TabsTrigger value="salesforce" className="flex-1">
+                        Salesforce
                       </TabsTrigger>
                     )}
                   </TabsList>
@@ -934,6 +947,59 @@ export function TenantFormSheet({
                         adminTenantId={tenantId}
                         compact
                       />
+                    </TabsContent>
+                  )}
+
+                  {/* Tab: Salesforce App (OPH-73) */}
+                  {!isNew && (
+                    <TabsContent value="salesforce" className="px-6 pb-6 space-y-6 mt-0">
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label className="text-base font-medium">Salesforce App</Label>
+                            <p className="text-sm text-muted-foreground mt-0.5">
+                              Ermöglicht dem Außendienst, Bestellungen direkt über eine mobile App einzugeben.
+                            </p>
+                          </div>
+                          <Switch
+                            checked={salesforceEnabled}
+                            onCheckedChange={setSalesforceEnabled}
+                          />
+                        </div>
+
+                        <div className={`space-y-4 ${!salesforceEnabled ? "opacity-50 pointer-events-none" : ""}`}>
+                          <div className="space-y-2">
+                            <Label htmlFor="salesforce-slug">Subdomain-Slug</Label>
+                            <Input
+                              id="salesforce-slug"
+                              value={salesforceSlug}
+                              onChange={(e) => setSalesforceSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                              placeholder="z.B. meisinger"
+                              disabled={!salesforceEnabled}
+                              maxLength={30}
+                            />
+                            {salesforceSlug.length > 0 && (
+                              <p className="text-sm text-muted-foreground">
+                                URL: <span className="font-mono text-foreground">{salesforceSlug}.ids.online</span>
+                              </p>
+                            )}
+                            {salesforceSlug.length > 0 && salesforceSlug.length < 3 && (
+                              <p className="text-sm text-destructive">Mindestens 3 Zeichen erforderlich.</p>
+                            )}
+                          </div>
+
+                          {salesforceEnabled && salesforceSlug.length >= 3 && (
+                            <Alert>
+                              <Info className="h-4 w-4" />
+                              <AlertDescription>
+                                Außendienst-Benutzer können sich über{" "}
+                                <span className="font-mono font-medium">{salesforceSlug}.ids.online</span>{" "}
+                                per Magic Link einloggen. Benutzer werden im Tab &quot;Benutzer&quot; mit der Rolle &quot;Außendienst&quot; angelegt.
+                              </AlertDescription>
+                            </Alert>
+                          )}
+                        </div>
+                      </div>
                     </TabsContent>
                   )}
                 </ScrollArea>
