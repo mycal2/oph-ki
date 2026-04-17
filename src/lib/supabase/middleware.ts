@@ -54,14 +54,22 @@ export async function updateSession(request: NextRequest) {
 
   // OPH-73: Detect Salesforce App subdomain (*.ids.online)
   // Extract the subdomain from the host header. Ignore known OPH domains.
+  // Supports environment-suffixed subdomains: meisinger-dev.ids.online, meisinger-staging.ids.online
   const OPH_HOSTS = new Set([
     "localhost:3003", "localhost:3000",
     "oph-ki.ids.online", "oph-ki-dev.ids.online", "oph-ki-staging.ids.online",
   ]);
   const isSalesforceSubdomain = !OPH_HOSTS.has(hostname) &&
     (hostname.endsWith(".ids.online") || hostname.match(/^localhost:\d+$/) !== null && false);
+
+  // Detect environment suffix from hostname (works for both OPH and SF subdomains)
+  const envSuffix = hostname.includes("-dev.ids.online") ? "-dev"
+    : hostname.includes("-staging.ids.online") ? "-staging"
+    : "";
+
+  // Strip environment suffix to get canonical slug: meisinger-dev → meisinger
   const salesforceSubdomain = isSalesforceSubdomain
-    ? hostname.replace(".ids.online", "").toLowerCase()
+    ? hostname.replace(".ids.online", "").replace(/-(dev|staging)$/, "").toLowerCase()
     : null;
 
   // Public routes that do not require authentication
@@ -216,11 +224,12 @@ export async function updateSession(request: NextRequest) {
 
     if (role === "sales_rep") {
       // Sales reps on the OPH domain → redirect to their Salesforce subdomain
+      // Uses environment suffix so dev→dev, staging→staging, prod→prod
       // Skip all sales_rep redirects on localhost (allows testing both OPH and SF locally)
       if (!isSalesforceSubdomain && !isLocalhost) {
         if (userSalesforceSlug) {
           return NextResponse.redirect(
-            new URL(`https://${userSalesforceSlug}.ids.online/`)
+            new URL(`https://${userSalesforceSlug}${envSuffix}.ids.online/`)
           );
         }
         // No slug configured → sign out with error
@@ -240,9 +249,9 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.redirect(redirectUrl);
       }
     } else if (isSalesforceSubdomain) {
-      // Non-sales_rep user on a Salesforce subdomain → redirect to OPH
+      // Non-sales_rep user on a Salesforce subdomain → redirect to OPH (environment-aware)
       return NextResponse.redirect(
-        new URL("https://oph-ki.ids.online/dashboard")
+        new URL(`https://oph-ki${envSuffix}.ids.online/dashboard`)
       );
     }
   }

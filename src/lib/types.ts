@@ -1151,3 +1151,21 @@ export interface SalesforceOrderResponse {
   orderId: string;
   confidenceScore: number;
 }
+
+/** OPH-81: Single item in the Salesforce order history list. */
+export interface SalesforceOrderListItem {
+  id: string;
+  status: OrderStatus;
+  createdAt: string;
+  dealerName: string | null;
+  customerNumber: string | null;
+  lineItemCount: number;
+}
+
+/** OPH-81: Response from GET /api/sf/orders (order history). */
+export interface SalesforceOrderListResponse {
+  orders: SalesforceOrderListItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
