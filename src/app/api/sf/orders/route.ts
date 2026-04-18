@@ -379,7 +379,7 @@ export async function POST(
         extraction_status: "extracted",
         extracted_data: extractedData,
         extraction_error: null,
-        recognition_confidence: confidenceScore / 100,
+        recognition_confidence: confidenceScore,
         ...(dealerId ? { dealer_id: dealerId } : {}),
         recognition_method: dealerId ? "manual" : "none",
       })
