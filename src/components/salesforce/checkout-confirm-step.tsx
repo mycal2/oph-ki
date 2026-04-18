@@ -118,7 +118,7 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
           address: manualDealer.address,
         };
       } else {
-        setError("Haendler-Informationen fehlen. Bitte gehen Sie zurueck zu Schritt 1.");
+        setError("Kundeninformationen fehlen. Bitte gehen Sie zurück zu Schritt 1.");
         setIsSubmitting(false);
         return;
       }
@@ -217,7 +217,7 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
       {/* Progress indicator */}
       <div className="mb-6">
         <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-          <span className="text-muted-foreground">1. Haendler</span>
+          <span className="text-muted-foreground">1. Kunde</span>
           <Separator className="flex-1" />
           <span className="text-muted-foreground">2. Lieferung</span>
           <Separator className="flex-1" />
@@ -235,7 +235,7 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
           <div className="flex items-center gap-2 mb-2">
             <Building2 className="h-4 w-4 text-muted-foreground" />
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-              Haendler
+              Kunde
             </span>
             <Badge variant="secondary" className="text-[10px] ml-auto">
               {methodLabels[identificationMethod ?? ""] ?? "—"}

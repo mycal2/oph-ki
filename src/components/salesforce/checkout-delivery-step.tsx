@@ -115,7 +115,7 @@ export function CheckoutDeliveryStep({ slug }: CheckoutDeliveryStepProps) {
       {/* Progress indicator */}
       <div className="mb-6">
         <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-          <span className="text-muted-foreground">1. Händler</span>
+          <span className="text-muted-foreground">1. Kunde</span>
           <Separator className="flex-1" />
           <span className="font-semibold text-primary">2. Lieferung</span>
           <Separator className="flex-1" />
@@ -141,7 +141,7 @@ export function CheckoutDeliveryStep({ slug }: CheckoutDeliveryStepProps) {
                   Abweichende Lieferadresse
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Nur angeben, wenn die Lieferung nicht an die Händleradresse gehen soll.
+                  Nur angeben, wenn die Lieferung nicht an die Kundenadresse gehen soll.
                 </p>
               </div>
             </div>

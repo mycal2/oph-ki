@@ -68,17 +68,17 @@ export function CheckoutDealerStep({ slug, hasCustomers }: CheckoutDealerStepPro
       {/* Progress indicator */}
       <div className="mb-6">
         <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-          <span className="font-semibold text-primary">1. Händler</span>
+          <span className="font-semibold text-primary">1. Kunde</span>
           <Separator className="flex-1" />
           <span>2. Lieferung</span>
           <Separator className="flex-1" />
           <span>3. Bestätigung</span>
         </div>
-        <h1 className="text-lg font-semibold">Händler identifizieren</h1>
+        <h1 className="text-lg font-semibold">Kunde auswählen</h1>
         <p className="text-sm text-muted-foreground">
           {hasCustomers
-            ? "Suchen Sie nach Kundennummer oder Händlername."
-            : "Geben Sie die Händlerdaten manuell ein."}
+            ? "Suchen Sie nach Kundennummer oder Kundenname."
+            : "Geben Sie die Kundendaten manuell ein."}
         </p>
       </div>
 
@@ -275,14 +275,14 @@ function DealerSearch({ onSelect, onNotFound }: DealerSearchProps) {
         <Input
           ref={inputRef}
           type="text"
-          placeholder="Kundennummer oder Händlername..."
+          placeholder="Kundennummer oder Kundenname..."
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
             setSelectedId(null);
           }}
           className="pl-9 h-12 text-base"
-          aria-label="Händler suchen"
+          aria-label="Kunde suchen"
           autoComplete="off"
           autoCorrect="off"
           spellCheck={false}
@@ -378,7 +378,7 @@ function DealerSearch({ onSelect, onNotFound }: DealerSearchProps) {
       {!isLoading && hasSearched && results.length === 0 && (
         <div className="mt-3 flex items-center gap-2 rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
           <AlertCircle className="h-4 w-4 shrink-0" />
-          <span>Kein Händler gefunden.</span>
+          <span>Kein Kunde gefunden.</span>
         </div>
       )}
 
@@ -390,7 +390,7 @@ function DealerSearch({ onSelect, onNotFound }: DealerSearchProps) {
           onClick={onNotFound}
         >
           <UserPlus className="h-4 w-4" />
-          Händler manuell eingeben
+          Kunde manuell eingeben
         </Button>
       )}
     </div>
@@ -430,7 +430,7 @@ function ManualDealerEntry({ onSubmit, initialValues }: ManualDealerEntryProps) 
     <div>
       <div className="flex items-center gap-2 mb-3">
         <Building2 className="h-4 w-4 text-muted-foreground" />
-        <h2 className="text-sm font-semibold">Händler manuell eingeben</h2>
+        <h2 className="text-sm font-semibold">Kunde manuell eingeben</h2>
       </div>
 
       <div className="space-y-4">
@@ -498,7 +498,7 @@ function ManualDealerEntry({ onSubmit, initialValues }: ManualDealerEntryProps) 
           className="w-full font-semibold"
         >
           <Building2 className="h-4 w-4" />
-          Händler übernehmen
+          Kunde übernehmen
         </Button>
       </div>
     </div>
@@ -531,7 +531,7 @@ function DealerSummaryCard({ customer, manualDealer, method, onReset }: DealerSu
             <div className="flex items-center gap-2 mb-2">
               <Check className="h-4 w-4 text-primary shrink-0" />
               <span className="text-xs font-semibold text-primary">
-                Händler identifiziert
+                Kunde ausgewählt
               </span>
               <Badge variant="secondary" className="text-[10px]">
                 {methodLabels[method]}
