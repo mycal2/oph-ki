@@ -105,7 +105,7 @@ export function BasketView({ slug }: BasketViewProps) {
           {/* Checkout button */}
           <Button className="flex-1 font-semibold" asChild>
             <Link href={`${basePath}/checkout`}>
-              Zur Kasse
+              Bestellung einleiten
               <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>
