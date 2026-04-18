@@ -94,6 +94,7 @@
 | OPH-80 | Salesforce App: Order Submission (SF-9) | In Review | [OPH-80-salesforce-order-submission.md](OPH-80-salesforce-order-submission.md) | 2026-04-17 |
 | OPH-81 | Salesforce App: Order History & Reorder (SF-10) | In Progress | [OPH-81-salesforce-order-history.md](OPH-81-salesforce-order-history.md) | 2026-04-17 |
 | OPH-82 | Außendienstler Menu in Stammdaten Sidebar Section | In Review | [OPH-82-aussendienstler-stammdaten-sidebar.md](OPH-82-aussendienstler-stammdaten-sidebar.md) | 2026-04-17 |
+| OPH-83 | Show Sales Rep Identity on Salesforce App Orders | In Review | [OPH-83-salesforce-order-submitter-visibility.md](OPH-83-salesforce-order-submitter-visibility.md) | 2026-04-18 |
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-83
+## Next Available ID: OPH-84

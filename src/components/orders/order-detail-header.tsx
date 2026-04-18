@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Calendar, FileText, Mail, Trash2, User } from "lucide-react";
+import { Calendar, FileText, Mail, Smartphone, Trash2, User } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -151,11 +151,17 @@ export function OrderDetailHeader({
                 <Calendar className="h-3.5 w-3.5" />
                 {formatDate(order.created_at)}
               </span>
-              {order.uploaded_by_name && (
+              {(order.uploaded_by_name || order.source === "salesforce_app") && (
                 <span className="flex items-center gap-1.5">
                   <User className="h-3.5 w-3.5" />
-                  {order.uploaded_by_name}
+                  {order.uploaded_by_name ?? "Unbekannt"}
                 </span>
+              )}
+              {order.source === "salesforce_app" && (
+                <Badge variant="secondary" className="text-[10px] gap-1">
+                  <Smartphone className="h-3 w-3" />
+                  Salesforce App
+                </Badge>
               )}
               {order.files.length > 1 && (
                 <span className="text-xs">
