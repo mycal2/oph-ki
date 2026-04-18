@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sfOrderSubmitSchema } from "@/lib/validations";
@@ -77,21 +78,93 @@ export async function GET(
       );
     }
 
-    // 3. Parse pagination params
+    // 3. Parse and validate query params (BUG-3: Zod validation)
+    const querySchema = z.object({
+      page: z.coerce.number().int().min(1).default(1),
+      search: z.string().max(200).default(""),
+      datePreset: z.enum(["thisMonth", "last3Months", "thisYear", ""]).default(""),
+    });
+
     const url = new URL(request.url);
-    const pageParam = parseInt(url.searchParams.get("page") ?? "1", 10);
-    const page = Math.max(1, pageParam);
+    const queryResult = querySchema.safeParse({
+      page: url.searchParams.get("page") ?? "1",
+      search: url.searchParams.get("search") ?? "",
+      datePreset: url.searchParams.get("datePreset") ?? "",
+    });
+
+    if (!queryResult.success) {
+      return NextResponse.json(
+        { success: false, error: "Ungültige Abfrageparameter." },
+        { status: 400 }
+      );
+    }
+
+    const { page, search: rawSearch, datePreset: datePresetParam } = queryResult.data;
     const pageSize = 20;
     const offset = (page - 1) * pageSize;
 
+    const searchParam = rawSearch.trim();
+
+    // OPH-88: Compute date range from preset
+    let dateFrom: string | null = null;
+    if (datePresetParam) {
+      const now = new Date();
+      switch (datePresetParam) {
+        case "thisMonth": {
+          const start = new Date(now.getFullYear(), now.getMonth(), 1);
+          dateFrom = start.toISOString();
+          break;
+        }
+        case "last3Months": {
+          // BUG-2 fix: use day 1 to avoid month-length overflow (e.g. May 31 → Feb 31)
+          const start = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+          dateFrom = start.toISOString();
+          break;
+        }
+        case "thisYear": {
+          const start = new Date(now.getFullYear(), 0, 1);
+          dateFrom = start.toISOString();
+          break;
+        }
+        // Unknown preset: ignore (no filter)
+      }
+    }
+
     // 4. Query orders
     const adminClient = createAdminClient();
-    const { data: orders, count, error: queryError } = await adminClient
+    let query = adminClient
       .from("orders")
       .select("id, status, created_at, extracted_data, dealer_id", { count: "exact" })
       .eq("tenant_id", tenantId)
       .eq("uploaded_by", user.id)
-      .eq("source", "salesforce_app")
+      .eq("source", "salesforce_app");
+
+    // OPH-88: Apply date filter
+    if (dateFrom) {
+      query = query.gte("created_at", dateFrom);
+    }
+
+    // OPH-88: Apply search filter on JSONB fields (dealer name or customer number).
+    // PostgREST supports nested JSONB arrow operators in filters.
+    // We search: extracted_data->order->dealer->>name ILIKE %term%
+    //         OR extracted_data->order->sender->>company_name ILIKE %term%
+    //         OR extracted_data->order->sender->>customer_number ILIKE %term%
+    if (searchParam) {
+      // BUG-1 fix: Sanitize PostgREST filter syntax chars (commas, parentheses, backslashes)
+      // to prevent filter injection, then escape LIKE wildcards (% and _)
+      const sanitized = searchParam.replace(/[,()\\]/g, "");
+      const escaped = sanitized.replace(/%/g, "\\%").replace(/_/g, "\\_");
+      const pattern = `%${escaped}%`;
+      query = query.or(
+        [
+          `extracted_data->order->dealer->>name.ilike.${pattern}`,
+          `extracted_data->order->sender->>company_name.ilike.${pattern}`,
+          `extracted_data->order->sender->>customer_number.ilike.${pattern}`,
+        ].join(",")
+      );
+    }
+
+    const { data: orders, count, error: queryError } = await query
       .order("created_at", { ascending: false })
       .range(offset, offset + pageSize - 1);
 

@@ -30,5 +30,5 @@ export default async function OrdersPage({ params }: OrdersPageProps) {
     redirect(`/sf/${slug}/login`);
   }
 
-  return <SalesforceOrderHistory slug={slug} />;
+  return <SalesforceOrderHistory slug={slug} showSearch />;
 }
