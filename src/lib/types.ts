@@ -216,6 +216,8 @@ export interface OrderWithDealer extends Order {
   has_unmapped_articles: boolean;
   /** OPH-25: Email subject stored on the order (from Postmark, .eml parsing, or manual input). */
   subject: string | null;
+  /** OPH-83: Order source — e.g. "salesforce_app" for field rep orders. */
+  source: string | null;
   /** OPH-66: Who reset the dealer assignment (null if never reset or cleared on new assignment). */
   dealer_reset_by: string | null;
   /** OPH-66: When the dealer assignment was reset. */
@@ -238,6 +240,8 @@ export interface OrderListItem {
   extraction_status: ExtractionStatus | null;
   /** OPH-18: Tenant name for cross-tenant admin view. Null for non-admin responses. */
   tenant_name: string | null;
+  /** OPH-83: Order source — e.g. "salesforce_app" for field rep orders. */
+  source: string | null;
 }
 
 /** Response from PATCH /api/orders/[orderId]/dealer */
