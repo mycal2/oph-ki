@@ -1,7 +1,9 @@
 "use client";
 
-import { createContext, useState, useCallback, useMemo } from "react";
+import { createContext, useState, useCallback, useMemo, useEffect, useRef } from "react";
 import type { ArticleCatalogItem } from "@/lib/types";
+
+const STORAGE_KEY = "sf_basket";
 
 /** A single item in the basket. */
 export interface BasketItem {
@@ -35,12 +37,39 @@ interface BasketProviderProps {
  *
  * Wraps the Salesforce App layout so that the header (badge count),
  * search page (add to basket), and basket page (view/edit) all
- * share the same in-memory basket.
+ * share the same basket.
  *
- * Data is session-based (clears on tab close) as specified in the feature spec.
+ * Persisted to sessionStorage so basket survives page reloads on real subdomains.
+ * Clears automatically when the tab is closed (session-scoped).
  */
 export function BasketProvider({ children }: BasketProviderProps) {
-  const [items, setItems] = useState<BasketItem[]>([]);
+  const [items, setItems] = useState<BasketItem[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const stored = sessionStorage.getItem(STORAGE_KEY);
+      return stored ? (JSON.parse(stored) as BasketItem[]) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Sync to sessionStorage whenever items change (skip the initial mount)
+  const isInitialMount = useRef(true);
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    try {
+      if (items.length === 0) {
+        sessionStorage.removeItem(STORAGE_KEY);
+      } else {
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      }
+    } catch {
+      // sessionStorage full or unavailable — basket still works in-memory
+    }
+  }, [items]);
 
   const itemCount = useMemo(
     () => items.reduce((sum, item) => sum + item.quantity, 0),
@@ -79,6 +108,7 @@ export function BasketProvider({ children }: BasketProviderProps) {
 
   const clearBasket = useCallback(() => {
     setItems([]);
+    try { sessionStorage.removeItem(STORAGE_KEY); } catch { /* noop */ }
   }, []);
 
   const value = useMemo<BasketContextValue>(
