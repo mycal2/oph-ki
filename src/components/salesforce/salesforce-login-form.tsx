@@ -13,7 +13,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { createClient } from "@/lib/supabase/client";
 import { Loader2, AlertCircle, CheckCircle2, Mail } from "lucide-react";
 
 interface SalesforceLoginFormProps {
@@ -60,10 +59,7 @@ export function SalesforceLoginForm({ tenantName, slug }: SalesforceLoginFormPro
     setError(null);
 
     try {
-      const supabase = createClient();
-
-      // Determine the callback URL based on environment
-      // Supports environment-suffixed subdomains: meisinger-dev.ids.online
+      // OPH-84: Determine the callback URL based on environment
       const isLocal = window.location.hostname === "localhost";
       const host = window.location.hostname;
       const envSuffix = host.includes("-dev.ids.online") ? "-dev"
@@ -73,28 +69,24 @@ export function SalesforceLoginForm({ tenantName, slug }: SalesforceLoginFormPro
         ? `${window.location.origin}/sf/${slug}/auth/callback?next=/`
         : `https://${slug}${envSuffix}.ids.online/auth/callback?next=/`;
 
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        email: email.trim().toLowerCase(),
-        options: {
-          emailRedirectTo: callbackUrl,
-          shouldCreateUser: false,
-        },
+      // OPH-84: Send magic link via server-side API route (domain validation)
+      const res = await fetch(`/api/sf/${slug}/magic-link`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          callbackUrl,
+        }),
       });
 
-      if (otpError) {
-        // Supabase returns an error if signups are disabled and user doesn't exist,
-        // but we show a generic success message to prevent email enumeration.
-        // Only show actual errors for rate limiting or server issues.
-        if (otpError.status === 429) {
-          setError(
-            "Zu viele Anfragen. Bitte warten Sie einen Moment und versuchen Sie es erneut."
-          );
-          return;
-        }
-        // For all other errors (including "user not found" with shouldCreateUser: false),
-        // show the success message to prevent information leakage.
+      if (!res.ok && res.status === 429) {
+        setError(
+          "Zu viele Anfragen. Bitte warten Sie einen Moment und versuchen Sie es erneut."
+        );
+        return;
       }
 
+      // Always show success — server returns 200 regardless of domain/user validity
       setIsSent(true);
     } catch {
       setError("Verbindungsfehler. Bitte versuchen Sie es erneut.");
