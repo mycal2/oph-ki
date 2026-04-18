@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useCheckout } from "@/hooks/use-checkout";
 import { useBasket } from "@/hooks/use-basket";
+import { useSfBasePath } from "@/hooks/use-sf-base-path";
 import type { ApiResponse, SalesforceOrderResponse } from "@/lib/types";
 
 interface CheckoutConfirmStepProps {
@@ -35,6 +36,7 @@ interface CheckoutConfirmStepProps {
  */
 export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
   const router = useRouter();
+  const basePath = useSfBasePath(slug);
   const {
     isDealerIdentified,
     identificationMethod,
@@ -59,9 +61,9 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
   useEffect(() => {
     if (submittedOrder) return;
     if (!isDealerIdentified) {
-      router.replace(`/sf/${slug}/checkout`);
+      router.replace(`${basePath}/checkout`);
     } else if (items.length === 0) {
-      router.replace(`/sf/${slug}`);
+      router.replace(`${basePath}`);
     }
   }, [isDealerIdentified, items.length, submittedOrder, router, slug]);
 
@@ -152,7 +154,7 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
   const handleNewOrder = () => {
     clearBasket();
     resetCheckout();
-    router.push(`/sf/${slug}`);
+    router.push(`${basePath}`);
   };
 
   // Don't render if guard will redirect (skip when post-submission)
@@ -352,7 +354,7 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background p-4">
         <div className="mx-auto flex max-w-lg gap-3">
           <Button variant="outline" className="shrink-0" asChild>
-            <Link href={`/sf/${slug}/checkout/delivery`}>
+            <Link href={`${basePath}/checkout/delivery`}>
               <ArrowLeft className="h-4 w-4" />
               Zurueck
             </Link>

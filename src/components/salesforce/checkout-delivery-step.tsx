@@ -20,6 +20,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useCheckout } from "@/hooks/use-checkout";
+import { useSfBasePath } from "@/hooks/use-sf-base-path";
 import type { DeliveryAddress } from "@/hooks/use-checkout";
 
 const NOTES_MAX_LENGTH = 500;
@@ -38,6 +39,7 @@ interface CheckoutDeliveryStepProps {
  */
 export function CheckoutDeliveryStep({ slug }: CheckoutDeliveryStepProps) {
   const router = useRouter();
+  const basePath = useSfBasePath(slug);
   const {
     isDealerIdentified,
     deliveryAddress,
@@ -49,7 +51,7 @@ export function CheckoutDeliveryStep({ slug }: CheckoutDeliveryStepProps) {
   // Flow guard: redirect to step 1 if no dealer identified
   useEffect(() => {
     if (!isDealerIdentified) {
-      router.replace(`/sf/${slug}/checkout`);
+      router.replace(`${basePath}/checkout`);
     }
   }, [isDealerIdentified, router, slug]);
 
@@ -100,7 +102,7 @@ export function CheckoutDeliveryStep({ slug }: CheckoutDeliveryStepProps) {
   }, [syncAddressToContext]);
 
   const handleContinue = () => {
-    router.push(`/sf/${slug}/checkout/confirm`);
+    router.push(`${basePath}/checkout/confirm`);
   };
 
   // Don't render if guard will redirect
@@ -257,7 +259,7 @@ export function CheckoutDeliveryStep({ slug }: CheckoutDeliveryStepProps) {
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background p-4">
         <div className="mx-auto flex max-w-lg gap-3">
           <Button variant="outline" className="shrink-0" asChild>
-            <Link href={`/sf/${slug}/checkout`}>
+            <Link href={`${basePath}/checkout`}>
               <ArrowLeft className="h-4 w-4" />
               Zurück
             </Link>
