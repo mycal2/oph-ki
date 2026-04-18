@@ -220,9 +220,13 @@ export async function POST(
 
     const parsed = sfOrderSubmitSchema.safeParse(body);
     if (!parsed.success) {
-      const firstError = parsed.error.issues[0]?.message ?? "Ungueltige Eingabe.";
+      const issue = parsed.error.issues[0];
+      const path = issue?.path?.join(".") ?? "";
+      const msg = issue?.message ?? "Ungültige Eingabe.";
+      const errorDetail = path ? `${path}: ${msg}` : msg;
+      console.error("SF order validation failed:", JSON.stringify(parsed.error.issues));
       return NextResponse.json(
-        { success: false, error: firstError },
+        { success: false, error: errorDetail },
         { status: 400 }
       );
     }
