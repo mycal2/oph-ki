@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { SalesforceHeader } from "@/components/salesforce/salesforce-header";
 import { BasketProvider } from "@/components/salesforce/basket-provider";
 import { CheckoutProvider } from "@/components/salesforce/checkout-provider";
@@ -32,6 +33,28 @@ export default async function SalesforceLayout({ children, params }: SalesforceL
     notFound();
   }
 
+  // OPH-85: Fetch current user's name for the header dropdown
+  let userName: string | null = null;
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: profile } = await adminClient
+        .from("user_profiles")
+        .select("first_name, last_name")
+        .eq("id", user.id)
+        .single();
+      if (profile) {
+        const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim();
+        userName = fullName || user.email || null;
+      } else {
+        userName = user.email || null;
+      }
+    }
+  } catch {
+    // Non-critical — header will show fallback
+  }
+
   return (
     <BasketProvider>
       <CheckoutProvider>
@@ -40,6 +63,7 @@ export default async function SalesforceLayout({ children, params }: SalesforceL
             tenantName={tenant.name as string}
             tenantLogoUrl={(tenant.logo_url as string | null) ?? null}
             slug={slug}
+            userName={userName}
           />
           <main className="flex-1">
             <div className="mx-auto max-w-lg px-4 py-6">
