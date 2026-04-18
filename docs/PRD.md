@@ -97,6 +97,9 @@ Eine mandantenfähige SaaS-Plattform ("Order Intelligence Platform"), die Dental
 | P1 | OPH-84: Salesforce App: Magic Link Domain Validation | Planned |
 | P1 | OPH-85: Salesforce App: Header User Identity & Navigation Dropdown | Planned |
 | P1 | OPH-86: Salesforce App: Sales Rep Profile Page | Planned |
+| P1 | OPH-87: Salesforce App: Personalized Login Page | In Progress |
+| P1 | OPH-88: Salesforce App: Order History Search & Date Filter | Planned |
+| P1 | OPH-89: Außendienstler: Edit Name & Status | Planned |
 
 ## Success Metrics
 - Bearbeitungszeit pro Bestellung: von ~15 Min. manuell auf < 3 Min. mit System
