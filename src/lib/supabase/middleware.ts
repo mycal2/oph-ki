@@ -148,9 +148,11 @@ export async function updateSession(request: NextRequest) {
 
   // --- Authenticated user on public route ---
   // Allow preview pages even when logged in (users may click email links while authenticated)
+  // Allow SF public routes (login/callback) — SF auth flow handles its own redirects
   if (
     user &&
     isPublicRoute &&
+    !isSfPublicRoute &&
     url.pathname !== "/reset-password" &&
     url.pathname !== "/auth/callback" &&
     url.pathname !== "/invite/accept" &&
