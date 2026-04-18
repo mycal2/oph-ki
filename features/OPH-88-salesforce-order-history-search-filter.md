@@ -1,6 +1,6 @@
 # OPH-88: Salesforce App — Order History Search & Date Filter
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-04-18
 **Last Updated:** 2026-04-18
 **PRD:** [Salesforce App PRD](../docs/AD-PRD.md)
