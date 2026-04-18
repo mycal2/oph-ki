@@ -225,11 +225,17 @@ export async function updateSession(request: NextRequest) {
     const userSalesforceSlug = (appMetadata as Record<string, unknown>)?.salesforce_slug as string | undefined;
 
     if (role === "sales_rep") {
-      // Sales reps on the OPH domain → redirect to their Salesforce subdomain
-      // Uses environment suffix so dev→dev, staging→staging, prod→prod
-      // Skip all sales_rep redirects on localhost (allows testing both OPH and SF locally)
-      if (!isSalesforceSubdomain && !isLocalhost) {
-        if (userSalesforceSlug) {
+      // Sales reps can ONLY access Salesforce App routes — never OPH platform
+      const isOnSfPath = url.pathname.startsWith("/sf/");
+
+      if (!isSalesforceSubdomain && !isOnSfPath) {
+        // Sales rep accessing OPH routes → redirect to Salesforce App
+        if (isLocalhost && userSalesforceSlug) {
+          // On localhost, redirect to the local SF path
+          const redirectUrl = request.nextUrl.clone();
+          redirectUrl.pathname = `/sf/${userSalesforceSlug}/`;
+          return NextResponse.redirect(redirectUrl);
+        } else if (userSalesforceSlug) {
           return NextResponse.redirect(
             new URL(`https://${userSalesforceSlug}${envSuffix}.ids.online/`)
           );
