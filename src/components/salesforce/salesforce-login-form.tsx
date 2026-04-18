@@ -19,6 +19,31 @@ interface SalesforceLoginFormProps {
   tenantName: string;
   /** The Salesforce subdomain slug (e.g. "meisinger") */
   slug: string;
+  /** OPH-87: Tenant company logo URL (from tenants.logo_url) */
+  logoUrl: string | null;
+}
+
+/** OPH-87: Read the sf_user cookie to get the returning user's name. */
+function readSfUserCookie(): { firstName: string; lastName: string } | null {
+  try {
+    const match = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("sf_user="));
+    if (!match) return null;
+    const value = decodeURIComponent(match.split("=").slice(1).join("="));
+    const parsed = JSON.parse(value);
+    if (
+      typeof parsed.firstName === "string" &&
+      typeof parsed.lastName === "string" &&
+      (parsed.firstName.trim() || parsed.lastName.trim())
+    ) {
+      return { firstName: parsed.firstName, lastName: parsed.lastName };
+    }
+    return null;
+  } catch {
+    // Cookie is malformed or unreadable — fall back silently
+    return null;
+  }
 }
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -38,12 +63,22 @@ const ERROR_MESSAGES: Record<string, string> = {
  * Sales reps enter their email address and receive a one-click login link.
  * After sending, the form shows a confirmation message.
  */
-export function SalesforceLoginForm({ tenantName, slug }: SalesforceLoginFormProps) {
+export function SalesforceLoginForm({ tenantName, slug, logoUrl }: SalesforceLoginFormProps) {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSent, setIsSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [logoError, setLogoError] = useState(false);
+  const [returningUser, setReturningUser] = useState<{ firstName: string; lastName: string } | null>(null);
   const searchParams = useSearchParams();
+
+  // OPH-87: Read sf_user cookie on mount for personalized greeting
+  useEffect(() => {
+    const sfUser = readSfUserCookie();
+    if (sfUser) {
+      setReturningUser(sfUser);
+    }
+  }, []);
 
   // Show error from URL params (e.g., after middleware redirect)
   useEffect(() => {
@@ -138,12 +173,29 @@ export function SalesforceLoginForm({ tenantName, slug }: SalesforceLoginFormPro
     );
   }
 
+  // OPH-87: Build personalized or generic greeting
+  const greeting = returningUser
+    ? `Hallo ${[returningUser.firstName, returningUser.lastName].filter(Boolean).join(" ").trim()}, willkommen bei der ${tenantName} Bestellplattform.`
+    : `Willkommen bei ${tenantName}.`;
+
   // Default state: login form
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
+        {/* OPH-87: Tenant logo */}
+        {logoUrl && !logoError && (
+          <div className="mb-2 flex justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={logoUrl}
+              alt={tenantName}
+              className="h-20 w-auto max-w-[240px] object-contain"
+              onError={() => setLogoError(true)}
+            />
+          </div>
+        )}
         <CardTitle className="text-xl font-bold">
-          Willkommen bei {tenantName}
+          {greeting}
         </CardTitle>
         <CardDescription>
           Wir senden Ihnen einen Anmelde-Link per E-Mail.

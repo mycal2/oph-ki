@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 
 /**
@@ -32,15 +33,50 @@ export async function GET(
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
+      // OPH-87: Build the redirect response first, then append sf_user cookie
+      let redirectUrl: string;
       if (isLocal) {
         // In development, redirect to the local sf route (not root, which would trigger sales_rep redirect)
         const origin = new URL(request.url).origin;
         const sfNext = next === "/" ? `/sf/${slug}/` : `/sf/${slug}${next}`;
-        return NextResponse.redirect(`${origin}${sfNext}`);
+        redirectUrl = `${origin}${sfNext}`;
+      } else {
+        // Redirect back to the Salesforce subdomain (environment-aware)
+        redirectUrl = `https://${slug}${envSuffix}.ids.online${next}`;
       }
 
-      // Redirect back to the Salesforce subdomain (environment-aware)
-      return NextResponse.redirect(`https://${slug}${envSuffix}.ids.online${next}`);
+      const response = NextResponse.redirect(redirectUrl);
+
+      // OPH-87: Fetch user profile and write sf_user cookie for personalized login greeting
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const adminClient = createAdminClient();
+          const { data: profile } = await adminClient
+            .from("user_profiles")
+            .select("first_name, last_name")
+            .eq("id", user.id)
+            .single();
+
+          if (profile?.first_name && profile?.last_name) {
+            const cookieValue = encodeURIComponent(
+              JSON.stringify({
+                firstName: profile.first_name,
+                lastName: profile.last_name,
+              })
+            );
+            const isSecure = !isLocal;
+            response.headers.append(
+              "Set-Cookie",
+              `sf_user=${cookieValue}; Path=/; Max-Age=2592000; SameSite=Lax${isSecure ? "; Secure" : ""}`
+            );
+          }
+        }
+      } catch {
+        // Non-critical — personalized greeting is a nice-to-have, don't block auth
+      }
+
+      return response;
     }
   }
 
