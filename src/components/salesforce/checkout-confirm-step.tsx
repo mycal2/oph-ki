@@ -13,16 +13,32 @@ import {
   ShoppingCart,
   Building2,
   PartyPopper,
+  Minus,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useCheckout } from "@/hooks/use-checkout";
 import { useBasket } from "@/hooks/use-basket";
 import { useSfBasePath } from "@/hooks/use-sf-base-path";
 import type { ApiResponse, SalesforceOrderResponse } from "@/lib/types";
+import type { BasketItem } from "@/hooks/use-basket";
 
 interface CheckoutConfirmStepProps {
   slug: string;
@@ -31,8 +47,8 @@ interface CheckoutConfirmStepProps {
 /**
  * OPH-80: Checkout step 3 — Order Review & Submission.
  *
- * Shows full order summary, submits to POST /api/sf/orders,
- * then shows a confirmation screen with order ID.
+ * Shows full order summary with editable quantities, delete with confirmation,
+ * and "Ändern" links on customer/address cards. Submits to POST /api/sf/orders.
  */
 export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
   const router = useRouter();
@@ -56,8 +72,6 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
   } | null>(null);
 
   // Flow guard: redirect to step 1 if no dealer or empty basket.
-  // Skip guard when submittedOrder is set — avoids race condition when
-  // handleNewOrder clears checkout state before router.push takes effect.
   useEffect(() => {
     if (submittedOrder) return;
     if (!isDealerIdentified) {
@@ -65,31 +79,18 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
     } else if (items.length === 0) {
       router.replace(`${basePath}`);
     }
-  }, [isDealerIdentified, items.length, submittedOrder, router, slug]);
+  }, [isDealerIdentified, items.length, submittedOrder, router, basePath]);
 
-  const handleSubmit = async () => {
-    if (isSubmitting) return;
+  async function handleSubmit() {
     setIsSubmitting(true);
     setError(null);
 
     try {
-      // Build the request body matching sfOrderSubmitSchema
-      const lineItems = items.map((item) => ({
-        articleId: item.article.id,
-        articleNumber: item.article.article_number,
-        name: item.article.name,
-        quantity: item.quantity,
-      }));
-
+      // Build the order payload
       let dealer:
+        | { type: "catalog"; customerId: string }
         | {
-            method: "customer_number" | "dropdown";
-            customerId: string;
-            customerNumber: string;
-            companyName: string;
-          }
-        | {
-            method: "manual";
+            type: "manual";
             companyName: string;
             contactPerson: string;
             email: string;
@@ -103,14 +104,12 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
         selectedCustomer
       ) {
         dealer = {
-          method: identificationMethod,
+          type: "catalog",
           customerId: selectedCustomer.id,
-          customerNumber: selectedCustomer.customer_number,
-          companyName: selectedCustomer.company_name,
         };
       } else if (identificationMethod === "manual" && manualDealer) {
         dealer = {
-          method: "manual",
+          type: "manual",
           companyName: manualDealer.companyName,
           contactPerson: manualDealer.contactPerson,
           email: manualDealer.email,
@@ -123,39 +122,45 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
         return;
       }
 
-      const body = {
-        lineItems,
+      const payload = {
+        items: items.map((item) => ({
+          articleId: item.article.id,
+          articleNumber: item.article.article_number,
+          name: item.article.name,
+          quantity: item.quantity,
+        })),
         dealer,
-        deliveryAddress: deliveryAddress ?? null,
-        notes: notes || "",
+        deliveryAddress: deliveryAddress ?? undefined,
+        notes: notes || undefined,
       };
 
       const res = await fetch("/api/sf/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify(payload),
       });
 
       const json: ApiResponse<SalesforceOrderResponse> = await res.json();
 
       if (!json.success) {
-        setError(json.error ?? "Bestellung konnte nicht erstellt werden.");
-        setIsSubmitting(false);
+        setError(json.error ?? "Bestellung konnte nicht gesendet werden.");
         return;
       }
 
       setSubmittedOrder(json.data!);
     } catch {
-      setError("Netzwerkfehler. Bitte pruefen Sie Ihre Internetverbindung und versuchen Sie es erneut.");
+      setError("Netzwerkfehler. Bitte versuchen Sie es erneut.");
+    } finally {
       setIsSubmitting(false);
     }
-  };
+  }
 
-  const handleNewOrder = () => {
-    clearBasket();
+  function handleNewOrder() {
+    setSubmittedOrder(null);
     resetCheckout();
+    clearBasket();
     router.push(`${basePath}`);
-  };
+  }
 
   // Don't render if guard will redirect (skip when post-submission)
   if (!submittedOrder && (!isDealerIdentified || items.length === 0)) {
@@ -171,7 +176,7 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
         </div>
         <h1 className="text-xl font-bold mb-2">Bestellung aufgegeben!</h1>
         <p className="text-sm text-muted-foreground mb-6">
-          Ihre Bestellung wurde erfolgreich uebermittelt und wird jetzt bearbeitet.
+          Ihre Bestellung wurde erfolgreich übermittelt und wird jetzt bearbeitet.
         </p>
 
         <Card className="w-full mb-6">
@@ -221,15 +226,15 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
           <Separator className="flex-1" />
           <span className="text-muted-foreground">2. Lieferung</span>
           <Separator className="flex-1" />
-          <span className="font-semibold text-primary">3. Bestaetigung</span>
+          <span className="font-semibold text-primary">3. Bestätigung</span>
         </div>
-        <h1 className="text-lg font-semibold">Bestellung pruefen</h1>
+        <h1 className="text-lg font-semibold">Bestellung prüfen</h1>
         <p className="text-sm text-muted-foreground">
-          Bitte pruefen Sie Ihre Bestellung und senden Sie sie ab.
+          Bitte prüfen Sie Ihre Bestellung und senden Sie sie ab.
         </p>
       </div>
 
-      {/* Dealer summary */}
+      {/* Customer summary — with "Ändern" link to step 1 */}
       <Card className="mb-4">
         <CardContent className="pt-4 pb-4">
           <div className="flex items-center gap-2 mb-2">
@@ -237,9 +242,15 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
               Kunde
             </span>
-            <Badge variant="secondary" className="text-[10px] ml-auto">
+            <Badge variant="secondary" className="text-[10px]">
               {methodLabels[identificationMethod ?? ""] ?? "—"}
             </Badge>
+            <Link
+              href={`${basePath}/checkout`}
+              className="ml-auto text-xs text-muted-foreground hover:text-foreground"
+            >
+              Ändern
+            </Link>
           </div>
           <p className="text-sm font-semibold">{dealerName}</p>
           {selectedCustomer && (
@@ -271,7 +282,7 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
         </CardContent>
       </Card>
 
-      {/* Delivery address (if set) */}
+      {/* Delivery address — with "Ändern" link to step 2 */}
       {deliveryAddress && (
         <Card className="mb-4">
           <CardContent className="pt-4 pb-4">
@@ -280,6 +291,12 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                 Abweichende Lieferadresse
               </span>
+              <Link
+                href={`${basePath}/checkout/delivery`}
+                className="ml-auto text-xs text-muted-foreground hover:text-foreground"
+              >
+                Ändern
+              </Link>
             </div>
             <p className="text-sm">
               {[
@@ -297,7 +314,7 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
         </Card>
       )}
 
-      {/* Notes (if set) */}
+      {/* Notes (if set) — with "Ändern" link to step 2 */}
       {notes && (
         <Card className="mb-4">
           <CardContent className="pt-4 pb-4">
@@ -306,13 +323,19 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                 Bemerkungen
               </span>
+              <Link
+                href={`${basePath}/checkout/delivery`}
+                className="ml-auto text-xs text-muted-foreground hover:text-foreground"
+              >
+                Ändern
+              </Link>
             </div>
             <p className="text-sm whitespace-pre-line">{notes}</p>
           </CardContent>
         </Card>
       )}
 
-      {/* Line items */}
+      {/* Editable line items */}
       <div className="mb-4">
         <div className="flex items-center gap-2 mb-3">
           <ShoppingCart className="h-4 w-4 text-muted-foreground" />
@@ -322,22 +345,7 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
         </div>
         <div className="space-y-2">
           {items.map((item) => (
-            <div
-              key={item.article.id}
-              className="flex items-center gap-3 rounded-lg border p-3"
-            >
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-primary tabular-nums">
-                  {item.article.article_number}
-                </p>
-                <p className="text-sm leading-snug truncate">
-                  {item.article.name}
-                </p>
-              </div>
-              <Badge variant="outline" className="shrink-0 tabular-nums">
-                {item.quantity}x
-              </Badge>
-            </div>
+            <EditableLineItem key={item.article.id} item={item} />
           ))}
         </div>
       </div>
@@ -356,7 +364,7 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
           <Button variant="outline" className="shrink-0" asChild>
             <Link href={`${basePath}/checkout/delivery`}>
               <ArrowLeft className="h-4 w-4" />
-              Zurueck
+              Zurück
             </Link>
           </Button>
           <Button
@@ -378,6 +386,115 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
           </Button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Editable line item with quantity controls and delete
+// ---------------------------------------------------------------------------
+
+function EditableLineItem({ item }: { item: BasketItem }) {
+  const { setQuantity, removeFromBasket } = useBasket();
+  const [inputValue, setInputValue] = useState(String(item.quantity));
+
+  const handleDecrement = () => {
+    const newQty = item.quantity - 1;
+    if (newQty <= 0) return; // use delete button instead
+    setQuantity(item.article.id, newQty);
+    setInputValue(String(newQty));
+  };
+
+  const handleIncrement = () => {
+    const newQty = item.quantity + 1;
+    setQuantity(item.article.id, newQty);
+    setInputValue(String(newQty));
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInputValue(val);
+    const parsed = parseInt(val, 10);
+    if (!isNaN(parsed) && parsed > 0) {
+      setQuantity(item.article.id, parsed);
+    }
+  };
+
+  const handleInputBlur = () => {
+    const parsed = parseInt(inputValue, 10);
+    if (isNaN(parsed) || parsed <= 0) {
+      setInputValue(String(item.quantity));
+    }
+  };
+
+  return (
+    <div className="flex items-start gap-3 rounded-lg border p-3">
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-bold text-primary tabular-nums">
+          {item.article.article_number}
+        </p>
+        <p className="text-sm leading-snug truncate">{item.article.name}</p>
+
+        {/* Quantity controls */}
+        <div className="mt-2 flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-7 w-7 shrink-0"
+            onClick={handleDecrement}
+            disabled={item.quantity <= 1}
+            aria-label="Menge verringern"
+          >
+            <Minus className="h-3 w-3" />
+          </Button>
+          <Input
+            type="number"
+            min={1}
+            value={inputValue}
+            onChange={handleInputChange}
+            onBlur={handleInputBlur}
+            className="h-7 w-12 text-center tabular-nums text-sm px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            aria-label={`Menge für ${item.article.name}`}
+          />
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-7 w-7 shrink-0"
+            onClick={handleIncrement}
+            aria-label="Menge erhöhen"
+          >
+            <Plus className="h-3 w-3" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Delete with confirmation */}
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+            aria-label={`${item.article.name} entfernen`}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Artikel entfernen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              &quot;{item.article.name}&quot; wird aus der Bestellung entfernt.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={() => removeFromBasket(item.article.id)}>
+              Entfernen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
