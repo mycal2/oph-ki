@@ -81,6 +81,22 @@ export const changePlatformRoleSchema = z.object({
 
 export type ChangePlatformRoleInput = z.infer<typeof changePlatformRoleSchema>;
 
+/** OPH-89: Update user first/last name. */
+export const updateUserNameSchema = z.object({
+  first_name: z
+    .string()
+    .trim()
+    .min(1, "Vorname darf nicht leer sein.")
+    .max(100, "Vorname darf maximal 100 Zeichen lang sein."),
+  last_name: z
+    .string()
+    .trim()
+    .min(1, "Nachname darf nicht leer sein.")
+    .max(100, "Nachname darf maximal 100 Zeichen lang sein."),
+});
+
+export type UpdateUserNameInput = z.infer<typeof updateUserNameSchema>;
+
 /**
  * OPH-2: Upload validation schemas.
  */
