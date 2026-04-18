@@ -1173,3 +1173,22 @@ export interface SalesforceOrderListResponse {
   page: number;
   pageSize: number;
 }
+
+/** OPH-81: Full order detail returned by GET /api/sf/orders/[orderId]. */
+export interface SalesforceOrderDetailResponse {
+  id: string;
+  status: OrderStatus;
+  createdAt: string;
+  dealerName: string | null;
+  customerNumber: string | null;
+  lineItems: {
+    position: number;
+    articleNumber: string | null;
+    description: string;
+    quantity: number;
+    unit: string | null;
+  }[];
+  deliveryAddress: CanonicalAddress | null;
+  notes: string | null;
+  senderCompanyName: string | null;
+}
