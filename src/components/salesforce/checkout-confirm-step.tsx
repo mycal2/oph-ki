@@ -142,6 +142,9 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
         return;
       }
 
+      // Clear basket immediately so the header badge disappears on the confirmation screen
+      clearBasket();
+      resetCheckout();
       setSubmittedOrder(json.data!);
     } catch {
       setError("Netzwerkfehler. Bitte versuchen Sie es erneut.");
@@ -152,8 +155,6 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
 
   function handleNewOrder() {
     setSubmittedOrder(null);
-    resetCheckout();
-    clearBasket();
     router.push(`${basePath}`);
   }
 
