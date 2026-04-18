@@ -258,9 +258,16 @@ export async function updateSession(request: NextRequest) {
 
   // OPH-72: Rewrite Salesforce subdomain requests to /sf/[slug]/...
   // e.g. meisinger.ids.online/basket → /sf/meisinger/basket (internal rewrite)
+  // If the path already starts with /sf/{slug}/ (from client-side links or server redirects),
+  // strip the prefix first to avoid double-prefixing.
   // This runs after all auth checks so cookies are properly set.
   if (isSalesforceSubdomain && salesforceSubdomain) {
-    const sfPath = url.pathname === "/" ? "" : url.pathname;
+    let sfPath = url.pathname === "/" ? "" : url.pathname;
+    // Strip existing /sf/{slug} prefix to prevent double-rewrite
+    const sfPrefix = `/sf/${salesforceSubdomain}`;
+    if (sfPath.startsWith(sfPrefix)) {
+      sfPath = sfPath.slice(sfPrefix.length) || "";
+    }
     const rewriteUrl = request.nextUrl.clone();
     rewriteUrl.pathname = `/sf/${salesforceSubdomain}${sfPath}`;
 

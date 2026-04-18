@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/client";
 import { useBasket } from "@/hooks/use-basket";
+import { useSfBasePath } from "@/hooks/use-sf-base-path";
 
 interface SalesforceHeaderProps {
   tenantName: string;
@@ -23,11 +24,12 @@ interface SalesforceHeaderProps {
 export function SalesforceHeader({ tenantName, tenantLogoUrl, slug }: SalesforceHeaderProps) {
   const [logoError, setLogoError] = useState(false);
   const { itemCount } = useBasket();
+  const basePath = useSfBasePath(slug);
 
   const handleLogout = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
-    window.location.href = "/login";
+    window.location.href = `${basePath}/login`;
   };
 
   return (
@@ -48,7 +50,7 @@ export function SalesforceHeader({ tenantName, tenantLogoUrl, slug }: Salesforce
         {/* Right: Basket icon + Tenant logo + logout */}
         <div className="flex items-center gap-2">
           {/* Basket icon with count badge */}
-          <Link href={`/sf/${slug}/basket`} aria-label="Warenkorb anzeigen">
+          <Link href={`${basePath}/basket`} aria-label="Warenkorb anzeigen">
             <Button
               variant="ghost"
               size="icon"

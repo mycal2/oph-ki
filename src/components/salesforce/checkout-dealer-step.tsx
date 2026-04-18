@@ -22,6 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useCheckout } from "@/hooks/use-checkout";
+import { useSfBasePath } from "@/hooks/use-sf-base-path";
 import type { CustomerCatalogItem, ApiResponse, CustomerCatalogPageResponse } from "@/lib/types";
 
 const DEBOUNCE_MS = 400;
@@ -53,6 +54,7 @@ export function CheckoutDealerStep({ slug, hasCustomers }: CheckoutDealerStepPro
     setManualDealer,
     clearDealerIdentification,
   } = useCheckout();
+  const basePath = useSfBasePath(slug);
 
   // Which fallback steps are visible
   const [showDropdown, setShowDropdown] = useState(!hasCustomers);
@@ -155,7 +157,7 @@ export function CheckoutDealerStep({ slug, hasCustomers }: CheckoutDealerStepPro
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background p-4">
         <div className="mx-auto flex max-w-lg gap-3">
           <Button variant="outline" className="shrink-0" asChild>
-            <Link href={`/sf/${slug}/basket`}>
+            <Link href={`${basePath}/basket`}>
               <ArrowLeft className="h-4 w-4" />
               Zurück
             </Link>
@@ -166,7 +168,7 @@ export function CheckoutDealerStep({ slug, hasCustomers }: CheckoutDealerStepPro
             asChild={isDealerIdentified}
           >
             {isDealerIdentified ? (
-              <Link href={`/sf/${slug}/checkout/delivery`}>
+              <Link href={`${basePath}/checkout/delivery`}>
                 Weiter
                 <ArrowRight className="h-4 w-4" />
               </Link>
