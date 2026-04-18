@@ -33,7 +33,18 @@
 ---
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Overview
+OPH-86 is a simple page that displays profile info at the top and embeds the existing OPH-81 order history component below. Server component fetches user profile data, client component renders.
+
+### Files
+
+| File | Change |
+|---|---|
+| `src/app/sf/[slug]/profile/page.tsx` | NEW: Server component — auth guard, fetches user_profiles, renders SalesforceProfile |
+| `src/components/salesforce/salesforce-profile.tsx` | NEW: Client component — profile card (name, email) + embedded SalesforceOrderHistory |
+
+No new API routes (profile data fetched server-side), no DB changes, no new packages.
 
 ## QA Test Results
 _To be added by /qa_
