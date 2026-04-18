@@ -97,7 +97,7 @@
 | OPH-83 | Show Sales Rep Identity on Salesforce App Orders | In Review | [OPH-83-salesforce-order-submitter-visibility.md](OPH-83-salesforce-order-submitter-visibility.md) | 2026-04-18 |
 | OPH-84 | Salesforce App: Magic Link Domain Validation | In Progress | [OPH-84-salesforce-magic-link-domain-validation.md](OPH-84-salesforce-magic-link-domain-validation.md) | 2026-04-18 |
 | OPH-85 | Salesforce App: Header User Identity & Navigation Dropdown | In Progress | [OPH-85-salesforce-header-user-identity.md](OPH-85-salesforce-header-user-identity.md) | 2026-04-18 |
-| OPH-86 | Salesforce App: Sales Rep Profile Page | Planned | [OPH-86-salesforce-profile-page.md](OPH-86-salesforce-profile-page.md) | 2026-04-18 |
+| OPH-86 | Salesforce App: Sales Rep Profile Page | In Review | [OPH-86-salesforce-profile-page.md](OPH-86-salesforce-profile-page.md) | 2026-04-18 |
 <!-- Add features above this line -->
 
 ## Next Available ID: OPH-87
