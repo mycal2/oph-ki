@@ -9,6 +9,7 @@ export type {
   CheckoutContextValue,
   DealerIdentificationMethod,
   ManualDealerInfo,
+  DeliveryAddress,
   CheckoutState,
 } from "@/components/salesforce/checkout-provider";
 

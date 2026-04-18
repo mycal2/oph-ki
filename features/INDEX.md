@@ -83,16 +83,21 @@
 | OPH-69 | Image Extraction from Inbound Emails | In Progress | [OPH-69-image-extraction-from-emails.md](OPH-69-image-extraction-from-emails.md) | 2026-04-16 |
 | OPH-70 | Inline Email Body Text Preview in Dokument-Vorschau | In Progress | [OPH-70-email-body-text-preview.md](OPH-70-email-body-text-preview.md) | 2026-04-16 |
 | OPH-71 | Excel File Preview in Dokument-Vorschau | In Progress | [OPH-71-excel-preview.md](OPH-71-excel-preview.md) | 2026-04-17 |
-| OPH-72 | Salesforce App: Per-Tenant Subdomain Routing & Layout (SF-1) | In Progress | [OPH-72-salesforce-subdomain-routing.md](OPH-72-salesforce-subdomain-routing.md) | 2026-04-17 |
+| OPH-72 | Salesforce App: Per-Tenant Subdomain Routing & Layout (SF-1) | In Review | [OPH-72-salesforce-subdomain-routing.md](OPH-72-salesforce-subdomain-routing.md) | 2026-04-17 |
 | OPH-73 | Salesforce App: Sales Rep Role & Tenant Feature Flag (SF-2) | In Progress | [OPH-73-salesforce-role-feature-flag.md](OPH-73-salesforce-role-feature-flag.md) | 2026-04-17 |
 | OPH-74 | Salesforce App: Sales Rep User Management in OPH (SF-3) | In Review | [OPH-74-salesforce-user-management.md](OPH-74-salesforce-user-management.md) | 2026-04-17 |
 | OPH-75 | Salesforce App: Magic Link Authentication (SF-4) | In Progress | [OPH-75-salesforce-magic-link-auth.md](OPH-75-salesforce-magic-link-auth.md) | 2026-04-17 |
 | OPH-76 | Salesforce App: Article Search & Browse (SF-5) | In Progress | [OPH-76-salesforce-article-search.md](OPH-76-salesforce-article-search.md) | 2026-04-17 |
-| OPH-77 | Salesforce App: Shopping Basket (SF-6) | In Progress | [OPH-77-salesforce-shopping-basket.md](OPH-77-salesforce-shopping-basket.md) | 2026-04-17 |
-| OPH-78 | Salesforce App: Checkout — Dealer Identification (SF-7) | In Progress | [OPH-78-salesforce-checkout-dealer.md](OPH-78-salesforce-checkout-dealer.md) | 2026-04-17 |
-| OPH-79 | Salesforce App: Checkout — Delivery & Notes (SF-8) | Planned | [OPH-79-salesforce-checkout-delivery-notes.md](OPH-79-salesforce-checkout-delivery-notes.md) | 2026-04-17 |
-| OPH-80 | Salesforce App: Order Submission (SF-9) | Planned | [OPH-80-salesforce-order-submission.md](OPH-80-salesforce-order-submission.md) | 2026-04-17 |
-| OPH-81 | Salesforce App: Order History & Reorder (SF-10) | Planned | [OPH-81-salesforce-order-history.md](OPH-81-salesforce-order-history.md) | 2026-04-17 |
+| OPH-77 | Salesforce App: Shopping Basket (SF-6) | In Review | [OPH-77-salesforce-shopping-basket.md](OPH-77-salesforce-shopping-basket.md) | 2026-04-17 |
+| OPH-78 | Salesforce App: Checkout — Dealer Identification (SF-7) | In Review | [OPH-78-salesforce-checkout-dealer.md](OPH-78-salesforce-checkout-dealer.md) | 2026-04-17 |
+| OPH-79 | Salesforce App: Checkout — Delivery & Notes (SF-8) | In Review | [OPH-79-salesforce-checkout-delivery-notes.md](OPH-79-salesforce-checkout-delivery-notes.md) | 2026-04-17 |
+| OPH-80 | Salesforce App: Order Submission (SF-9) | In Review | [OPH-80-salesforce-order-submission.md](OPH-80-salesforce-order-submission.md) | 2026-04-17 |
+| OPH-81 | Salesforce App: Order History & Reorder (SF-10) | In Progress | [OPH-81-salesforce-order-history.md](OPH-81-salesforce-order-history.md) | 2026-04-17 |
+| OPH-82 | Außendienstler Menu in Stammdaten Sidebar Section | In Review | [OPH-82-aussendienstler-stammdaten-sidebar.md](OPH-82-aussendienstler-stammdaten-sidebar.md) | 2026-04-17 |
+| OPH-83 | Show Sales Rep Identity on Salesforce App Orders | In Review | [OPH-83-salesforce-order-submitter-visibility.md](OPH-83-salesforce-order-submitter-visibility.md) | 2026-04-18 |
+| OPH-84 | Salesforce App: Magic Link Domain Validation | In Progress | [OPH-84-salesforce-magic-link-domain-validation.md](OPH-84-salesforce-magic-link-domain-validation.md) | 2026-04-18 |
+| OPH-85 | Salesforce App: Header User Identity & Navigation Dropdown | In Progress | [OPH-85-salesforce-header-user-identity.md](OPH-85-salesforce-header-user-identity.md) | 2026-04-18 |
+| OPH-86 | Salesforce App: Sales Rep Profile Page | In Review | [OPH-86-salesforce-profile-page.md](OPH-86-salesforce-profile-page.md) | 2026-04-18 |
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-82
+## Next Available ID: OPH-87

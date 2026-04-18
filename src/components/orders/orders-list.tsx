@@ -12,6 +12,7 @@ import {
   Store,
   ChevronLeft,
   ChevronRight,
+  Smartphone,
   Trash2,
 } from "lucide-react";
 import {
@@ -500,6 +501,12 @@ export function OrdersList() {
                             </span>
                           )}
                         </Link>
+                        {order.source === "salesforce_app" && (
+                          <Badge variant="secondary" className="mt-1 text-[10px] gap-1 w-fit">
+                            <Smartphone className="h-3 w-3" />
+                            Salesforce App
+                          </Badge>
+                        )}
                       </TableCell>
                       {isPlatformAdmin && (
                         <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
@@ -515,7 +522,7 @@ export function OrdersList() {
                         />
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
-                        {order.uploaded_by_name ?? "-"}
+                        {order.uploaded_by_name ?? (order.source === "salesforce_app" ? "Unbekannt" : "-")}
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1">

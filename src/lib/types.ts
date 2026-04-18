@@ -216,6 +216,8 @@ export interface OrderWithDealer extends Order {
   has_unmapped_articles: boolean;
   /** OPH-25: Email subject stored on the order (from Postmark, .eml parsing, or manual input). */
   subject: string | null;
+  /** OPH-83: Order source — e.g. "salesforce_app" for field rep orders. */
+  source: string | null;
   /** OPH-66: Who reset the dealer assignment (null if never reset or cleared on new assignment). */
   dealer_reset_by: string | null;
   /** OPH-66: When the dealer assignment was reset. */
@@ -238,6 +240,8 @@ export interface OrderListItem {
   extraction_status: ExtractionStatus | null;
   /** OPH-18: Tenant name for cross-tenant admin view. Null for non-admin responses. */
   tenant_name: string | null;
+  /** OPH-83: Order source — e.g. "salesforce_app" for field rep orders. */
+  source: string | null;
 }
 
 /** Response from PATCH /api/orders/[orderId]/dealer */
@@ -752,7 +756,7 @@ export interface ErpConfigSavePayload {
  * OPH-10: Email Ingestion types.
  */
 
-export type OrderSource = "web_upload" | "email_inbound";
+export type OrderSource = "web_upload" | "email_inbound" | "salesforce_app";
 export type QuarantineReviewStatus = "pending" | "approved" | "rejected";
 
 /** Quarantined email entry for admin review. */
@@ -1140,4 +1144,51 @@ export interface AdminDashboardStats {
   lineDistribution: LineDistribution;
   /** Revenue KPI (filtered by selected period). */
   revenue: RevenueBreakdown;
+}
+
+// ---------------------------------------------------------------------------
+// OPH-80: Salesforce App Order Submission types
+// ---------------------------------------------------------------------------
+
+/** Response from POST /api/sf/orders (Salesforce App order submission). */
+export interface SalesforceOrderResponse {
+  orderId: string;
+  confidenceScore: number;
+}
+
+/** OPH-81: Single item in the Salesforce order history list. */
+export interface SalesforceOrderListItem {
+  id: string;
+  status: OrderStatus;
+  createdAt: string;
+  dealerName: string | null;
+  customerNumber: string | null;
+  lineItemCount: number;
+}
+
+/** OPH-81: Response from GET /api/sf/orders (order history). */
+export interface SalesforceOrderListResponse {
+  orders: SalesforceOrderListItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+/** OPH-81: Full order detail returned by GET /api/sf/orders/[orderId]. */
+export interface SalesforceOrderDetailResponse {
+  id: string;
+  status: OrderStatus;
+  createdAt: string;
+  dealerName: string | null;
+  customerNumber: string | null;
+  lineItems: {
+    position: number;
+    articleNumber: string | null;
+    description: string;
+    quantity: number;
+    unit: string | null;
+  }[];
+  deliveryAddress: CanonicalAddress | null;
+  notes: string | null;
+  senderCompanyName: string | null;
 }

@@ -95,6 +95,7 @@ export async function GET(
         last_exported_at,
         has_unmapped_articles,
         subject,
+        source,
         dealer_reset_by,
         dealer_reset_at,
         dealers ( id, name, street, postal_code, city, country ),
@@ -182,6 +183,8 @@ export async function GET(
       has_unmapped_articles: (order.has_unmapped_articles as boolean) ?? false,
       // OPH-25: Email subject
       subject: (order.subject as string | null) ?? null,
+      // OPH-83: Order source
+      source: (order.source as string | null) ?? null,
       // OPH-66: Dealer reset fields
       dealer_reset_by: (order.dealer_reset_by as string | null) ?? null,
       dealer_reset_at: (order.dealer_reset_at as string | null) ?? null,

@@ -1,7 +1,9 @@
 "use client";
 
-import { createContext, useState, useCallback, useMemo } from "react";
+import { createContext, useState, useCallback, useMemo, useEffect, useRef } from "react";
 import type { CustomerCatalogItem } from "@/lib/types";
+
+const STORAGE_KEY = "sf_checkout";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -22,6 +24,15 @@ export interface ManualDealerInfo {
   address: string;
 }
 
+/** OPH-79: Structured delivery address for alternate shipping location. */
+export interface DeliveryAddress {
+  companyName: string;
+  street: string;
+  zipCode: string;
+  city: string;
+  country: string;
+}
+
 /** All checkout state shared across steps OPH-78, OPH-79, OPH-80. */
 export interface CheckoutState {
   /** The method used to identify the dealer. */
@@ -31,7 +42,7 @@ export interface CheckoutState {
   /** Manual dealer info (if dealer is not in the system). */
   manualDealer: ManualDealerInfo | null;
   /** Delivery address (OPH-79). */
-  deliveryAddress: string;
+  deliveryAddress: DeliveryAddress | null;
   /** Order notes (OPH-79). */
   notes: string;
 }
@@ -46,7 +57,7 @@ export interface CheckoutContextValue extends CheckoutState {
   /** Clear the dealer identification (reset to initial state). */
   clearDealerIdentification: () => void;
   /** Set delivery address (OPH-79). */
-  setDeliveryAddress: (address: string) => void;
+  setDeliveryAddress: (address: DeliveryAddress | null) => void;
   /** Set notes (OPH-79). */
   setNotes: (notes: string) => void;
   /** Whether a dealer has been identified (any method). */
@@ -73,7 +84,7 @@ const INITIAL_STATE: CheckoutState = {
   identificationMethod: null,
   selectedCustomer: null,
   manualDealer: null,
-  deliveryAddress: "",
+  deliveryAddress: null,
   notes: "",
 };
 
@@ -85,7 +96,31 @@ const INITIAL_STATE: CheckoutState = {
  * checkout pages and the header all share the same state.
  */
 export function CheckoutProvider({ children }: CheckoutProviderProps) {
-  const [state, setState] = useState<CheckoutState>(INITIAL_STATE);
+  const [state, setState] = useState<CheckoutState>(() => {
+    if (typeof window === "undefined") return INITIAL_STATE;
+    try {
+      const stored = sessionStorage.getItem(STORAGE_KEY);
+      return stored ? { ...INITIAL_STATE, ...(JSON.parse(stored) as Partial<CheckoutState>) } : INITIAL_STATE;
+    } catch {
+      return INITIAL_STATE;
+    }
+  });
+
+  // Sync to sessionStorage on state changes
+  const isInitialMount = useRef(true);
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    try {
+      if (state === INITIAL_STATE || (!state.identificationMethod && !state.deliveryAddress && !state.notes)) {
+        sessionStorage.removeItem(STORAGE_KEY);
+      } else {
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      }
+    } catch { /* noop */ }
+  }, [state]);
 
   const setCustomerMatch = useCallback((customer: CustomerCatalogItem) => {
     setState((prev) => ({
@@ -123,7 +158,7 @@ export function CheckoutProvider({ children }: CheckoutProviderProps) {
     }));
   }, []);
 
-  const setDeliveryAddress = useCallback((address: string) => {
+  const setDeliveryAddress = useCallback((address: DeliveryAddress | null) => {
     setState((prev) => ({ ...prev, deliveryAddress: address }));
   }, []);
 
@@ -133,6 +168,7 @@ export function CheckoutProvider({ children }: CheckoutProviderProps) {
 
   const resetCheckout = useCallback(() => {
     setState(INITIAL_STATE);
+    try { sessionStorage.removeItem(STORAGE_KEY); } catch { /* noop */ }
   }, []);
 
   const isDealerIdentified =

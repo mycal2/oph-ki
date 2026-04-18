@@ -54,14 +54,22 @@ export async function updateSession(request: NextRequest) {
 
   // OPH-73: Detect Salesforce App subdomain (*.ids.online)
   // Extract the subdomain from the host header. Ignore known OPH domains.
+  // Supports environment-suffixed subdomains: meisinger-dev.ids.online, meisinger-staging.ids.online
   const OPH_HOSTS = new Set([
     "localhost:3003", "localhost:3000",
     "oph-ki.ids.online", "oph-ki-dev.ids.online", "oph-ki-staging.ids.online",
   ]);
   const isSalesforceSubdomain = !OPH_HOSTS.has(hostname) &&
     (hostname.endsWith(".ids.online") || hostname.match(/^localhost:\d+$/) !== null && false);
+
+  // Detect environment suffix from hostname (works for both OPH and SF subdomains)
+  const envSuffix = hostname.includes("-dev.ids.online") ? "-dev"
+    : hostname.includes("-staging.ids.online") ? "-staging"
+    : "";
+
+  // Strip environment suffix to get canonical slug: meisinger-dev → meisinger
   const salesforceSubdomain = isSalesforceSubdomain
-    ? hostname.replace(".ids.online", "").toLowerCase()
+    ? hostname.replace(".ids.online", "").replace(/-(dev|staging)$/, "").toLowerCase()
     : null;
 
   // Public routes that do not require authentication
@@ -73,12 +81,18 @@ export async function updateSession(request: NextRequest) {
     "/auth/callback",
     "/orders/preview", // OPH-16: Public magic-link preview page
   ];
-  const isPublicRoute = publicRoutes.some((route) =>
+  // Salesforce App login and auth callback are also public
+  const isSfPublicRoute =
+    url.pathname.match(/^\/sf\/[^/]+\/login/) !== null ||
+    url.pathname.match(/^\/sf\/[^/]+\/auth\/callback/) !== null;
+  const isPublicRoute = isSfPublicRoute || publicRoutes.some((route) =>
     url.pathname.startsWith(route)
   );
 
   // OPH-72: Block direct access to /sf/ from non-Salesforce hosts
-  if (url.pathname.startsWith("/sf") && !isSalesforceSubdomain) {
+  // Allow localhost for local development testing
+  const isLocalhost = hostname.startsWith("localhost:");
+  if (url.pathname.startsWith("/sf") && !isSalesforceSubdomain && !isLocalhost) {
     return NextResponse.rewrite(new URL("/not-found", request.url));
   }
 
@@ -126,15 +140,19 @@ export async function updateSession(request: NextRequest) {
   // --- Unauthenticated user handling ---
   if (!user && !isPublicRoute) {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/login";
+    // Salesforce paths redirect to the Salesforce login, not OPH login
+    const sfMatch = url.pathname.match(/^\/sf\/([^/]+)/);
+    redirectUrl.pathname = sfMatch ? `/sf/${sfMatch[1]}/login` : "/login";
     return NextResponse.redirect(redirectUrl);
   }
 
   // --- Authenticated user on public route ---
   // Allow preview pages even when logged in (users may click email links while authenticated)
+  // Allow SF public routes (login/callback) — SF auth flow handles its own redirects
   if (
     user &&
     isPublicRoute &&
+    !isSfPublicRoute &&
     url.pathname !== "/reset-password" &&
     url.pathname !== "/auth/callback" &&
     url.pathname !== "/invite/accept" &&
@@ -208,10 +226,12 @@ export async function updateSession(request: NextRequest) {
 
     if (role === "sales_rep") {
       // Sales reps on the OPH domain → redirect to their Salesforce subdomain
-      if (!isSalesforceSubdomain) {
+      // Uses environment suffix so dev→dev, staging→staging, prod→prod
+      // Skip all sales_rep redirects on localhost (allows testing both OPH and SF locally)
+      if (!isSalesforceSubdomain && !isLocalhost) {
         if (userSalesforceSlug) {
           return NextResponse.redirect(
-            new URL(`https://${userSalesforceSlug}.ids.online/`)
+            new URL(`https://${userSalesforceSlug}${envSuffix}.ids.online/`)
           );
         }
         // No slug configured → sign out with error
@@ -231,18 +251,25 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.redirect(redirectUrl);
       }
     } else if (isSalesforceSubdomain) {
-      // Non-sales_rep user on a Salesforce subdomain → redirect to OPH
+      // Non-sales_rep user on a Salesforce subdomain → redirect to OPH (environment-aware)
       return NextResponse.redirect(
-        new URL("https://oph-ki.ids.online/dashboard")
+        new URL(`https://oph-ki${envSuffix}.ids.online/dashboard`)
       );
     }
   }
 
   // OPH-72: Rewrite Salesforce subdomain requests to /sf/[slug]/...
   // e.g. meisinger.ids.online/basket → /sf/meisinger/basket (internal rewrite)
+  // If the path already starts with /sf/{slug}/ (from client-side links or server redirects),
+  // strip the prefix first to avoid double-prefixing.
   // This runs after all auth checks so cookies are properly set.
   if (isSalesforceSubdomain && salesforceSubdomain) {
-    const sfPath = url.pathname === "/" ? "" : url.pathname;
+    let sfPath = url.pathname === "/" ? "" : url.pathname;
+    // Strip existing /sf/{slug} prefix to prevent double-rewrite
+    const sfPrefix = `/sf/${salesforceSubdomain}`;
+    if (sfPath.startsWith(sfPrefix)) {
+      sfPath = sfPath.slice(sfPrefix.length) || "";
+    }
     const rewriteUrl = request.nextUrl.clone();
     rewriteUrl.pathname = `/sf/${salesforceSubdomain}${sfPath}`;
 

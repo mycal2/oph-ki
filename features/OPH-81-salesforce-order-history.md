@@ -1,6 +1,6 @@
 # OPH-81: Salesforce App — Order History & Reorder (SF-10)
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-04-17
 **Last Updated:** 2026-04-17
 **PRD:** [Salesforce App PRD](../docs/AD-PRD.md)
@@ -34,7 +34,89 @@
 ---
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Overview
+OPH-81 adds a browsable order history and one-tap reorder to the Salesforce App. Orders are already stored in the `orders` table (from OPH-80) — no new database tables needed. Two new API endpoints expose the list and detail for the current sales rep. The reorder feature validates articles against the live catalog before adding them to the basket.
+
+---
+
+### A) Component Structure
+
+```
+SalesforceHeader (MODIFY)
++-- Add "Bestellungen" link (clock icon) next to basket icon
+
+sf/[slug]/orders/page.tsx (NEW — server component, auth guard)
++-- SalesforceOrderHistory (NEW client component)
+    +-- "Meine Bestellungen" heading
+    +-- Order card list (sorted newest first)
+    |   +-- OrderCard: date, dealer name, item count, status badge
+    |   +-- Empty state: "Noch keine Bestellungen" + CTA to start new order
+    +-- "Mehr laden" button (20 per page, loads next page on click)
+    +-- Loading skeletons while fetching
+
+sf/[slug]/orders/[orderId]/page.tsx (NEW — server component, auth guard)
++-- SalesforceOrderDetail (NEW client component)
+    +-- Back button (← Bestellungen)
+    +-- Order header: date, dealer name, status badge
+    +-- Dealer info card (name, customer number if applicable)
+    +-- Line items list (article number, name, quantity)
+    +-- Delivery address card (only if set)
+    +-- Notes card (only if set)
+    +-- Sticky footer: [Nachbestellen] button
+        +-- Validates each article still exists in catalog
+        +-- Unavailable articles shown as warning before proceeding
+        +-- Copies available articles to basket, navigates to /basket
+```
+
+---
+
+### B) Data (what's stored and where)
+
+Orders already exist in the database from OPH-80. The `extracted_data` JSONB column contains everything needed:
+- Dealer name and customer number (from `order.sender` or `order.dealer`)
+- All line items: article number, description, quantity
+- Delivery address and notes
+
+The order history reads this existing data — no new tables or columns needed.
+
+**Status label mapping** (from existing `OrderStatus` values):
+
+| Database value | Label shown in app |
+|---|---|
+| `extracted` | Eingereicht |
+| `review` | In Prüfung |
+| `approved` / `exported` | Exportiert |
+| `error` | Fehler |
+
+---
+
+### C) APIs Needed
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/sf/orders` | List orders for current sales rep. Filters: `source = salesforce_app` + `uploaded_by = user.id`. Returns 20 per page. Response includes: id, date, dealer name, item count, status. |
+| `GET /api/sf/orders/[orderId]` | Single order detail for the current sales rep. Returns full `extracted_data` (line items, dealer, address, notes). Verifies the order belongs to the requesting user (no cross-user access). |
+
+`GET /api/sf/orders` is added to the existing `route.ts` alongside the existing `POST`. The detail endpoint is a new file.
+
+The reorder flow uses the existing `GET /api/articles?search=...` endpoint to verify each article still exists before adding to the basket.
+
+---
+
+### D) Files Changed
+
+| File | Change |
+|---|---|
+| `src/app/api/sf/orders/route.ts` | MODIFY: Add `GET` handler for order list |
+| `src/app/api/sf/orders/[orderId]/route.ts` | NEW: Order detail endpoint |
+| `src/app/sf/[slug]/orders/page.tsx` | NEW: Order history route |
+| `src/app/sf/[slug]/orders/[orderId]/page.tsx` | NEW: Order detail route |
+| `src/components/salesforce/salesforce-order-history.tsx` | NEW: Order list with pagination |
+| `src/components/salesforce/salesforce-order-detail.tsx` | NEW: Order detail + reorder |
+| `src/components/salesforce/salesforce-header.tsx` | MODIFY: Add "Bestellungen" icon link |
+
+No new npm packages. All UI uses existing shadcn/ui components.
 
 ## QA Test Results
 _To be added by /qa_

@@ -1,6 +1,6 @@
 # OPH-80: Salesforce App — Order Submission (SF-9)
 
-## Status: Planned
+## Status: In Review
 **Created:** 2026-04-17
 **Last Updated:** 2026-04-17
 **PRD:** [Salesforce App PRD](../docs/AD-PRD.md)
@@ -36,7 +36,58 @@
 ---
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Overview
+OPH-80 is step 3 of the 3-step checkout (OPH-78 → OPH-79 → OPH-80). Shows the full order summary (line items, dealer, delivery address, notes) and submits to the existing `POST /api/sf/orders` endpoint. On success, shows a confirmation screen with order ID and a "Neue Bestellung" button.
+
+---
+
+### A) Component Structure
+
+```
+sf/[slug]/checkout/confirm/page.tsx  (ALREADY EXISTS)
++-- Auth guard: redirect to /login if unauthenticated
++-- CheckoutConfirmStep (NEW client component)
+    +-- Flow guard: redirect to /checkout if isDealerIdentified=false or basket empty
+    +-- Step header: "Schritt 3 von 3: Bestätigung"
+    +-- Progress bar / step indicator (3 steps)
+    |
+    +-- [REVIEW MODE]
+    |   +-- Dealer summary card (name, number, method badge)
+    |   +-- Delivery address card (only if set)
+    |   +-- Notes card (only if set)
+    |   +-- Line items list (article number, name, quantity badge)
+    |   +-- Error alert (if submission failed)
+    |   +-- Sticky footer: [← Zurück] + [Bestellung absenden] (disables on click)
+    |
+    +-- [SUCCESS MODE] (after submission)
+        +-- Confirmation icon + heading
+        +-- Order ID, article count, confidence score
+        +-- [Neue Bestellung] button → clears basket + checkout, goes to home
+```
+
+---
+
+### B) API Used
+
+`POST /api/sf/orders` (already exists — built in OPH-80 backend)
+
+Request body matches `sfOrderSubmitSchema`:
+- `lineItems`: from BasketContext
+- `dealer`: from CheckoutContext (customer_number/dropdown/manual)
+- `deliveryAddress`: from CheckoutContext (OPH-79)
+- `notes`: from CheckoutContext (OPH-79)
+
+---
+
+### C) Files Changed
+
+| File | Change |
+|---|---|
+| `src/app/sf/[slug]/checkout/confirm/page.tsx` | ALREADY EXISTS: Auth guard + renders CheckoutConfirmStep |
+| `src/components/salesforce/checkout-confirm-step.tsx` | NEW: Order review, submission, confirmation screen |
+
+No new npm packages. No context changes needed.
 
 ## QA Test Results
 _To be added by /qa_

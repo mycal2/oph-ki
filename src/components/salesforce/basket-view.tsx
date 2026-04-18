@@ -17,6 +17,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useBasket } from "@/hooks/use-basket";
+import { useSfBasePath } from "@/hooks/use-sf-base-path";
 import type { BasketItem } from "@/hooks/use-basket";
 
 interface BasketViewProps {
@@ -32,6 +33,7 @@ interface BasketViewProps {
  */
 export function BasketView({ slug }: BasketViewProps) {
   const { items, itemCount, clearBasket } = useBasket();
+  const basePath = useSfBasePath(slug);
 
   // Empty state
   if (items.length === 0) {
@@ -42,7 +44,7 @@ export function BasketView({ slug }: BasketViewProps) {
         <p className="text-sm text-muted-foreground max-w-xs mb-6">
           Suchen Sie nach Artikeln und fügen Sie diese zu Ihrem Warenkorb hinzu.
         </p>
-        <Link href={`/sf/${slug}`}>
+        <Link href={`${basePath}`}>
           <Button variant="outline">
             <Search className="h-4 w-4" />
             Zur Artikelsuche
@@ -102,8 +104,8 @@ export function BasketView({ slug }: BasketViewProps) {
 
           {/* Checkout button */}
           <Button className="flex-1 font-semibold" asChild>
-            <Link href={`/sf/${slug}/checkout`}>
-              Zur Kasse
+            <Link href={`${basePath}/checkout`}>
+              Bestellung einleiten
               <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>
