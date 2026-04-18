@@ -86,17 +86,10 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
     setError(null);
 
     try {
-      // Build the order payload
+      // Build the order payload matching sfOrderSubmitSchema
       let dealer:
-        | { type: "catalog"; customerId: string }
-        | {
-            type: "manual";
-            companyName: string;
-            contactPerson: string;
-            email: string;
-            phone: string;
-            address: string;
-          };
+        | { method: "customer_number" | "dropdown"; customerId: string; customerNumber: string; companyName: string }
+        | { method: "manual"; companyName: string; contactPerson: string; email: string; phone: string; address: string };
 
       if (
         (identificationMethod === "customer_number" ||
@@ -104,12 +97,14 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
         selectedCustomer
       ) {
         dealer = {
-          type: "catalog",
+          method: identificationMethod,
           customerId: selectedCustomer.id,
+          customerNumber: selectedCustomer.customer_number,
+          companyName: selectedCustomer.company_name,
         };
       } else if (identificationMethod === "manual" && manualDealer) {
         dealer = {
-          type: "manual",
+          method: "manual",
           companyName: manualDealer.companyName,
           contactPerson: manualDealer.contactPerson,
           email: manualDealer.email,
@@ -123,8 +118,7 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
       }
 
       const payload = {
-        items: items.map((item) => ({
-          articleId: item.article.id,
+        lineItems: items.map((item) => ({
           articleNumber: item.article.article_number,
           name: item.article.name,
           quantity: item.quantity,
