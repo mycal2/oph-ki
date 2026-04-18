@@ -119,6 +119,7 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
 
       const payload = {
         lineItems: items.map((item) => ({
+          articleId: item.article.id,
           articleNumber: item.article.article_number,
           name: item.article.name,
           quantity: item.quantity,
