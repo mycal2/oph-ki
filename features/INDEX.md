@@ -99,7 +99,8 @@
 | OPH-85 | Salesforce App: Header User Identity & Navigation Dropdown | In Progress | [OPH-85-salesforce-header-user-identity.md](OPH-85-salesforce-header-user-identity.md) | 2026-04-18 |
 | OPH-86 | Salesforce App: Sales Rep Profile Page | In Review | [OPH-86-salesforce-profile-page.md](OPH-86-salesforce-profile-page.md) | 2026-04-18 |
 | OPH-87 | Salesforce App: Personalized Login Page | In Progress | [OPH-87-salesforce-personalized-login.md](OPH-87-salesforce-personalized-login.md) | 2026-04-18 |
-| OPH-88 | Salesforce App: Order History Search & Date Filter | In Progress | [OPH-88-salesforce-order-history-search-filter.md](OPH-88-salesforce-order-history-search-filter.md) | 2026-04-18 |
+| OPH-88 | Salesforce App: Order History Search & Date Filter | In Review | [OPH-88-salesforce-order-history-search-filter.md](OPH-88-salesforce-order-history-search-filter.md) | 2026-04-18 |
+| OPH-89 | Außendienstler: Edit Name & Status | Planned | [OPH-89-aussendienstler-edit-name-status.md](OPH-89-aussendienstler-edit-name-status.md) | 2026-04-18 |
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-89
+## Next Available ID: OPH-90
