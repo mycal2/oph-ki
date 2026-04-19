@@ -40,18 +40,45 @@ The Salesforce App gives sales reps a direct, structured input channel that bypa
 
 ## Core Features (Roadmap)
 
-| Priority | Feature | Description |
-|----------|---------|-------------|
-| P0 | SF-1: Per-Tenant Subdomain Routing & Layout | Wildcard `*.ids.online` routing. Middleware resolves subdomain slug → tenant. Salesforce App layout with IDS.online logo + tenant manufacturer logo. |
-| P0 | SF-2: Sales Rep Role & Tenant Feature Flag | New `sales_rep` role. Platform admin toggle to enable Salesforce App per tenant. `salesforce_slug` field on tenant config. |
-| P0 | SF-3: Sales Rep User Management in OPH | Tenant admin can add/remove/manage sales rep users. Separate section in OPH, only visible when Salesforce App is enabled for the tenant. |
-| P0 | SF-4: Magic Link Authentication | Sales reps log in via email magic link at `{slug}.ids.online`. No password needed. Only sales reps belonging to the resolved tenant can authenticate. |
-| P0 | SF-5: Article Search & Browse | Full-text search across all article catalog fields for the resolved tenant. Prominent search bar, mobile-optimized results. |
-| P0 | SF-6: Shopping Basket | Add articles with quantities, adjust amounts, remove items. Persistent during session. Visible item count badge. |
-| P0 | SF-7: Checkout — Dealer Identification | Enter customer number (auto-recognize via tenant's customer catalog) → select from existing dealers → manual dealer entry fallback. |
-| P0 | SF-8: Checkout — Delivery & Notes | Optional delivery address (different from dealer). Order-level notes field. |
-| P0 | SF-9: Order Submission | Submit basket as OPH order. Source = "salesforce_app". Confidence score based on customer data completeness. |
-| P1 | SF-10: Order History & Reorder | Sales rep sees own past orders with status. Copy past order into new basket for quick reorder. |
+### P0 — MVP (Core Order Flow)
+
+| ID | Feature | OPH ID | Status |
+|----|---------|--------|--------|
+| SF-1 | Per-Tenant Subdomain Routing & Layout | OPH-72 | In Review |
+| SF-2 | Sales Rep Role & Tenant Feature Flag | OPH-73 | In Progress |
+| SF-3 | Sales Rep User Management in OPH | OPH-74 | In Review |
+| SF-4 | Magic Link Authentication | OPH-75 | In Progress |
+| SF-5 | Article Search & Browse | OPH-76 | In Progress |
+| SF-6 | Shopping Basket | OPH-77 | In Review |
+| SF-7 | Checkout — Dealer Identification | OPH-78 | In Review |
+| SF-8 | Checkout — Delivery & Notes | OPH-79 | In Review |
+| SF-9 | Order Submission | OPH-80 | In Review |
+
+### P1 — Post-MVP (History, Identity, Admin)
+
+| ID | Feature | OPH ID | Status |
+|----|---------|--------|--------|
+| SF-10 | Order History & Reorder | OPH-81 | In Progress |
+| SF-11 | Außendienstler Menu in Stammdaten Sidebar | OPH-82 | In Review |
+| SF-12 | Sales Rep Identity on OPH Orders | OPH-83 | In Review |
+| SF-13 | Magic Link Domain Validation | OPH-84 | In Progress |
+| SF-14 | Header User Identity & Navigation Dropdown | OPH-85 | In Progress |
+| SF-15 | Sales Rep Profile Page | OPH-86 | In Review |
+| SF-16 | Personalized Login Page | OPH-87 | In Progress |
+| SF-17 | Order History Search & Date Filter | OPH-88 | In Review |
+| SF-18 | Außendienstler Edit Name & Status | OPH-89 | In Review |
+
+### P1 Feature Descriptions
+
+- **SF-10: Order History & Reorder** — Sales rep sees own past orders with status badges (Eingereicht, In Prüfung, Exportiert). Tap to view details. "Nachbestellen" copies all line items into a new basket. Paginated (20 per page).
+- **SF-11: Außendienstler Menu** — Adds "Außendienstler" entry under the Stammdaten sidebar section in OPH, visible only when Salesforce App is enabled for the tenant.
+- **SF-12: Sales Rep Identity on OPH Orders** — Orders from the Salesforce App show the submitting sales rep's name in the OPH order list and detail view (with a Smartphone icon).
+- **SF-13: Magic Link Domain Validation** — Server-side validation that the sales rep's email domain matches the tenant's `allowed_email_domains`. Prevents magic link abuse from unauthorized email addresses.
+- **SF-14: Header User Identity** — The Salesforce App header shows the logged-in sales rep's name with a dropdown menu (Profil, Bestellhistorie, Abmelden).
+- **SF-15: Profile Page** — Sales rep can view their profile (name, email) at `{slug}.ids.online/profile`. Order history is embedded below the profile card.
+- **SF-16: Personalized Login Page** — Tenant logo at the top, cookie-based returning user greeting ("Hallo Max Muster, willkommen bei der Meisinger Bestellplattform."). First-time visitors see a generic welcome.
+- **SF-17: Order History Search & Date Filter** — Search by dealer name or customer number, date filter presets (Alle, Dieser Monat, Letzte 3 Monate, Dieses Jahr). Server-side search with debounce.
+- **SF-18: Außendienstler Edit Name** — Tenant admin and platform admin can edit a sales rep's first and last name from the Außendienstler management page. Activate/deactivate via dropdown.
 
 ## Per-Tenant Subdomain Architecture
 
@@ -81,27 +108,45 @@ vita.ids.online         → Tenant "VITA" (slug: "vita")
 
 ### Happy Path: Order with Known Customer Number
 1. Sales rep opens `meisinger.ids.online` on phone
-2. Enters email → receives magic link → taps to log in
-3. Searches for article by name/number/keyword
-4. Adds articles to basket, adjusts quantities
-5. Taps "Zur Kasse" (Checkout)
-6. Enters customer number → system recognizes dealer, shows dealer name
-7. Optionally adds delivery address and/or notes
-8. Submits order → confirmation screen with order summary
-9. Order appears in OPH with 99% confidence
+2. Sees personalized greeting ("Hallo Max Muster, willkommen bei der Meisinger Bestellplattform.") with tenant logo
+3. Enters email → receives magic link → taps to log in
+4. Lands on article search page ("Bestellung aufgeben")
+5. Searches for article by name/number/keyword
+6. Adds articles to basket, adjusts quantities
+7. Taps "Zur Kasse" (Checkout)
+8. Enters customer number → system recognizes dealer, shows dealer name
+9. Optionally adds delivery address and/or notes
+10. Submits order → confirmation screen with order summary, basket cleared
+11. Order appears in OPH with 99% confidence, tagged with the sales rep's name
 
 ### Fallback: Unknown Customer Number
-1. Steps 1-5 same as above
+1. Steps 1-7 same as above
 2. Customer number field is empty → system shows dealer selection dropdown
 3. Sales rep selects a dealer from the list
 4. Continues with optional delivery address and notes
 5. Submits → order in OPH with 95% confidence (dealer identified)
 
 ### Fallback: Dealer Not in System
-1. Steps 1-5 same as above
+1. Steps 1-7 same as above
 2. Customer number empty, dealer not in dropdown
 3. Sales rep taps "Neuer Händler" and enters dealer details manually (company name, contact info)
 4. Submits → order in OPH with LOW confidence (needs manual review for dealer assignment)
+
+### Returning User Login
+1. Sales rep who has previously logged in opens `meisinger.ids.online`
+2. Browser has `sf_user` cookie from last login → login page greets them by name
+3. Enters email → magic link → back in the app in seconds
+
+### Order History & Reorder
+1. Sales rep taps their name in the header → selects "Bestellhistorie"
+2. Sees list of past orders with status badges, sorted newest first
+3. Searches by dealer name or filters by date range
+4. Taps an order → sees full details (line items, dealer, delivery address, notes)
+5. Taps "Nachbestellen" → articles copied into a new basket → continues with checkout
+
+### Profile
+1. Sales rep taps their name in the header → selects "Profil"
+2. Sees their name, email, and recent order history below
 
 ## Confidence Score Logic
 
@@ -174,4 +219,5 @@ Salesforce App orders are inserted into the same `orders` table with:
 - OPH-39: Manufacturer Article Catalog (article data source)
 - OPH-46: Manufacturer Customer Catalog (customer number recognition)
 - OPH-3: Händler-Erkennung & Händler-Profile (dealer selection)
-- OPH-51: Tenant Company Logo (manufacturer logo display)
+- OPH-51: Tenant Company Logo (manufacturer logo display in header and login page)
+- OPH-17: Allowed Email Domains (magic link domain validation)
