@@ -3,7 +3,7 @@
 ## Status: In Progress
 **Created:** 2026-04-17
 **Last Updated:** 2026-04-17
-**PRD:** [Salesforce App PRD](../docs/AD-PRD.md)
+**PRD:** [Salesforce App PRD](../docs/salesforce-prd.md)
 
 ## Dependencies
 - OPH-77 (SF-6): Shopping Basket — checkout is entered from the basket

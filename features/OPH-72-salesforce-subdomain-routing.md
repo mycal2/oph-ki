@@ -3,7 +3,7 @@
 ## Status: Planned
 **Created:** 2026-04-17
 **Last Updated:** 2026-04-17
-**PRD:** [Salesforce App PRD](../docs/AD-PRD.md)
+**PRD:** [Salesforce App PRD](../docs/salesforce-prd.md)
 
 ## Dependencies
 - OPH-73 (SF-2): Sales Rep Role & Tenant Feature Flag — needs `salesforce_slug` and `salesforce_enabled` on tenant config

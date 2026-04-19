@@ -3,7 +3,7 @@
 ## Status: In Review
 **Created:** 2026-04-17
 **Last Updated:** 2026-04-17
-**PRD:** [Salesforce App PRD](../docs/AD-PRD.md)
+**PRD:** [Salesforce App PRD](../docs/salesforce-prd.md)
 
 ## Dependencies
 - OPH-73 (SF-2): Sales Rep Role & Tenant Feature Flag — section only visible when `salesforce_enabled = true`

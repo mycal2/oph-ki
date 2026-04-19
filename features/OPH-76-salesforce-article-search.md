@@ -3,7 +3,7 @@
 ## Status: In Progress
 **Created:** 2026-04-17
 **Last Updated:** 2026-04-17
-**PRD:** [Salesforce App PRD](../docs/AD-PRD.md)
+**PRD:** [Salesforce App PRD](../docs/salesforce-prd.md)
 
 ## Dependencies
 - OPH-75 (SF-4): Magic Link Authentication — user must be logged in

@@ -3,7 +3,7 @@
 ## Status: Planned
 **Created:** 2026-04-18
 **Last Updated:** 2026-04-18
-**PRD:** [Salesforce App PRD](../docs/AD-PRD.md)
+**PRD:** [Salesforce App PRD](../docs/salesforce-prd.md)
 
 ## Dependencies
 - OPH-75 (SF-4): Magic Link Authentication — the login form being secured

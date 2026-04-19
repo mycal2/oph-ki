@@ -3,7 +3,7 @@
 ## Status: In Progress
 **Created:** 2026-04-17
 **Last Updated:** 2026-04-17
-**PRD:** [Salesforce App PRD](../docs/AD-PRD.md)
+**PRD:** [Salesforce App PRD](../docs/salesforce-prd.md)
 
 ## Dependencies
 - OPH-76 (SF-5): Article Search & Browse — articles are added to basket from search results
