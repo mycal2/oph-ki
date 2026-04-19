@@ -19,6 +19,8 @@ Manufacturer sales reps visit dealers and practices, take handwritten orders on 
 
 The Salesforce App gives sales reps a direct, structured input channel that bypasses AI extraction entirely.
 
+**Zusätzlicher Anwendungsfall: Telefonische Bestellannahme.** Auch Innendienst-Mitarbeiter und Customer-Support-Teams können die Salesforce App nutzen, um telefonisch eingehende Bestellungen in Echtzeit zu erfassen. Die schnelle Artikelsuche und der strukturierte Warenkorb ermöglichen es, eine Bestellung während des Telefonats aufzunehmen — ohne Nachbearbeitung und ohne den Umweg über E-Mail-Ingestion und KI-Extraktion.
+
 ## Target Users
 
 ### Primary: Außendienst-Mitarbeiter (Sales Reps)
@@ -28,7 +30,14 @@ The Salesforce App gives sales reps a direct, structured input channel that bypa
 - Not technical users — UI must be extremely simple
 - Often have limited time at the point of order entry
 
-### Secondary: Mandanten-Admins (Tenant Admins)
+### Secondary: Innendienst & Customer Support (Telefonische Bestellannahme)
+- Nehmen Bestellungen telefonisch entgegen (z.B. wenn ein Händler anruft)
+- Brauchen eine schnelle, strukturierte Eingabemöglichkeit während des Telefonats
+- Nutzen die gleiche Artikelsuche und den gleichen Warenkorb wie der Außendienst
+- Vorteil gegenüber E-Mail-Ingestion: Bestellung ist sofort strukturiert erfasst und kann direkt prozessiert werden — kein Umweg über KI-Extraktion
+- Kein Produktänderung erforderlich — die bestehende Salesforce App deckt diesen Anwendungsfall vollständig ab
+
+### Tertiary: Mandanten-Admins (Tenant Admins)
 - Manage sales rep user accounts within OPH
 - Need visibility into which sales reps are active
 - Receive orders from both email and Salesforce App in the same OPH workflow
