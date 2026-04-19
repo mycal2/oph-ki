@@ -3,7 +3,7 @@
 ## Status: In Progress
 **Created:** 2026-04-17
 **Last Updated:** 2026-04-17
-**PRD:** [Salesforce App PRD](../docs/salesforce-prd.md)
+**PRD:** [Salesforce App PRD](../docs/SALESFORCE-PRD.md)
 
 ## Dependencies
 - OPH-72 (SF-1): Subdomain Routing — login page lives under the Salesforce layout

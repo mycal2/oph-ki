@@ -3,7 +3,7 @@
 ## Status: In Review
 **Created:** 2026-04-17
 **Last Updated:** 2026-04-17
-**PRD:** [Salesforce App PRD](../docs/salesforce-prd.md)
+**PRD:** [Salesforce App PRD](../docs/SALESFORCE-PRD.md)
 
 ## Dependencies
 - OPH-78 (SF-7): Checkout — Dealer Identification

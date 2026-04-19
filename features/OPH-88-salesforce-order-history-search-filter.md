@@ -3,7 +3,7 @@
 ## Status: In Review
 **Created:** 2026-04-18
 **Last Updated:** 2026-04-18
-**PRD:** [Salesforce App PRD](../docs/salesforce-prd.md)
+**PRD:** [Salesforce App PRD](../docs/SALESFORCE-PRD.md)
 
 ## Dependencies
 - OPH-81 (SF-10): Order History — the order list component and `/api/sf/orders` endpoint this feature enhances
