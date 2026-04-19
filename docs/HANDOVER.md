@@ -48,7 +48,7 @@ Email arrives at tenant inbox (e.g. meisinger@oph.ids.online)
 | **Planned** | 2 | OPH-61, OPH-64 |
 
 Full feature list with specs: `features/INDEX.md`
-Product roadmap: `docs/PRD.md`
+Product roadmap: `docs/OPH-PRD.md`
 
 ### What's Deployed and Working
 
@@ -292,7 +292,7 @@ supabase/migrations/       # Database migrations (SQL)
 
 If you're new to the codebase, read these files in this order:
 
-1. **`docs/PRD.md`** — Product vision, target users, full feature roadmap
+1. **`docs/OPH-PRD.md`** — Product vision, target users, full feature roadmap
 2. **`features/INDEX.md`** — Current state of all 64 features
 3. **`docs/infrastructure.md`** — Three-environment setup, Supabase/Postmark/Vercel details
 4. **`src/app/api/inbound/email/route.ts`** — The heart of the platform: inbound email processing, dealer recognition, extraction trigger, notifications, forwarding

@@ -17,7 +17,7 @@ You are a helpful project assistant. Your job is to analyze the current project 
 
 Read these files to understand where the project stands:
 
-1. **Check PRD:** Read `docs/PRD.md`
+1. **Check PRD:** Read `docs/OPH-PRD.md`
    - Is it still the empty template? → Project not initialized yet
    - Is it filled out? → Project has been set up
 
@@ -68,7 +68,7 @@ Based on the state analysis, determine what the user should do next:
 **If all features are deployed:**
 > All current features are deployed! You can:
 > - Run `/requirements` to add a new feature
-> - Check `docs/PRD.md` for planned features not yet specified
+> - Check `docs/OPH-PRD.md` for planned features not yet specified
 
 ### Step 3: Answer User Questions
 
