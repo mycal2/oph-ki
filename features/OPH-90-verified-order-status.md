@@ -1,8 +1,8 @@
 # OPH-90: Geprüft Order Status (Verified State)
 
-## Status: In Progress
+## Status: Deployed
 **Created:** 2026-04-18
-**Last Updated:** 2026-04-18
+**Last Updated:** 2026-04-20
 
 ## Dependencies
 - OPH-5: Bestellprüfung & manuelle Korrektur (review page where status transitions happen)
@@ -163,4 +163,8 @@ The new `/check` endpoint is a thin parallel to the existing `/approve` route �
 - Invalid status transitions rejected: PASS
 
 ## Deployment
-_To be added by /deploy_
+
+- **Production:** https://oph.ids.online
+- **Deployed:** 2026-04-20
+- **Commit:** f94381c
+- **Tag:** v1.90.0-OPH-90
