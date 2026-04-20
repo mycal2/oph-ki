@@ -101,7 +101,8 @@ oph-ki/
 │   └── INDEX.md                     # Feature status tracking
 ├── dealerrules/                     # Dealer extraction rule documentation
 ├── docs/
-│   └── PRD.md                       # Product Requirements Document
+│   ├── OPH-PRD.md                   # Product Requirements Document (OPH Platform)
+│   └── SALESFORCE-PRD.md            # Product Requirements Document (Salesforce App)
 ├── supabase/
 │   └── migrations/                  # Database migrations
 └── .claude/
@@ -134,7 +135,7 @@ We use [Claude Code](https://docs.anthropic.com/en/docs/claude-code) with specia
 
 ### Feature Tracking
 
-All features are tracked in `features/INDEX.md` with status (Planned → In Progress → In Review → Deployed). Each feature has its own spec file: `features/OPH-X-feature-name.md`. The full product roadmap is in `docs/PRD.md`.
+All features are tracked in `features/INDEX.md` with status (Planned → In Progress → In Review → Deployed). Each feature has its own spec file: `features/OPH-X-feature-name.md`. The full product roadmap is in `docs/OPH-PRD.md`.
 
 Every skill reads INDEX.md at start and updates it when done.
 

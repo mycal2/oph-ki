@@ -3,7 +3,7 @@
 ## Status: In Review
 **Created:** 2026-04-17
 **Last Updated:** 2026-04-17
-**PRD:** [docs/PRD.md](../docs/PRD.md)
+**PRD:** [docs/OPH-PRD.md](../docs/OPH-PRD.md)
 
 ## Dependencies
 - OPH-74 (SF-3): Außendienstler page and management — the page that this nav item links to

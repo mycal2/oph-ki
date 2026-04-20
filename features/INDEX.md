@@ -101,6 +101,7 @@
 | OPH-87 | Salesforce App: Personalized Login Page | In Progress | [OPH-87-salesforce-personalized-login.md](OPH-87-salesforce-personalized-login.md) | 2026-04-18 |
 | OPH-88 | Salesforce App: Order History Search & Date Filter | In Review | [OPH-88-salesforce-order-history-search-filter.md](OPH-88-salesforce-order-history-search-filter.md) | 2026-04-18 |
 | OPH-89 | Außendienstler: Edit Name & Status | In Review | [OPH-89-aussendienstler-edit-name-status.md](OPH-89-aussendienstler-edit-name-status.md) | 2026-04-18 |
+| OPH-90 | Geprüft Order Status (Verified State) | In Progress | [OPH-90-verified-order-status.md](OPH-90-verified-order-status.md) | 2026-04-18 |
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-90
+## Next Available ID: OPH-91

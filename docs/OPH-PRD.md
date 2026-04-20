@@ -91,7 +91,7 @@ Eine mandantenfähige SaaS-Plattform ("Order Intelligence Platform"), die Dental
 | P1 | OPH-69: Image Extraction from Inbound Emails | Planned |
 | P2 | OPH-70: Inline Email Body Text Preview in Dokument-Vorschau | Planned |
 | P2 | OPH-71: Excel File Preview in Dokument-Vorschau | Planned |
-| P1 | OPH-72–81: Salesforce App (10 features) | In Review | See [Salesforce App PRD](./AD-PRD.md) |
+| P1 | OPH-72–81: Salesforce App (10 features) | In Review | See [Salesforce App PRD](./SALESFORCE-PRD.md) |
 | P1 | OPH-82: Außendienstler Menu in Stammdaten Sidebar | In Review |
 | P1 | OPH-83: Show Sales Rep Identity on Salesforce App Orders | Planned |
 | P1 | OPH-84: Salesforce App: Magic Link Domain Validation | Planned |
@@ -100,6 +100,7 @@ Eine mandantenfähige SaaS-Plattform ("Order Intelligence Platform"), die Dental
 | P1 | OPH-87: Salesforce App: Personalized Login Page | In Progress |
 | P1 | OPH-88: Salesforce App: Order History Search & Date Filter | Planned |
 | P1 | OPH-89: Außendienstler: Edit Name & Status | Planned |
+| P1 | OPH-90: Geprüft Order Status (Verified State) | Planned |
 
 ## Success Metrics
 - Bearbeitungszeit pro Bestellung: von ~15 Min. manuell auf < 3 Min. mit System

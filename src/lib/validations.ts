@@ -265,6 +265,14 @@ export const reviewApproveSchema = z.object({
 export type ReviewSaveInput = z.infer<typeof reviewSaveSchema>;
 export type ReviewApproveInput = z.infer<typeof reviewApproveSchema>;
 
+/** OPH-90: POST /api/orders/[orderId]/check — mark order as checked/verified. */
+export const orderCheckSchema = z.object({
+  /** ISO timestamp for optimistic locking. */
+  updatedAt: z.string().optional(),
+});
+
+export type OrderCheckInput = z.infer<typeof orderCheckSchema>;
+
 /**
  * OPH-6: Export validation schemas.
  */

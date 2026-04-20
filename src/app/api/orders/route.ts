@@ -248,7 +248,7 @@ export async function GET(
         uploaded_by_name: uploaderData
           ? `${uploaderData.first_name} ${uploaderData.last_name}`.trim()
           : null,
-        dealer_name: dealerData?.name ?? null,
+        dealer_name: dealerData?.name ?? extractSenderName(order.extracted_data) ?? null,
         recognition_method:
           (order.recognition_method as OrderListItem["recognition_method"]) ??
           "none",
@@ -321,6 +321,23 @@ export async function GET(
 /** Internal type with _order_number for search. */
 interface OrderListItemInternal extends OrderListItem {
   _order_number?: string | null;
+}
+
+/** Extract sender/customer company name from extracted_data JSON (fallback when no dealer linked). */
+function extractSenderName(extractedData: unknown): string | null {
+  if (!extractedData || typeof extractedData !== "object") return null;
+  const data = extractedData as {
+    order?: {
+      sender?: { company_name?: unknown };
+      dealer?: { name?: unknown };
+    };
+  };
+  // Try dealer name first, then sender company name
+  const dealerName = data.order?.dealer?.name;
+  if (typeof dealerName === "string" && dealerName.trim()) return dealerName;
+  const senderName = data.order?.sender?.company_name;
+  if (typeof senderName === "string" && senderName.trim()) return senderName;
+  return null;
 }
 
 /** Extract order number from extracted_data JSON. */

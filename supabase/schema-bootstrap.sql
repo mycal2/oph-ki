@@ -206,7 +206,7 @@ CREATE TABLE public.orders (
   id                       uuid        PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   tenant_id                uuid        NOT NULL REFERENCES public.tenants(id),
   uploaded_by              uuid        NULL REFERENCES public.user_profiles(id),
-  status                   text        NOT NULL DEFAULT 'uploaded' CHECK (status IN ('uploaded','processing','extracted','review','approved','exported','error')),
+  status                   text        NOT NULL DEFAULT 'uploaded' CHECK (status IN ('uploaded','processing','extracted','review','checked','approved','exported','error')),
   created_at               timestamptz NOT NULL DEFAULT now(),
   updated_at               timestamptz NOT NULL DEFAULT now(),
   dealer_id                uuid        NULL REFERENCES public.dealers(id),

@@ -23,7 +23,8 @@ src/
 features/           Feature specifications (OPH-X-name.md)
   INDEX.md          Feature status overview
 docs/
-  PRD.md            Product Requirements Document
+  OPH-PRD.md        Product Requirements Document (OPH Platform)
+  SALESFORCE-PRD.md  Product Requirements Document (Salesforce App)
   production/       Production guides (Sentry, security, performance)
 ```
 
@@ -63,7 +64,7 @@ npm run start      # Production server
 
 ## Product Context
 
-@docs/PRD.md
+@docs/OPH-PRD.md
 
 ## Feature Overview
 
