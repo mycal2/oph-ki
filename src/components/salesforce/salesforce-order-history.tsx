@@ -374,7 +374,7 @@ export function SalesforceOrderHistory({
           Sie haben noch keine Bestellungen aufgegeben. Starten Sie Ihre erste
           Bestellung.
         </p>
-        <Link href={`${basePath}`}>
+        <Link href={`${basePath}/order`}>
           <Button>
             <ShoppingCart className="h-4 w-4" />
             Neue Bestellung

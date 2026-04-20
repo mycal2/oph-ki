@@ -44,7 +44,7 @@ export function BasketView({ slug }: BasketViewProps) {
         <p className="text-sm text-muted-foreground max-w-xs mb-6">
           Suchen Sie nach Artikeln und fügen Sie diese zu Ihrem Warenkorb hinzu.
         </p>
-        <Link href={`${basePath}`}>
+        <Link href={`${basePath}/order`}>
           <Button variant="outline">
             <Search className="h-4 w-4" />
             Zur Artikelsuche
