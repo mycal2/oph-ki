@@ -99,7 +99,7 @@ export interface ApiResponse<T = undefined> {
 /**
  * OPH-2: Order Upload types.
  */
-export type OrderStatus = "uploaded" | "processing" | "extracted" | "review" | "approved" | "exported" | "error";
+export type OrderStatus = "uploaded" | "processing" | "extracted" | "review" | "checked" | "approved" | "exported" | "error";
 
 export interface Order {
   id: string;

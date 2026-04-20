@@ -59,6 +59,7 @@ function getStatusDisplay(status: OrderStatus): {
     case "extracted":
       return { label: "Eingereicht", variant: "default" };
     case "review":
+    case "checked":
       return { label: "In Prüfung", variant: "secondary" };
     case "approved":
     case "exported":

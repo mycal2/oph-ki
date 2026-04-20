@@ -3,7 +3,7 @@
 ## Status: In Progress
 **Created:** 2026-04-17
 **Last Updated:** 2026-04-17
-**PRD:** [Salesforce App PRD](../docs/AD-PRD.md)
+**PRD:** [Salesforce App PRD](../docs/SALESFORCE-PRD.md)
 
 ## Dependencies
 - OPH-80 (SF-9): Order Submission — orders must exist to be listed

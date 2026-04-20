@@ -39,7 +39,7 @@ export default async function SalesforceLoginPage({ params }: SalesforceLoginPag
   const adminClient = createAdminClient();
   const { data: tenant } = await adminClient
     .from("tenants")
-    .select("id, name, salesforce_enabled, salesforce_slug")
+    .select("id, name, salesforce_enabled, salesforce_slug, logo_url")
     .eq("salesforce_slug", slug)
     .eq("salesforce_enabled", true)
     .single();
@@ -54,6 +54,7 @@ export default async function SalesforceLoginPage({ params }: SalesforceLoginPag
         <SalesforceLoginForm
           tenantName={tenant.name as string}
           slug={slug}
+          logoUrl={(tenant.logo_url as string | null) ?? null}
         />
       </Suspense>
     </div>

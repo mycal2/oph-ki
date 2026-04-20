@@ -40,7 +40,7 @@ export function DealerBadge({
   recognitionMethod,
   compact = false,
 }: DealerBadgeProps) {
-  const isUnknown = !dealerName || recognitionMethod === "none";
+  const isUnknown = !dealerName;
 
   if (isUnknown) {
     return (

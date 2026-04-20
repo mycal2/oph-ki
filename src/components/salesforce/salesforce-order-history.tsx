@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import {
   ClipboardList,
@@ -10,11 +10,14 @@ import {
   ChevronRight,
   ShoppingCart,
   Package,
+  Search,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
 import { useSfBasePath } from "@/hooks/use-sf-base-path";
 import type {
   SalesforceOrderListItem,
@@ -25,8 +28,20 @@ import type {
 
 const PAGE_SIZE = 20;
 
+/** OPH-88: Date preset options for filtering orders. */
+type DatePreset = "" | "thisMonth" | "last3Months" | "thisYear";
+
+const DATE_PRESET_OPTIONS: { value: DatePreset; label: string }[] = [
+  { value: "", label: "Alle" },
+  { value: "thisMonth", label: "Dieser Monat" },
+  { value: "last3Months", label: "Letzte 3 Monate" },
+  { value: "thisYear", label: "Dieses Jahr" },
+];
+
 interface SalesforceOrderHistoryProps {
   slug: string;
+  /** OPH-88: When true, show search input and date filter. Default: false. */
+  showSearch?: boolean;
 }
 
 /** Maps order status to a German label and badge variant. */
@@ -38,6 +53,7 @@ function getStatusDisplay(status: OrderStatus): {
     case "extracted":
       return { label: "Eingereicht", variant: "default" };
     case "review":
+    case "checked":
       return { label: "In Prüfung", variant: "secondary" };
     case "approved":
     case "exported":
@@ -72,7 +88,10 @@ function formatDate(dateStr: string): string {
  * Supports "Mehr laden" pagination (20 per page).
  * Includes loading skeletons, error state, and empty state.
  */
-export function SalesforceOrderHistory({ slug }: SalesforceOrderHistoryProps) {
+export function SalesforceOrderHistory({
+  slug,
+  showSearch = false,
+}: SalesforceOrderHistoryProps) {
   const basePath = useSfBasePath(slug);
 
   const [orders, setOrders] = useState<SalesforceOrderListItem[]>([]);
@@ -82,8 +101,32 @@ export function SalesforceOrderHistory({ slug }: SalesforceOrderHistoryProps) {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // OPH-88: Search & filter state
+  const [searchInput, setSearchInput] = useState("");
+  const [activeSearch, setActiveSearch] = useState("");
+  const [datePreset, setDatePreset] = useState<DatePreset>("");
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  // BUG-5 fix: ref tracks latest datePreset so the debounced callback always reads the current value
+  const datePresetRef = useRef<DatePreset>(datePreset);
+
+  /** Whether any filter is currently active. */
+  const isFilterActive = activeSearch !== "" || datePreset !== "";
+
   const fetchOrders = useCallback(
-    async (pageNum: number, append: boolean) => {
+    async (
+      pageNum: number,
+      append: boolean,
+      search: string = "",
+      preset: DatePreset = ""
+    ) => {
+      // Cancel any in-flight request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
       if (append) {
         setIsLoadingMore(true);
       } else {
@@ -93,8 +136,16 @@ export function SalesforceOrderHistory({ slug }: SalesforceOrderHistoryProps) {
 
       try {
         const params = new URLSearchParams({ page: pageNum.toString() });
-        const res = await fetch(`/api/sf/orders?${params}`);
+        if (search) params.set("search", search);
+        if (preset) params.set("datePreset", preset);
+
+        const res = await fetch(`/api/sf/orders?${params}`, {
+          signal: controller.signal,
+        });
         const json: ApiResponse<SalesforceOrderListResponse> = await res.json();
+
+        // Ignore stale responses
+        if (controller.signal.aborted) return;
 
         if (!json.success) {
           setError(json.error ?? "Bestellungen konnten nicht geladen werden.");
@@ -108,11 +159,15 @@ export function SalesforceOrderHistory({ slug }: SalesforceOrderHistoryProps) {
           setOrders(newOrders);
         }
         setTotal(json.data!.total);
-      } catch {
+      } catch (err) {
+        // Ignore abort errors
+        if (err instanceof DOMException && err.name === "AbortError") return;
         setError("Netzwerkfehler beim Laden der Bestellungen.");
       } finally {
-        setIsLoading(false);
-        setIsLoadingMore(false);
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+          setIsLoadingMore(false);
+        }
       }
     },
     []
@@ -123,19 +178,125 @@ export function SalesforceOrderHistory({ slug }: SalesforceOrderHistoryProps) {
     fetchOrders(1, false);
   }, [fetchOrders]);
 
+  // OPH-88: Debounced search — fires 400ms after user stops typing
+  useEffect(() => {
+    if (!showSearch) return;
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    const trimmed = searchInput.trim();
+
+    debounceTimerRef.current = setTimeout(() => {
+      if (trimmed !== activeSearch) {
+        setActiveSearch(trimmed);
+        setPage(1);
+        setOrders([]);
+        // BUG-5 fix: read datePreset from ref to avoid stale closure value
+        fetchOrders(1, false, trimmed, datePresetRef.current);
+      }
+    }, 400);
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+    // activeSearch intentionally omitted to avoid re-triggering
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchInput, showSearch]);
+
+  // OPH-88: Date preset changes trigger immediate fetch
+  const handleDatePresetChange = (preset: DatePreset) => {
+    setDatePreset(preset);
+    datePresetRef.current = preset;
+    setPage(1);
+    setOrders([]);
+    fetchOrders(1, false, activeSearch, preset);
+  };
+
+  // OPH-88: Reset all filters
+  const handleReset = () => {
+    setSearchInput("");
+    setActiveSearch("");
+    setDatePreset("");
+    datePresetRef.current = "";
+    setPage(1);
+    setOrders([]);
+    fetchOrders(1, false, "", "");
+  };
+
   const handleLoadMore = () => {
     const nextPage = page + 1;
     setPage(nextPage);
-    fetchOrders(nextPage, true);
+    fetchOrders(nextPage, true, activeSearch, datePreset);
   };
 
   const hasMore = orders.length < total;
+
+  // ---- SEARCH & FILTER CONTROLS (shared across states when showSearch=true) ----
+  const searchFilterControls = showSearch ? (
+    <div className="flex flex-col gap-3">
+      {/* Search input */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          type="text"
+          placeholder="Kunde oder Kundennr. suchen..."
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          maxLength={200}
+          className="pl-9 pr-9"
+          aria-label="Bestellungen durchsuchen"
+        />
+        {searchInput && (
+          <button
+            type="button"
+            onClick={() => setSearchInput("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            aria-label="Suche leeren"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
+      {/* Date preset selector */}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {DATE_PRESET_OPTIONS.map((option) => (
+          <Button
+            key={option.value}
+            variant={datePreset === option.value ? "default" : "outline"}
+            size="sm"
+            onClick={() => handleDatePresetChange(option.value)}
+            className="text-xs h-8"
+          >
+            {option.label}
+          </Button>
+        ))}
+
+        {/* Reset control */}
+        {isFilterActive && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleReset}
+            className="text-xs h-8 text-muted-foreground ml-auto"
+          >
+            Zurücksetzen
+          </Button>
+        )}
+      </div>
+    </div>
+  ) : null;
 
   // ---- LOADING STATE ----
   if (isLoading) {
     return (
       <div className="flex flex-col gap-4">
         <h1 className="text-lg font-semibold">Meine Bestellungen</h1>
+        {searchFilterControls}
         <div
           className="flex flex-col gap-3"
           role="status"
@@ -164,11 +325,15 @@ export function SalesforceOrderHistory({ slug }: SalesforceOrderHistoryProps) {
     return (
       <div className="flex flex-col gap-4">
         <h1 className="text-lg font-semibold">Meine Bestellungen</h1>
+        {searchFilterControls}
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
-        <Button variant="outline" onClick={() => fetchOrders(1, false)}>
+        <Button
+          variant="outline"
+          onClick={() => fetchOrders(1, false, activeSearch, datePreset)}
+        >
           Erneut versuchen
         </Button>
       </div>
@@ -177,6 +342,28 @@ export function SalesforceOrderHistory({ slug }: SalesforceOrderHistoryProps) {
 
   // ---- EMPTY STATE ----
   if (orders.length === 0) {
+    // OPH-88: When filters are active, show a different empty state
+    if (isFilterActive) {
+      return (
+        <div className="flex flex-col gap-4">
+          <h1 className="text-lg font-semibold">Meine Bestellungen</h1>
+          {searchFilterControls}
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <Search className="h-10 w-10 text-muted-foreground/30 mb-3" />
+            <p className="text-sm font-medium mb-1">
+              Keine Bestellungen gefunden.
+            </p>
+            <p className="text-xs text-muted-foreground mb-4">
+              Passen Sie Ihre Suche oder Filter an.
+            </p>
+            <Button variant="outline" size="sm" onClick={handleReset}>
+              Zurücksetzen
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <ClipboardList className="h-12 w-12 text-muted-foreground/30 mb-4" />
@@ -203,9 +390,12 @@ export function SalesforceOrderHistory({ slug }: SalesforceOrderHistoryProps) {
       <div>
         <h1 className="text-lg font-semibold">Meine Bestellungen</h1>
         <p className="text-sm text-muted-foreground">
-          {total} {total === 1 ? "Bestellung" : "Bestellungen"} insgesamt
+          {total} {total === 1 ? "Bestellung" : "Bestellungen"}
+          {isFilterActive ? " gefunden" : " insgesamt"}
         </p>
       </div>
+
+      {searchFilterControls}
 
       {/* Inline error for load-more failures */}
       {error && (

@@ -194,6 +194,14 @@ export function ArticleSearch({ hasArticles }: ArticleSearchProps) {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Page heading */}
+      <div>
+        <h1 className="text-lg font-semibold">Bestellung aufgeben</h1>
+        <p className="text-sm text-muted-foreground">
+          Artikelnummer, Referenznummer oder Suchbegriff eingeben
+        </p>
+      </div>
+
       {/* Basket indicator (visible when items are in basket) */}
       {itemCount > 0 && (
         <div className="flex items-center justify-end">

@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { RoleChangeConfirmDialog } from "@/components/admin/role-change-confirm-dialog";
 import type { RoleChangeRequest } from "@/components/admin/role-change-confirm-dialog";
+import { EditNameDialog } from "@/components/team/edit-name-dialog";
 import type { TeamMember, UserRole, ApiResponse } from "@/lib/types";
 import {
   Loader2,
@@ -41,6 +42,7 @@ import {
   ShieldOff,
   Mail,
   KeyRound,
+  Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -117,6 +119,14 @@ export function UsersTable({ refreshKey, roleFilter }: UsersTableProps) {
   const [confirmResendInvite, setConfirmResendInvite] = useState<{ userId: string; userName: string } | null>(null);
   const [confirmResetPassword, setConfirmResetPassword] = useState<{ userId: string; userName: string } | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // OPH-89: Edit name dialog state
+  const [editNameTarget, setEditNameTarget] = useState<{
+    userId: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  } | null>(null);
 
   // OPH-41: Load current user info
   useEffect(() => {
@@ -413,6 +423,22 @@ export function UsersTable({ refreshKey, roleFilter }: UsersTableProps) {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          {/* OPH-89: Edit name (tenant_admin or platform_admin, not self, tenant-scoped) */}
+                          {canChangeRoles && !isSelf && (!isTargetPlatform || currentUserRole === "platform_admin") && (
+                            <DropdownMenuItem
+                              onClick={() =>
+                                setEditNameTarget({
+                                  userId: user.id,
+                                  email: user.email,
+                                  firstName: user.first_name ?? "",
+                                  lastName: user.last_name ?? "",
+                                })
+                              }
+                            >
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Name bearbeiten
+                            </DropdownMenuItem>
+                          )}
                           {/* OPH-48: Resend invite (pending users only) */}
                           {canResendInvite && (
                             <DropdownMenuItem
@@ -542,6 +568,30 @@ export function UsersTable({ refreshKey, roleFilter }: UsersTableProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* OPH-89: Edit name dialog */}
+      <EditNameDialog
+        open={!!editNameTarget}
+        onOpenChange={(open) => {
+          if (!open) setEditNameTarget(null);
+        }}
+        userId={editNameTarget?.userId ?? ""}
+        email={editNameTarget?.email ?? ""}
+        currentFirstName={editNameTarget?.firstName ?? ""}
+        currentLastName={editNameTarget?.lastName ?? ""}
+        onSaved={(firstName, lastName) => {
+          if (editNameTarget) {
+            setUsers((prev) =>
+              prev.map((u) =>
+                u.id === editNameTarget.userId
+                  ? { ...u, first_name: firstName, last_name: lastName }
+                  : u
+              )
+            );
+            toast.success("Name erfolgreich geändert.");
+          }
+        }}
+      />
     </>
   );
 }

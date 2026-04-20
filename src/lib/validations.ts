@@ -81,6 +81,22 @@ export const changePlatformRoleSchema = z.object({
 
 export type ChangePlatformRoleInput = z.infer<typeof changePlatformRoleSchema>;
 
+/** OPH-89: Update user first/last name. */
+export const updateUserNameSchema = z.object({
+  first_name: z
+    .string()
+    .trim()
+    .min(1, "Vorname darf nicht leer sein.")
+    .max(100, "Vorname darf maximal 100 Zeichen lang sein."),
+  last_name: z
+    .string()
+    .trim()
+    .min(1, "Nachname darf nicht leer sein.")
+    .max(100, "Nachname darf maximal 100 Zeichen lang sein."),
+});
+
+export type UpdateUserNameInput = z.infer<typeof updateUserNameSchema>;
+
 /**
  * OPH-2: Upload validation schemas.
  */
@@ -248,6 +264,14 @@ export const reviewApproveSchema = z.object({
 
 export type ReviewSaveInput = z.infer<typeof reviewSaveSchema>;
 export type ReviewApproveInput = z.infer<typeof reviewApproveSchema>;
+
+/** OPH-90: POST /api/orders/[orderId]/check — mark order as checked/verified. */
+export const orderCheckSchema = z.object({
+  /** ISO timestamp for optimistic locking. */
+  updatedAt: z.string().optional(),
+});
+
+export type OrderCheckInput = z.infer<typeof orderCheckSchema>;
 
 /**
  * OPH-6: Export validation schemas.
