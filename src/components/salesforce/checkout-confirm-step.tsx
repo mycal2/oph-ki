@@ -77,7 +77,7 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
     if (!isDealerIdentified) {
       router.replace(`${basePath}/checkout`);
     } else if (items.length === 0) {
-      router.replace(`${basePath}`);
+      router.replace(`${basePath}/order`);
     }
   }, [isDealerIdentified, items.length, submittedOrder, router, basePath]);
 
@@ -155,7 +155,7 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
 
   function handleNewOrder() {
     setSubmittedOrder(null);
-    router.push(`${basePath}`);
+    router.push(`${basePath}/order`);
   }
 
   // Don't render if guard will redirect (skip when post-submission)
