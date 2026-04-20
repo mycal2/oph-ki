@@ -100,6 +100,7 @@ Eine mandantenfähige SaaS-Plattform ("Order Intelligence Platform"), die Dental
 | P1 | OPH-87: Salesforce App: Personalized Login Page | In Progress |
 | P1 | OPH-88: Salesforce App: Order History Search & Date Filter | Planned |
 | P1 | OPH-89: Außendienstler: Edit Name & Status | Planned |
+| P1 | OPH-90: Geprüft Order Status (Verified State) | Planned |
 
 ## Success Metrics
 - Bearbeitungszeit pro Bestellung: von ~15 Min. manuell auf < 3 Min. mit System

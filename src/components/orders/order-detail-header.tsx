@@ -44,6 +44,7 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
   processing: "Wird verarbeitet",
   extracted: "Extrahiert",
   review: "In Prüfung",
+  checked: "Geprüft",
   approved: "Freigegeben",
   exported: "Exportiert",
   error: "Fehler",
@@ -57,9 +58,15 @@ const STATUS_VARIANTS: Record<
   processing: "default",
   extracted: "outline",
   review: "default",
+  checked: "outline",
   approved: "default",
   exported: "secondary",
   error: "destructive",
+};
+
+/** OPH-90: Extra Tailwind classes for specific statuses (e.g. blue for "checked"). */
+const STATUS_CLASSNAMES: Partial<Record<OrderStatus, string>> = {
+  checked: "border-blue-300 bg-blue-50 text-blue-700",
 };
 
 /** OPH-20: ISO 639-1 code to full German language name for tooltip display. */
@@ -202,6 +209,7 @@ export function OrderDetailHeader({
             />
             <Badge
               variant={STATUS_VARIANTS[order.status]}
+              className={STATUS_CLASSNAMES[order.status] ?? ""}
             >
               {STATUS_LABELS[order.status]}
             </Badge>

@@ -45,6 +45,7 @@ export function ReviewPageContent({ orderId }: ReviewPageContentProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isApproving, setIsApproving] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
   const [isReExtracting, setIsReExtracting] = useState(false);
   const [showReExtractConfirm, setShowReExtractConfirm] = useState(false);
   const [updatedAt, setUpdatedAt] = useState("");
@@ -207,6 +208,47 @@ export function ReviewPageContent({ orderId }: ReviewPageContentProps) {
     }
   }, [reviewData, orderId, updatedAt, flush, router]);
 
+  // OPH-90: Mark order as checked (Geprüft)
+  const handleCheck = useCallback(async () => {
+    if (!reviewData) return;
+    setIsChecking(true);
+    setError(null);
+
+    try {
+      // Flush any pending auto-save first
+      const flushedUpdatedAt = await flush(reviewData);
+      const currentUpdatedAt = flushedUpdatedAt ?? updatedAt;
+
+      const res = await fetch(`/api/orders/${orderId}/check`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ updatedAt: currentUpdatedAt }),
+      });
+
+      const json = (await res.json()) as ApiResponse<{ orderId: string; status: string; updatedAt: string }>;
+
+      if (res.status === 409) {
+        setError("Konflikt: Die Bestellung wurde von einem anderen Benutzer geändert.");
+        return;
+      }
+
+      if (!res.ok || !json.success || !json.data) {
+        setError(json.error ?? "Markierung als geprüft fehlgeschlagen.");
+        return;
+      }
+
+      // Update local state to reflect the new status
+      if (order) {
+        setOrder({ ...order, status: "checked" });
+      }
+      setUpdatedAt(json.data.updatedAt);
+    } catch {
+      setError("Verbindungsfehler beim Markieren als geprüft.");
+    } finally {
+      setIsChecking(false);
+    }
+  }, [reviewData, orderId, updatedAt, flush, order]);
+
   // Re-extract: confirm dialog, then trigger
   const handleReExtractConfirm = useCallback(async () => {
     setShowReExtractConfirm(false);
@@ -341,8 +383,10 @@ export function ReviewPageContent({ orderId }: ReviewPageContentProps) {
         autoSaveError={autoSaveError}
         canApprove={canApprove}
         isApproving={isApproving}
+        isChecking={isChecking}
         isReExtracting={isReExtracting}
         onApprove={handleApprove}
+        onCheck={handleCheck}
         onReExtract={() => setShowReExtractConfirm(true)}
       />
 

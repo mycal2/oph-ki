@@ -55,6 +55,7 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
   processing: "Wird verarbeitet",
   extracted: "Extrahiert",
   review: "In Prüfung",
+  checked: "Geprüft",
   approved: "Freigegeben",
   exported: "Exportiert",
   error: "Fehler",
@@ -68,9 +69,15 @@ const STATUS_VARIANTS: Record<
   processing: "default",
   extracted: "outline",
   review: "default",
+  checked: "outline",
   approved: "default",
   exported: "secondary",
   error: "destructive",
+};
+
+/** OPH-90: Extra Tailwind classes for specific statuses (e.g. blue for "checked"). */
+const STATUS_CLASSNAMES: Partial<Record<OrderStatus, string>> = {
+  checked: "border-blue-300 bg-blue-50 text-blue-700",
 };
 
 /** Sentinel value for "All tenants" in the Select component. */
@@ -460,7 +467,7 @@ export function OrdersList() {
                     </TableHead>
                   )}
                   <TableHead className="hidden sm:table-cell">
-                    Händler
+                    Händler / Kunde
                   </TableHead>
                   <TableHead className="hidden md:table-cell">
                     Hochgeladen von
@@ -528,7 +535,7 @@ export function OrdersList() {
                         <div className="flex flex-col gap-1">
                           <Badge
                             variant={STATUS_VARIANTS[order.status]}
-                            className="text-xs w-fit gap-1"
+                            className={`text-xs w-fit gap-1 ${STATUS_CLASSNAMES[order.status] ?? ""}`}
                           >
                             {(order.status === "uploaded" ||
                               order.status === "processing") && (

@@ -2,22 +2,30 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { reviewApproveSchema } from "@/lib/validations";
-import type { AppMetadata, ApiResponse, ReviewApproveResponse, CanonicalOrderData } from "@/lib/types";
+import { orderCheckSchema } from "@/lib/validations";
+import type { AppMetadata, ApiResponse } from "@/lib/types";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** Response shape for POST /api/orders/[orderId]/check. */
+interface OrderCheckResponse {
+  orderId: string;
+  status: "checked";
+  updatedAt: string;
+}
+
 /**
- * POST /api/orders/[orderId]/approve
+ * POST /api/orders/[orderId]/check
  *
- * Approves/releases an order after review.
- * Validates that at least 1 line item with description and quantity exists.
- * Sets status to "approved" (ready for export in OPH-6).
+ * OPH-90: Marks an order as "checked" (Geprueft).
+ * Valid source statuses: extracted, review, checked.
+ * Does NOT trigger ERP export or any downstream processing.
+ * Does NOT set reviewed_at/reviewed_by (those are reserved for "approved").
  */
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ orderId: string }> }
-): Promise<NextResponse<ApiResponse<ReviewApproveResponse>>> {
+): Promise<NextResponse<ApiResponse<OrderCheckResponse>>> {
   try {
     const { orderId } = await params;
 
@@ -65,7 +73,7 @@ export async function POST(
     // 3. Validate orderId
     if (!UUID_REGEX.test(orderId)) {
       return NextResponse.json(
-        { success: false, error: "Ungültige Bestellungs-ID." },
+        { success: false, error: "Ungueltige Bestellungs-ID." },
         { status: 400 }
       );
     }
@@ -76,12 +84,12 @@ export async function POST(
       body = await request.json();
     } catch {
       return NextResponse.json(
-        { success: false, error: "Ungültiger JSON-Body." },
+        { success: false, error: "Ungueltiger JSON-Body." },
         { status: 400 }
       );
     }
 
-    const parsed = reviewApproveSchema.safeParse(body);
+    const parsed = orderCheckSchema.safeParse(body);
     if (!parsed.success) {
       const firstError = parsed.error.issues[0]?.message ?? "Validierungsfehler.";
       return NextResponse.json(
@@ -96,7 +104,7 @@ export async function POST(
     // 5. Fetch order
     let query = adminClient
       .from("orders")
-      .select("id, tenant_id, updated_at, status, reviewed_data, extracted_data")
+      .select("id, tenant_id, updated_at, status")
       .eq("id", orderId);
 
     if (!isPlatformAdmin && tenantId) {
@@ -117,96 +125,62 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
-          error: "Diese Bestellung wurde in der Zwischenzeit geändert. Bitte laden Sie die Seite neu.",
+          error: "Diese Bestellung wurde in der Zwischenzeit geaendert. Bitte laden Sie die Seite neu.",
         },
         { status: 409 }
       );
     }
 
-    // 7. Check order is in a valid state for approval
-    // OPH-90: "checked" is now also a valid source status for approval
-    const validStatuses = ["extracted", "review", "checked", "approved"];
+    // 7. Check order is in a valid state for checking
+    const validStatuses = ["extracted", "review", "checked"];
     if (!validStatuses.includes(order.status as string)) {
       return NextResponse.json(
         {
           success: false,
-          error: `Bestellung kann im Status "${order.status}" nicht freigegeben werden.`,
+          error: `Bestellung kann im Status "${order.status}" nicht als geprueft markiert werden.`,
         },
         { status: 400 }
       );
     }
 
-    // 8. Validate reviewed data has at least 1 line item with description + quantity
-    const reviewedData = (order.reviewed_data ?? order.extracted_data) as CanonicalOrderData | null;
-
-    if (!reviewedData) {
-      return NextResponse.json(
-        { success: false, error: "Keine Extraktionsdaten vorhanden. Freigabe nicht möglich." },
-        { status: 400 }
-      );
-    }
-
-    const hasValidLineItem = reviewedData.order.line_items.some(
-      (item) =>
-        item.description &&
-        item.description.trim().length > 0 &&
-        item.quantity > 0
-    );
-
-    if (!hasValidLineItem) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Mindestens eine Bestellposition mit Beschreibung und Menge ist erforderlich.",
-        },
-        { status: 400 }
-      );
-    }
-
-    // 9. Approve: update status, set reviewer info
-    const now = new Date().toISOString();
+    // 8. Update status to "checked"
     const { data: updated, error: updateError } = await adminClient
       .from("orders")
-      .update({
-        status: "approved",
-        reviewed_at: now,
-        reviewed_by: user.id,
-        // If reviewed_data is null, copy from extracted_data
-        ...(order.reviewed_data ? {} : { reviewed_data: order.extracted_data }),
-      })
+      .update({ status: "checked" })
       .eq("id", orderId)
       .select("updated_at")
       .single();
 
     if (updateError || !updated) {
-      console.error("Error approving order:", updateError?.message);
+      console.error("Error marking order as checked:", updateError?.message);
       return NextResponse.json(
-        { success: false, error: "Freigabe fehlgeschlagen." },
+        { success: false, error: "Markierung als geprueft fehlgeschlagen." },
         { status: 500 }
       );
     }
 
-    // 10. Audit log entry for approval
-    await adminClient.from("order_edits").insert({
-      order_id: orderId,
-      tenant_id: order.tenant_id as string,
-      user_id: user.id,
-      field_path: "status",
-      old_value: order.status,
-      new_value: "approved",
-    });
+    // 9. Audit log entry
+    if (order.status !== "checked") {
+      await adminClient.from("order_edits").insert({
+        order_id: orderId,
+        tenant_id: order.tenant_id as string,
+        user_id: user.id,
+        field_path: "status",
+        old_value: order.status,
+        new_value: "checked",
+      });
+    }
 
     return NextResponse.json({
       success: true,
       data: {
         orderId,
-        status: "approved" as const,
-        reviewedAt: now,
-        reviewedBy: user.id,
+        status: "checked" as const,
+        updatedAt: updated.updated_at as string,
       },
     });
   } catch (error) {
-    console.error("Unexpected error in POST /api/orders/[orderId]/approve:", error);
+    console.error("Unexpected error in POST /api/orders/[orderId]/check:", error);
     return NextResponse.json(
       { success: false, error: "Interner Serverfehler." },
       { status: 500 }
