@@ -104,6 +104,7 @@
 | OPH-90 | Geprüft Order Status (Verified State) | Deployed | [OPH-90-verified-order-status.md](OPH-90-verified-order-status.md) | 2026-04-18 |
 | OPH-91 | Salesforce App: Home Dashboard | Deployed | [OPH-91-salesforce-home-dashboard.md](OPH-91-salesforce-home-dashboard.md) | 2026-04-20 |
 | OPH-92 | Platform Admin Tenant Context Switcher | Deployed | [OPH-92-platform-admin-tenant-switcher.md](OPH-92-platform-admin-tenant-switcher.md) | 2026-04-20 |
+| OPH-93 | Clarification Order Status | In Review | [OPH-93-clarification-order-status.md](OPH-93-clarification-order-status.md) | 2026-04-21 |
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-93
+## Next Available ID: OPH-94

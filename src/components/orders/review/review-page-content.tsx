@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ReviewPageHeader } from "./review-page-header";
+import { ClarificationDialog } from "./clarification-dialog";
 import { DocumentPreviewPanel } from "./document-preview-panel";
 import { OrderEditForm } from "./order-edit-form";
 import { DealerSection } from "@/components/orders/dealer";
@@ -47,7 +48,10 @@ export function ReviewPageContent({ orderId }: ReviewPageContentProps) {
   const [isApproving, setIsApproving] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
   const [isReExtracting, setIsReExtracting] = useState(false);
+  const [isClarifying, setIsClarifying] = useState(false);
+  const [isResolvingClarification, setIsResolvingClarification] = useState(false);
   const [showReExtractConfirm, setShowReExtractConfirm] = useState(false);
+  const [showClarificationDialog, setShowClarificationDialog] = useState(false);
   const [updatedAt, setUpdatedAt] = useState("");
 
   // Working copy of the reviewed data
@@ -249,6 +253,89 @@ export function ReviewPageContent({ orderId }: ReviewPageContentProps) {
     }
   }, [reviewData, orderId, updatedAt, flush, order]);
 
+  // OPH-93: Mark order as needing clarification (Klärung)
+  const handleClarify = useCallback(async (note: string | null) => {
+    if (!reviewData) return;
+    setIsClarifying(true);
+    setError(null);
+
+    try {
+      // Flush any pending auto-save first
+      const flushedUpdatedAt = await flush(reviewData);
+      const currentUpdatedAt = flushedUpdatedAt ?? updatedAt;
+
+      const res = await fetch(`/api/orders/${orderId}/clarify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ updatedAt: currentUpdatedAt, note }),
+      });
+
+      const json = (await res.json()) as ApiResponse<{ orderId: string; status: string; clarificationNote: string | null; updatedAt: string }>;
+
+      if (res.status === 409) {
+        setError("Konflikt: Die Bestellung wurde von einem anderen Benutzer geändert.");
+        return;
+      }
+
+      if (!res.ok || !json.success || !json.data) {
+        setError(json.error ?? "Markierung als Klärung fehlgeschlagen.");
+        return;
+      }
+
+      // Update local state to reflect the new status
+      if (order) {
+        setOrder({ ...order, status: "clarification", clarification_note: json.data.clarificationNote });
+      }
+      setUpdatedAt(json.data.updatedAt);
+      setShowClarificationDialog(false);
+    } catch {
+      setError("Verbindungsfehler beim Markieren als Klärung.");
+    } finally {
+      setIsClarifying(false);
+    }
+  }, [reviewData, orderId, updatedAt, flush, order]);
+
+  // OPH-93: Resolve clarification — reset order back to "extracted"
+  const handleResolveClarification = useCallback(async () => {
+    if (!reviewData) return;
+    setIsResolvingClarification(true);
+    setError(null);
+
+    try {
+      // Flush any pending auto-save first
+      const flushedUpdatedAt = await flush(reviewData);
+      const currentUpdatedAt = flushedUpdatedAt ?? updatedAt;
+
+      const res = await fetch(`/api/orders/${orderId}/resolve-clarification`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ updatedAt: currentUpdatedAt }),
+      });
+
+      const json = (await res.json()) as ApiResponse<{ orderId: string; status: string; updatedAt: string }>;
+
+      if (res.status === 409) {
+        setError("Konflikt: Die Bestellung wurde von einem anderen Benutzer geändert.");
+        return;
+      }
+
+      if (!res.ok || !json.success || !json.data) {
+        setError(json.error ?? "Klärung konnte nicht abgeschlossen werden.");
+        return;
+      }
+
+      // Update local state
+      if (order) {
+        setOrder({ ...order, status: "extracted", clarification_note: null });
+      }
+      setUpdatedAt(json.data.updatedAt);
+    } catch {
+      setError("Verbindungsfehler beim Abschließen der Klärung.");
+    } finally {
+      setIsResolvingClarification(false);
+    }
+  }, [reviewData, orderId, updatedAt, flush, order]);
+
   // Re-extract: confirm dialog, then trigger
   const handleReExtractConfirm = useCallback(async () => {
     setShowReExtractConfirm(false);
@@ -385,9 +472,14 @@ export function ReviewPageContent({ orderId }: ReviewPageContentProps) {
         isApproving={isApproving}
         isChecking={isChecking}
         isReExtracting={isReExtracting}
+        isClarifying={isClarifying}
+        isResolvingClarification={isResolvingClarification}
+        clarificationNote={order.clarification_note}
         onApprove={handleApprove}
         onCheck={handleCheck}
         onReExtract={() => setShowReExtractConfirm(true)}
+        onClarify={() => setShowClarificationDialog(true)}
+        onResolveClarification={handleResolveClarification}
       />
 
       {/* Dealer info */}
@@ -450,6 +542,15 @@ export function ReviewPageContent({ orderId }: ReviewPageContentProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* OPH-93: Clarification dialog */}
+      <ClarificationDialog
+        open={showClarificationDialog}
+        onOpenChange={setShowClarificationDialog}
+        onConfirm={handleClarify}
+        isSubmitting={isClarifying}
+        existingNote={order.clarification_note}
+      />
     </div>
   );
 }

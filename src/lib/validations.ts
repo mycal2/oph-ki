@@ -273,6 +273,24 @@ export const orderCheckSchema = z.object({
 
 export type OrderCheckInput = z.infer<typeof orderCheckSchema>;
 
+/** OPH-93: POST /api/orders/[orderId]/clarify — mark order as needing clarification. */
+export const orderClarifySchema = z.object({
+  /** ISO timestamp for optimistic locking. */
+  updatedAt: z.string().optional(),
+  /** Optional free-text note explaining what needs clarification (max 500 chars). */
+  note: z.string().max(500, "Klärungsnotiz darf maximal 500 Zeichen lang sein.").optional().nullable(),
+});
+
+export type OrderClarifyInput = z.infer<typeof orderClarifySchema>;
+
+/** OPH-93: POST /api/orders/[orderId]/resolve-clarification — reset order from clarification back to extracted. */
+export const orderResolveClarificationSchema = z.object({
+  /** ISO timestamp for optimistic locking. */
+  updatedAt: z.string().optional(),
+});
+
+export type OrderResolveClarificationInput = z.infer<typeof orderResolveClarificationSchema>;
+
 /**
  * OPH-6: Export validation schemas.
  */
