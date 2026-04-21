@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Calendar, FileText, Mail, Smartphone, Trash2, User } from "lucide-react";
+import { AlertTriangle, Calendar, FileText, Mail, Smartphone, Trash2, User } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -45,6 +45,7 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
   extracted: "Extrahiert",
   review: "In Prüfung",
   checked: "Geprüft",
+  clarification: "Klärung",
   approved: "Freigegeben",
   exported: "Exportiert",
   error: "Fehler",
@@ -59,14 +60,16 @@ const STATUS_VARIANTS: Record<
   extracted: "outline",
   review: "default",
   checked: "outline",
+  clarification: "outline",
   approved: "default",
   exported: "secondary",
   error: "destructive",
 };
 
-/** OPH-90: Extra Tailwind classes for specific statuses (e.g. blue for "checked"). */
+/** OPH-90/93: Extra Tailwind classes for specific statuses. */
 const STATUS_CLASSNAMES: Partial<Record<OrderStatus, string>> = {
   checked: "border-blue-300 bg-blue-50 text-blue-700",
+  clarification: "border-amber-300 bg-amber-50 text-amber-700",
 };
 
 /** OPH-20: ISO 639-1 code to full German language name for tooltip display. */
@@ -243,6 +246,17 @@ export function OrderDetailHeader({
             </p>
           )}
         </div>
+
+        {/* OPH-93: Clarification note banner */}
+        {order.status === "clarification" && order.clarification_note && (
+          <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3">
+            <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" aria-hidden="true" />
+            <div className="space-y-0.5">
+              <p className="text-xs font-medium text-amber-800">Klärungsnotiz</p>
+              <p className="text-sm text-amber-700">{order.clarification_note}</p>
+            </div>
+          </div>
+        )}
 
         {/* Recognition Audit */}
         <RecognitionAuditLine

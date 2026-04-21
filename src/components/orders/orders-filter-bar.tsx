@@ -15,6 +15,7 @@ const STATUS_TABS: Array<{ value: OrderStatus | "all"; label: string }> = [
   { value: "processing", label: "Verarbeitung" },
   { value: "extracted", label: "Extrahiert" },
   { value: "review", label: "In Prüfung" },
+  { value: "clarification", label: "Klärung" },
   { value: "checked", label: "Geprüft" },
   { value: "approved", label: "Freigegeben" },
   { value: "exported", label: "Exportiert" },

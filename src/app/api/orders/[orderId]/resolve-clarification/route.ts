@@ -2,30 +2,29 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { orderCheckSchema } from "@/lib/validations";
+import { orderResolveClarificationSchema } from "@/lib/validations";
 import type { AppMetadata, ApiResponse } from "@/lib/types";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Response shape for POST /api/orders/[orderId]/check. */
-interface OrderCheckResponse {
+/** Response shape for POST /api/orders/[orderId]/resolve-clarification. */
+interface OrderResolveClarificationResponse {
   orderId: string;
-  status: "checked";
+  status: "extracted";
   updatedAt: string;
 }
 
 /**
- * POST /api/orders/[orderId]/check
+ * POST /api/orders/[orderId]/resolve-clarification
  *
- * OPH-90: Marks an order as "checked" (Geprueft).
- * Valid source statuses: extracted, review, checked.
- * Does NOT trigger ERP export or any downstream processing.
- * Does NOT set reviewed_at/reviewed_by (those are reserved for "approved").
+ * OPH-93: Resolves clarification by resetting order back to "extracted".
+ * Valid source status: clarification only.
+ * Clears the clarification_note.
  */
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ orderId: string }> }
-): Promise<NextResponse<ApiResponse<OrderCheckResponse>>> {
+): Promise<NextResponse<ApiResponse<OrderResolveClarificationResponse>>> {
   try {
     const { orderId } = await params;
 
@@ -89,7 +88,7 @@ export async function POST(
       );
     }
 
-    const parsed = orderCheckSchema.safeParse(body);
+    const parsed = orderResolveClarificationSchema.safeParse(body);
     if (!parsed.success) {
       const firstError = parsed.error.issues[0]?.message ?? "Validierungsfehler.";
       return NextResponse.json(
@@ -104,7 +103,7 @@ export async function POST(
     // 5. Fetch order
     let query = adminClient
       .from("orders")
-      .select("id, tenant_id, updated_at, status")
+      .select("id, tenant_id, updated_at, status, clarification_note")
       .eq("id", orderId);
 
     if (!isPlatformAdmin && tenantId) {
@@ -131,45 +130,54 @@ export async function POST(
       );
     }
 
-    // 7. Check order is in a valid state for checking
-    // OPH-93: "clarification" is also a valid source status (user can skip to checked)
-    const validStatuses = ["extracted", "review", "checked", "clarification"];
-    if (!validStatuses.includes(order.status as string)) {
+    // 7. Check order is in clarification state
+    if (order.status !== "clarification") {
       return NextResponse.json(
         {
           success: false,
-          error: `Bestellung kann im Status "${order.status}" nicht als geprueft markiert werden.`,
+          error: `Klaerung kann nur fuer Bestellungen im Status "Klaerung" abgeschlossen werden. Aktueller Status: "${order.status}".`,
         },
         { status: 400 }
       );
     }
 
-    // 8. Update status to "checked"
-    // OPH-93: Clear clarification_note when transitioning from clarification to checked
+    // 8. Reset status to "extracted" and clear clarification note
     const { data: updated, error: updateError } = await adminClient
       .from("orders")
-      .update({ status: "checked", clarification_note: null })
+      .update({
+        status: "extracted",
+        clarification_note: null,
+      })
       .eq("id", orderId)
       .select("updated_at")
       .single();
 
     if (updateError || !updated) {
-      console.error("Error marking order as checked:", updateError?.message);
+      console.error("Error resolving clarification:", updateError?.message);
       return NextResponse.json(
-        { success: false, error: "Markierung als geprueft fehlgeschlagen." },
+        { success: false, error: "Klaerung konnte nicht abgeschlossen werden." },
         { status: 500 }
       );
     }
 
-    // 9. Audit log entry
-    if (order.status !== "checked") {
+    // 9. Audit log entries
+    await adminClient.from("order_edits").insert({
+      order_id: orderId,
+      tenant_id: order.tenant_id as string,
+      user_id: user.id,
+      field_path: "status",
+      old_value: "clarification",
+      new_value: "extracted",
+    });
+
+    if (order.clarification_note) {
       await adminClient.from("order_edits").insert({
         order_id: orderId,
         tenant_id: order.tenant_id as string,
         user_id: user.id,
-        field_path: "status",
-        old_value: order.status,
-        new_value: "checked",
+        field_path: "clarification_note",
+        old_value: order.clarification_note,
+        new_value: null,
       });
     }
 
@@ -177,12 +185,12 @@ export async function POST(
       success: true,
       data: {
         orderId,
-        status: "checked" as const,
+        status: "extracted" as const,
         updatedAt: updated.updated_at as string,
       },
     });
   } catch (error) {
-    console.error("Unexpected error in POST /api/orders/[orderId]/check:", error);
+    console.error("Unexpected error in POST /api/orders/[orderId]/resolve-clarification:", error);
     return NextResponse.json(
       { success: false, error: "Interner Serverfehler." },
       { status: 500 }
