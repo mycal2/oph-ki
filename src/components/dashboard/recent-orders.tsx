@@ -24,8 +24,9 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
   uploaded: "Hochgeladen",
   processing: "Wird verarbeitet",
   extracted: "Extrahiert",
-  review: "In Prufung",
+  review: "In Prüfung",
   checked: "Geprüft",
+  clarification: "Klärung",
   approved: "Freigegeben",
   exported: "Exportiert",
   error: "Fehler",
@@ -40,14 +41,16 @@ const STATUS_VARIANTS: Record<
   extracted: "outline",
   review: "default",
   checked: "outline",
+  clarification: "outline",
   approved: "default",
   exported: "secondary",
   error: "destructive",
 };
 
-/** OPH-90: Extra Tailwind classes for specific statuses (e.g. blue for "checked"). */
+/** OPH-90/93: Extra Tailwind classes for specific statuses. */
 const STATUS_CLASSNAMES: Partial<Record<OrderStatus, string>> = {
   checked: "border-blue-300 bg-blue-50 text-blue-700",
+  clarification: "border-amber-300 bg-amber-50 text-amber-700",
 };
 
 function formatDate(dateStr: string): string {

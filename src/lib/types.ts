@@ -99,7 +99,7 @@ export interface ApiResponse<T = undefined> {
 /**
  * OPH-2: Order Upload types.
  */
-export type OrderStatus = "uploaded" | "processing" | "extracted" | "review" | "checked" | "approved" | "exported" | "error";
+export type OrderStatus = "uploaded" | "processing" | "extracted" | "review" | "checked" | "clarification" | "approved" | "exported" | "error";
 
 export interface Order {
   id: string;
@@ -224,6 +224,8 @@ export interface OrderWithDealer extends Order {
   dealer_reset_at: string | null;
   /** OPH-66: Display name of the user who reset the dealer. */
   reset_by_name: string | null;
+  /** OPH-93: Free-text clarification note (max 500 chars). Null when not in clarification status. */
+  clarification_note: string | null;
 }
 
 /** Lightweight order summary for the orders list page. */

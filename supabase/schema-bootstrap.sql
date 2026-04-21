@@ -206,7 +206,7 @@ CREATE TABLE public.orders (
   id                       uuid        PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   tenant_id                uuid        NOT NULL REFERENCES public.tenants(id),
   uploaded_by              uuid        NULL REFERENCES public.user_profiles(id),
-  status                   text        NOT NULL DEFAULT 'uploaded' CHECK (status IN ('uploaded','processing','extracted','review','checked','approved','exported','error')),
+  status                   text        NOT NULL DEFAULT 'uploaded' CHECK (status IN ('uploaded','processing','extracted','review','checked','clarification','approved','exported','error')),
   created_at               timestamptz NOT NULL DEFAULT now(),
   updated_at               timestamptz NOT NULL DEFAULT now(),
   dealer_id                uuid        NULL REFERENCES public.dealers(id),
@@ -232,7 +232,8 @@ CREATE TABLE public.orders (
   preview_token_expires_at timestamptz NULL,
   subject                  text        NULL,
   output_format_confidence_score integer NULL CHECK (output_format_confidence_score IS NULL OR (output_format_confidence_score >= 0 AND output_format_confidence_score <= 100)),
-  output_format_missing_columns  jsonb  NULL
+  output_format_missing_columns  jsonb  NULL,
+  clarification_note             text   NULL CHECK (clarification_note IS NULL OR length(clarification_note) <= 500)
 );
 
 -- order_files (FK → orders, tenants)

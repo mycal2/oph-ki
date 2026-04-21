@@ -96,6 +96,7 @@ export async function GET(
         has_unmapped_articles,
         subject,
         source,
+        clarification_note,
         dealer_reset_by,
         dealer_reset_at,
         dealers ( id, name, street, postal_code, city, country ),
@@ -191,6 +192,8 @@ export async function GET(
       reset_by_name: resetterData
         ? `${resetterData.first_name} ${resetterData.last_name}`.trim()
         : null,
+      // OPH-93: Clarification note
+      clarification_note: (order.clarification_note as string | null) ?? null,
       // OPH-5: Review fields
       reviewed_data: (order.reviewed_data as CanonicalOrderData) ?? null,
       reviewed_at: (order.reviewed_at as string) ?? null,
