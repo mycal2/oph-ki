@@ -2,12 +2,18 @@
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentUserRole } from "@/hooks/use-current-user-role";
+import { usePlatformTenantContext } from "@/hooks/use-platform-tenant-context";
 import { CustomerCatalogPage } from "@/components/customer-catalog/customer-catalog-page";
+import {
+  TenantContextBanner,
+  TenantContextRequired,
+} from "@/components/layout/tenant-context-required";
 
 export default function CustomerCatalogSettingsPage() {
-  const { isLoading: isLoadingRole, role } = useCurrentUserRole();
+  const { isLoading: isLoadingRole, role, isPlatformAdmin } = useCurrentUserRole();
+  const { activeTenant, isLoading: isLoadingContext } = usePlatformTenantContext();
 
-  if (isLoadingRole) {
+  if (isLoadingRole || (isPlatformAdmin && isLoadingContext)) {
     return (
       <div className="space-y-6">
         <div>
@@ -31,6 +37,23 @@ export default function CustomerCatalogSettingsPage() {
   }
 
   const readOnly = role === "tenant_user";
+
+  // OPH-92: Platform admin — show data for the selected tenant context
+  if (isPlatformAdmin) {
+    if (!activeTenant) {
+      return <TenantContextRequired />;
+    }
+
+    return (
+      <div className="space-y-4">
+        <TenantContextBanner activeTenant={activeTenant} />
+        <CustomerCatalogPage
+          adminTenantId={activeTenant.tenantId}
+          adminTenantName={activeTenant.tenantName}
+        />
+      </div>
+    );
+  }
 
   return <CustomerCatalogPage readOnly={readOnly} />;
 }

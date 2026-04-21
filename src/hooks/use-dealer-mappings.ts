@@ -6,9 +6,11 @@ import type { DealerDataMappingListItem, MappingType } from "@/lib/types";
 interface UseDealerMappingsOptions {
   dealerId: string | null;
   mappingType?: MappingType | null;
+  /** OPH-92: When provided (platform_admin), scope mappings to this tenant. */
+  adminTenantId?: string | null;
 }
 
-export function useDealerMappings({ dealerId, mappingType }: UseDealerMappingsOptions) {
+export function useDealerMappings({ dealerId, mappingType, adminTenantId }: UseDealerMappingsOptions) {
   const [mappings, setMappings] = useState<DealerDataMappingListItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,6 +27,7 @@ export function useDealerMappings({ dealerId, mappingType }: UseDealerMappingsOp
     try {
       const params = new URLSearchParams({ dealerId });
       if (mappingType) params.set("mappingType", mappingType);
+      if (adminTenantId) params.set("tenantId", adminTenantId);
 
       const res = await fetch(`/api/dealer-mappings?${params}`);
       const json = await res.json();
@@ -40,7 +43,7 @@ export function useDealerMappings({ dealerId, mappingType }: UseDealerMappingsOp
     } finally {
       setIsLoading(false);
     }
-  }, [dealerId, mappingType]);
+  }, [dealerId, mappingType, adminTenantId]);
 
   useEffect(() => {
     fetchMappings();
@@ -59,7 +62,7 @@ export function useDealerMappings({ dealerId, mappingType }: UseDealerMappingsOp
       const res = await fetch("/api/dealer-mappings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, ...(adminTenantId ? { tenantId: adminTenantId } : {}) }),
       });
       const json = await res.json();
 
@@ -70,7 +73,7 @@ export function useDealerMappings({ dealerId, mappingType }: UseDealerMappingsOp
       await fetchMappings();
       return json.data;
     },
-    [fetchMappings]
+    [fetchMappings, adminTenantId]
   );
 
   const updateMapping = useCallback(
@@ -113,6 +116,7 @@ export function useDealerMappings({ dealerId, mappingType }: UseDealerMappingsOp
         dealerId: importDealerId,
         mappingType: importMappingType,
       });
+      if (adminTenantId) params.set("tenantId", adminTenantId);
 
       const res = await fetch(`/api/dealer-mappings/import?${params}`, {
         method: "POST",
@@ -128,7 +132,7 @@ export function useDealerMappings({ dealerId, mappingType }: UseDealerMappingsOp
       await fetchMappings();
       return json.data as { created: number; updated: number; errors: string[] };
     },
-    [fetchMappings]
+    [fetchMappings, adminTenantId]
   );
 
   return {
