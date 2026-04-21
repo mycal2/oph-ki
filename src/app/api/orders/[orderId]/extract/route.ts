@@ -572,6 +572,27 @@ export async function POST(
       // unexpected abbreviations. Also marks truly unknown units with "(unbekannt)".
       finalExtractedData = normalizeUnits(finalExtractedData);
 
+      // --- Strip internal whitespace from article numbers (system-wide) ---
+      // Documents sometimes contain article numbers with spaces (e.g., "330 104 408 297 016")
+      // which must be normalized to "330104408297016" before matching and storage.
+      if (finalExtractedData.order.line_items) {
+        finalExtractedData = {
+          ...finalExtractedData,
+          order: {
+            ...finalExtractedData.order,
+            line_items: finalExtractedData.order.line_items.map((item) => ({
+              ...item,
+              article_number: item.article_number
+                ? String(item.article_number).replace(/\s+/g, "")
+                : item.article_number,
+              dealer_article_number: item.dealer_article_number
+                ? String(item.dealer_article_number).replace(/\s+/g, "")
+                : item.dealer_article_number,
+            })),
+          },
+        };
+      }
+
       // --- OPH-40 + OPH-65: Article number matching against tenant catalog ---
       if (tenantId) {
         try {
