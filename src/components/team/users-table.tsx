@@ -100,9 +100,11 @@ interface UsersTableProps {
   refreshKey?: number;
   /** OPH-74: Optional role filter — only show users with this role. */
   roleFilter?: UserRole;
+  /** OPH-92: When provided (platform_admin), fetch users for this tenant via admin API. */
+  adminTenantId?: string | null;
 }
 
-export function UsersTable({ refreshKey, roleFilter }: UsersTableProps) {
+export function UsersTable({ refreshKey, roleFilter, adminTenantId }: UsersTableProps) {
   const [users, setUsers] = useState<TeamMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [togglingUserId, setTogglingUserId] = useState<string | null>(null);
@@ -155,14 +157,25 @@ export function UsersTable({ refreshKey, roleFilter }: UsersTableProps) {
     setIsLoading(true);
     setError(null);
     try {
-      const url = roleFilter
-        ? `/api/team/members?role=${encodeURIComponent(roleFilter)}`
-        : "/api/team/members";
+      // OPH-92: Platform admin with tenant context uses admin endpoint
+      let url: string;
+      if (adminTenantId) {
+        url = `/api/admin/tenants/${adminTenantId}/users`;
+      } else if (roleFilter) {
+        url = `/api/team/members?role=${encodeURIComponent(roleFilter)}`;
+      } else {
+        url = "/api/team/members";
+      }
+
       const response = await fetch(url);
       const result: ApiResponse<TeamMember[]> = await response.json();
 
       if (result.success && result.data) {
-        setUsers(result.data);
+        // OPH-92: Admin endpoint doesn't support role filtering — filter client-side
+        const filtered = adminTenantId && roleFilter
+          ? result.data.filter((u) => u.role === roleFilter)
+          : result.data;
+        setUsers(filtered);
       } else {
         setError(result.error ?? "Teammitglieder konnten nicht geladen werden.");
       }
@@ -171,7 +184,7 @@ export function UsersTable({ refreshKey, roleFilter }: UsersTableProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [roleFilter]);
+  }, [roleFilter, adminTenantId]);
 
   useEffect(() => {
     loadUsers();

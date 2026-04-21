@@ -27,6 +27,11 @@ import { MappingsTable } from "@/components/dealer-mappings/mappings-table";
 import { useDealers } from "@/hooks/use-dealers";
 import { useDealerMappings } from "@/hooks/use-dealer-mappings";
 import { useCurrentUserRole } from "@/hooks/use-current-user-role";
+import { usePlatformTenantContext } from "@/hooks/use-platform-tenant-context";
+import {
+  TenantContextBanner,
+  TenantContextRequired,
+} from "@/components/layout/tenant-context-required";
 import type { MappingType } from "@/lib/types";
 
 const MAPPING_TABS: { value: MappingType; label: string }[] = [
@@ -39,6 +44,7 @@ function DealerMappingsContent() {
   const searchParams = useSearchParams();
   const { dealers, isLoading: isDealersLoading, error: dealersError } = useDealers();
   const { isPlatformAdmin } = useCurrentUserRole();
+  const { activeTenant } = usePlatformTenantContext();
   const [selectedDealerId, setSelectedDealerId] = useState<string | null>(
     searchParams.get("dealer")
   );
@@ -56,14 +62,25 @@ function DealerMappingsContent() {
     importCsv,
   } = useDealerMappings({
     dealerId: selectedDealerId,
+    adminTenantId: isPlatformAdmin && activeTenant ? activeTenant.tenantId : undefined,
   });
+
+  // OPH-92: Platform admin must select a tenant context for Stammdaten pages
+  if (isPlatformAdmin && !activeTenant) {
+    return <TenantContextRequired />;
+  }
 
   return (
     <div className="space-y-6">
+      {/* OPH-92: Show tenant context banner for platform admins */}
+      {isPlatformAdmin && activeTenant && (
+        <TenantContextBanner activeTenant={activeTenant} />
+      )}
+
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Händler-Zuordnungen</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Haendler-Zuordnungen</h1>
         <p className="text-muted-foreground">
-          Verwalten Sie Artikelnummern-, Einheiten- und Feld-Zuordnungen für Ihre Händler.
+          Verwalten Sie Artikelnummern-, Einheiten- und Feld-Zuordnungen fuer Ihre Haendler.
         </p>
       </div>
 
@@ -74,7 +91,7 @@ function DealerMappingsContent() {
           <Label htmlFor="global-mode" className="flex-1 text-sm cursor-pointer">
             Globale Zuordnungen verwalten
             <span className="text-muted-foreground block text-xs">
-              Neue Einträge gelten für alle Mandanten als Basis-Zuordnungen.
+              Neue Eintraege gelten fuer alle Mandanten als Basis-Zuordnungen.
             </span>
           </Label>
           <Switch
@@ -96,7 +113,7 @@ function DealerMappingsContent() {
               <div>
                 <CardTitle className="text-lg">Zuordnungen</CardTitle>
                 <CardDescription>
-                  Händler-Werte werden automatisch in ERP-Werte übersetzt.
+                  Haendler-Werte werden automatisch in ERP-Werte uebersetzt.
                 </CardDescription>
               </div>
             </div>
@@ -113,7 +130,7 @@ function DealerMappingsContent() {
                   onValueChange={(val) => setSelectedDealerId(val || null)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Händler auswählen..." />
+                    <SelectValue placeholder="Haendler auswaehlen..." />
                   </SelectTrigger>
                   <SelectContent>
                     {dealers.map((dealer) => (
@@ -134,7 +151,7 @@ function DealerMappingsContent() {
           {!selectedDealerId ? (
             <div className="text-center py-12 text-muted-foreground">
               <ArrowLeftRight className="h-10 w-10 mx-auto mb-3 opacity-30" />
-              <p>Wählen Sie einen Händler aus, um dessen Zuordnungen zu verwalten.</p>
+              <p>Waehlen Sie einen Haendler aus, um dessen Zuordnungen zu verwalten.</p>
             </div>
           ) : (
             <Tabs
