@@ -49,16 +49,18 @@ export function SalesforceHeader({ tenantName, tenantLogoUrl, slug, userName }: 
   return (
     <header className="sticky top-0 z-50 border-b bg-background">
       <div className="flex h-14 items-center justify-between px-4">
-        {/* Left: IDS.online logo */}
+        {/* Left: IDS.online logo — links to home (OPH-91) */}
         <div className="flex items-center gap-3">
-          <Image
-            src="/ids-logo.svg"
-            alt="IDS.online"
-            width={100}
-            height={28}
-            className="h-7 w-auto"
-            priority
-          />
+          <Link href={basePath || "/"} aria-label="Zur Startseite">
+            <Image
+              src="/ids-logo.svg"
+              alt="IDS.online"
+              width={100}
+              height={28}
+              className="h-7 w-auto"
+              priority
+            />
+          </Link>
         </div>
 
         {/* Right: Basket icon + User dropdown + Tenant logo */}
@@ -117,16 +119,19 @@ export function SalesforceHeader({ tenantName, tenantLogoUrl, slug, userName }: 
             </DropdownMenuContent>
           </DropdownMenu>
 
+          {/* Tenant logo — links to home (OPH-91) */}
           {tenantLogoUrl && !logoError && (
-            <Image
-              src={tenantLogoUrl}
-              alt={tenantName}
-              width={120}
-              height={32}
-              className="h-8 w-auto max-w-[120px] object-contain"
-              onError={() => setLogoError(true)}
-              unoptimized
-            />
+            <Link href={basePath || "/"} aria-label="Zur Startseite">
+              <Image
+                src={tenantLogoUrl}
+                alt={tenantName}
+                width={120}
+                height={32}
+                className="h-8 w-auto max-w-[120px] object-contain"
+                onError={() => setLogoError(true)}
+                unoptimized
+              />
+            </Link>
           )}
         </div>
       </div>

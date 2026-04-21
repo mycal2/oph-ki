@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Search, Plus, Loader2, PackageSearch, AlertCircle, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -49,10 +49,13 @@ export function ArticleSearch({ hasArticles }: ArticleSearchProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const { addToBasket, itemCount } = useBasket();
+  const { addToBasket, items, itemCount } = useBasket();
 
-  // Track which articles were just added (for visual feedback)
-  const [justAdded, setJustAdded] = useState<Set<string>>(new Set());
+  // Set of article IDs already in the basket (for persistent "Hinzugefügt" state)
+  const inBasketIds = useMemo(
+    () => new Set(items.map((item) => item.article.id)),
+    [items]
+  );
 
   // Auto-focus the search input on mount
   useEffect(() => {
@@ -160,17 +163,9 @@ export function ArticleSearch({ hasArticles }: ArticleSearchProps) {
     fetchArticles(debouncedQuery, nextPage, true);
   };
 
-  // Handle adding to basket with visual feedback
+  // Handle adding to basket
   const handleAdd = (article: ArticleCatalogItem) => {
     addToBasket(article);
-    setJustAdded((prev) => new Set(prev).add(article.id));
-    setTimeout(() => {
-      setJustAdded((prev) => {
-        const next = new Set(prev);
-        next.delete(article.id);
-        return next;
-      });
-    }, 1200);
   };
 
   const hasMore = articles.length < total;
@@ -274,7 +269,7 @@ export function ArticleSearch({ hasArticles }: ArticleSearchProps) {
                 key={article.id}
                 article={article}
                 onAdd={handleAdd}
-                justAdded={justAdded.has(article.id)}
+                inBasket={inBasketIds.has(article.id)}
               />
             ))}
           </div>
@@ -336,10 +331,10 @@ export function ArticleSearch({ hasArticles }: ArticleSearchProps) {
 interface ArticleResultCardProps {
   article: ArticleCatalogItem;
   onAdd: (article: ArticleCatalogItem) => void;
-  justAdded: boolean;
+  inBasket: boolean;
 }
 
-function ArticleResultCard({ article, onAdd, justAdded }: ArticleResultCardProps) {
+function ArticleResultCard({ article, onAdd, inBasket }: ArticleResultCardProps) {
   // Build packaging / size detail string
   const details: string[] = [];
   if (article.packaging) details.push(article.packaging);
@@ -369,12 +364,12 @@ function ArticleResultCard({ article, onAdd, justAdded }: ArticleResultCardProps
       {/* Add button */}
       <Button
         size="sm"
-        variant={justAdded ? "secondary" : "default"}
+        variant={inBasket ? "secondary" : "default"}
         onClick={() => onAdd(article)}
         className="shrink-0 font-semibold transition-all"
-        aria-label={`${article.name} hinzufügen`}
+        aria-label={inBasket ? `${article.name} erneut hinzufügen` : `${article.name} hinzufügen`}
       >
-        {justAdded ? (
+        {inBasket ? (
           "Hinzugefügt"
         ) : (
           <>

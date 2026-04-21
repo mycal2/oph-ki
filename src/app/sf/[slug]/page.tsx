@@ -1,42 +1,67 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
-import { ArticleSearch } from "@/components/salesforce/article-search";
+import { SalesforceHomeDashboard } from "@/components/salesforce/salesforce-home";
 import type { AppMetadata } from "@/lib/types";
 
+interface SalesforceHomePageProps {
+  params: Promise<{ slug: string }>;
+}
+
 /**
- * OPH-76: Salesforce App home page — Article Search & Browse.
+ * OPH-91: Salesforce App home page — Dashboard with greeting and navigation tiles.
  *
  * Server component that:
  * 1. Verifies the user is authenticated
- * 2. Checks whether the tenant has any articles in the catalog
- * 3. Renders the client-side ArticleSearch component
+ * 2. Fetches user first name + tenant info for the dashboard
+ * 3. Renders the SalesforceHomeDashboard client component
  */
-export default async function SalesforceHomePage() {
+export default async function SalesforceHomePage({ params }: SalesforceHomePageProps) {
+  const { slug } = await params;
+
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    redirect(`/sf/${slug}/login`);
   }
 
   const appMetadata = user.app_metadata as AppMetadata | undefined;
   const tenantId = appMetadata?.tenant_id;
 
   if (!tenantId) {
-    redirect("/login");
+    redirect(`/sf/${slug}/login`);
   }
 
-  // Check if tenant has any articles (quick count query)
   const adminClient = createAdminClient();
-  const { count } = await adminClient
-    .from("article_catalog")
-    .select("id", { count: "exact", head: true })
-    .eq("tenant_id", tenantId);
 
-  const hasArticles = (count ?? 0) > 0;
+  // Fetch user profile (first name for greeting)
+  const { data: profile } = await adminClient
+    .from("user_profiles")
+    .select("first_name")
+    .eq("id", user.id)
+    .single();
 
-  return <ArticleSearch hasArticles={hasArticles} />;
+  const firstName = (profile?.first_name as string) || null;
+
+  // Fetch tenant info (name + logo)
+  const { data: tenant } = await adminClient
+    .from("tenants")
+    .select("name, logo_url")
+    .eq("id", tenantId)
+    .single();
+
+  const tenantName = (tenant?.name as string) || "";
+  const tenantLogoUrl = (tenant?.logo_url as string | null) ?? null;
+
+  return (
+    <SalesforceHomeDashboard
+      slug={slug}
+      firstName={firstName}
+      tenantName={tenantName}
+      tenantLogoUrl={tenantLogoUrl}
+    />
+  );
 }

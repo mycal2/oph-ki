@@ -36,7 +36,16 @@ export async function GET(
       );
     }
 
-    const tenantId = appMetadata?.tenant_id;
+    const role = appMetadata?.role;
+    const { searchParams } = new URL(request.url);
+
+    // OPH-92: Platform admins can pass ?tenantId=X to view mappings for a specific tenant
+    const tenantIdParam = searchParams.get("tenantId");
+    const tenantId =
+      role === "platform_admin" && tenantIdParam
+        ? tenantIdParam
+        : appMetadata?.tenant_id;
+
     if (!tenantId) {
       return NextResponse.json(
         { success: false, error: "Kein Mandant zugewiesen." },
@@ -44,7 +53,6 @@ export async function GET(
       );
     }
 
-    const { searchParams } = new URL(request.url);
     const dealerId = searchParams.get("dealerId");
 
     if (!dealerId) {
@@ -176,8 +184,8 @@ export async function POST(
       );
     }
 
-    const tenantId = appMetadata?.tenant_id;
-    if (!tenantId && role !== "platform_admin") {
+    const ownTenantId = appMetadata?.tenant_id;
+    if (!ownTenantId && role !== "platform_admin") {
       return NextResponse.json(
         { success: false, error: "Kein Mandant zugewiesen." },
         { status: 403 }
@@ -197,9 +205,13 @@ export async function POST(
     const { dealerId, mappingType, dealerValue, erpValue, conversionFactor, description } =
       parsed.data;
 
+    // OPH-92: Platform admin can pass tenantId in body to create tenant-specific mappings
+    const contextTenantId =
+      role === "platform_admin" && body.tenantId ? (body.tenantId as string) : ownTenantId;
+
     // Determine tenant_id: platform_admin can create global (null), tenant_admin uses own
     const isGlobal = body.isGlobal === true && role === "platform_admin";
-    const mappingTenantId = isGlobal ? null : tenantId;
+    const mappingTenantId = isGlobal ? null : contextTenantId;
 
     const adminClient = createAdminClient();
 

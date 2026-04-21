@@ -50,7 +50,7 @@ export async function POST(
     }
 
     const role = appMetadata?.role;
-    const tenantId = appMetadata?.tenant_id;
+    const ownTenantId = appMetadata?.tenant_id;
 
     if (role !== "tenant_admin" && role !== "platform_admin") {
       return NextResponse.json(
@@ -62,6 +62,13 @@ export async function POST(
     const { searchParams } = new URL(request.url);
     const dealerId = searchParams.get("dealerId");
     const mappingType = searchParams.get("mappingType");
+
+    // OPH-92: Platform admins can pass ?tenantId=X to import mappings for a specific tenant
+    const tenantIdParam = searchParams.get("tenantId");
+    const tenantId =
+      role === "platform_admin" && tenantIdParam
+        ? tenantIdParam
+        : ownTenantId;
 
     if (!dealerId || !mappingType) {
       return NextResponse.json(

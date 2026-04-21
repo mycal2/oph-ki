@@ -101,7 +101,9 @@
 | OPH-87 | Salesforce App: Personalized Login Page | In Progress | [OPH-87-salesforce-personalized-login.md](OPH-87-salesforce-personalized-login.md) | 2026-04-18 |
 | OPH-88 | Salesforce App: Order History Search & Date Filter | In Review | [OPH-88-salesforce-order-history-search-filter.md](OPH-88-salesforce-order-history-search-filter.md) | 2026-04-18 |
 | OPH-89 | Außendienstler: Edit Name & Status | In Review | [OPH-89-aussendienstler-edit-name-status.md](OPH-89-aussendienstler-edit-name-status.md) | 2026-04-18 |
-| OPH-90 | Geprüft Order Status (Verified State) | In Progress | [OPH-90-verified-order-status.md](OPH-90-verified-order-status.md) | 2026-04-18 |
+| OPH-90 | Geprüft Order Status (Verified State) | Deployed | [OPH-90-verified-order-status.md](OPH-90-verified-order-status.md) | 2026-04-18 |
+| OPH-91 | Salesforce App: Home Dashboard | In Progress | [OPH-91-salesforce-home-dashboard.md](OPH-91-salesforce-home-dashboard.md) | 2026-04-20 |
+| OPH-92 | Platform Admin Tenant Context Switcher | In Progress | [OPH-92-platform-admin-tenant-switcher.md](OPH-92-platform-admin-tenant-switcher.md) | 2026-04-20 |
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-91
+## Next Available ID: OPH-93
