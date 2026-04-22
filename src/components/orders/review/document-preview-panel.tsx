@@ -340,6 +340,83 @@ function TextFilePreview({ file }: { file: FilePreviewUrl }) {
 }
 
 /**
+ * PDF preview sub-component.
+ * When the stored MIME type is not application/pdf (e.g. application/octet-stream from
+ * email ingestion), the browser would download instead of rendering inline. This component
+ * fetches the file, creates a Blob with the correct type, and uses an object URL so the
+ * browser's built-in PDF viewer renders it in the iframe.
+ */
+function PdfFilePreview({ file }: { file: FilePreviewUrl }) {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [isLoadingPdf, setIsLoadingPdf] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+
+  // If MIME type is already correct, use the signed URL directly (no fetch needed)
+  const needsBlobFix = file.mimeType !== "application/pdf";
+
+  useEffect(() => {
+    if (!needsBlobFix) return;
+
+    let cancelled = false;
+    let objectUrl: string | null = null;
+    setIsLoadingPdf(true);
+    setPdfError(null);
+
+    async function fetchAndCreateBlob() {
+      try {
+        const res = await fetch(file.signedUrl);
+        if (!res.ok) {
+          if (!cancelled) setPdfError("PDF konnte nicht geladen werden.");
+          return;
+        }
+        const arrayBuffer = await res.arrayBuffer();
+        const blob = new Blob([arrayBuffer], { type: "application/pdf" });
+        objectUrl = URL.createObjectURL(blob);
+        if (!cancelled) setBlobUrl(objectUrl);
+      } catch {
+        if (!cancelled) setPdfError("Verbindungsfehler beim Laden der PDF.");
+      } finally {
+        if (!cancelled) setIsLoadingPdf(false);
+      }
+    }
+
+    fetchAndCreateBlob();
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [file.signedUrl, needsBlobFix]);
+
+  if (pdfError) {
+    return (
+      <div className="w-full h-[500px] lg:h-full min-h-[400px] rounded-md border flex flex-col items-center justify-center text-center bg-muted/30">
+        <AlertCircle className="h-8 w-8 text-muted-foreground/50 mb-2" />
+        <p className="text-sm text-muted-foreground">{pdfError}</p>
+      </div>
+    );
+  }
+
+  if (needsBlobFix && isLoadingPdf) {
+    return (
+      <div className="w-full h-[500px] lg:h-full min-h-[400px] rounded-md border flex items-center justify-center bg-muted/20">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  const iframeSrc = needsBlobFix ? blobUrl : file.signedUrl;
+  if (!iframeSrc) return null;
+
+  return (
+    <iframe
+      src={iframeSrc}
+      className="w-full h-[500px] lg:h-full min-h-[400px] rounded-md border"
+      title={`Vorschau: ${file.filename}`}
+    />
+  );
+}
+
+/**
  * Left panel of the review page showing file previews.
  * PDFs are embedded via iframe using signed URLs.
  * Text files (email_body.txt) are rendered inline.
@@ -508,11 +585,7 @@ export function DocumentPreviewPanel({ orderId }: DocumentPreviewPanelProps) {
 
       <CardContent className="flex-1 min-h-0">
         {isPdf ? (
-          <iframe
-            src={activeFile.signedUrl}
-            className="w-full h-[500px] lg:h-full min-h-[400px] rounded-md border"
-            title={`Vorschau: ${activeFile.filename}`}
-          />
+          <PdfFilePreview file={activeFile} />
         ) : isImage ? (
           <div className="w-full h-[500px] lg:h-full min-h-[400px] rounded-md border overflow-auto bg-muted/20 flex items-center justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
