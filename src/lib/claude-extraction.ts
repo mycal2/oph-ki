@@ -163,6 +163,8 @@ export interface ExtractionInput {
   columnMappingContext?: string;
   /** OPH-25: Email subject from the order (Postmark, .eml, or manual input). */
   emailSubject?: string | null;
+  /** OPH-94: Tenant-configured Excel sheet name to extract. Null = all sheets. */
+  excelSheetName?: string | null;
 }
 
 export interface ExtractionResult {
@@ -367,9 +369,28 @@ export async function extractOrderData(
       case "xls": {
         const workbook = XLSX.read(file.content, { type: "buffer" });
 
-        // Combine all sheets into one CSV block
+        // OPH-94: Filter to configured sheet name (case-insensitive, trimmed)
+        let sheetsToProcess = workbook.SheetNames;
+        if (input.excelSheetName) {
+          const target = input.excelSheetName.trim().toLowerCase();
+          const match = workbook.SheetNames.find(
+            (s) => s.trim().toLowerCase() === target
+          );
+          if (match) {
+            sheetsToProcess = [match];
+            console.log(
+              `OPH-94: Filtering Excel "${file.originalFilename}" to sheet "${match}" (configured: "${input.excelSheetName}").`
+            );
+          } else {
+            console.warn(
+              `OPH-94: Configured sheet "${input.excelSheetName}" not found in "${file.originalFilename}" (available: ${workbook.SheetNames.join(", ")}). Falling back to all sheets.`
+            );
+          }
+        }
+
+        // Combine selected sheets into one CSV block
         let allCsv = "";
-        for (const sheetName of workbook.SheetNames) {
+        for (const sheetName of sheetsToProcess) {
           const sheet = workbook.Sheets[sheetName];
           if (!sheet) continue;
           const csv = XLSX.utils.sheet_to_csv(sheet, { FS: ";", rawNumbers: true });

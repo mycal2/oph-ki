@@ -1,6 +1,6 @@
 # OPH-93: Clarification Order Status
 
-## Status: In Review
+## Status: Deployed
 **Created:** 2026-04-21
 **Last Updated:** 2026-04-21
 
@@ -251,4 +251,9 @@ Key: `clarification` orders can go to `checked` (skipping back to extracted) but
 _To be added by /qa_
 
 ## Deployment
-_To be added by /deploy_
+
+- **Production:** https://oph-ki.ids.online
+- **Staging:** https://oph-ki-staging.ids.online
+- **Development:** https://oph-ki-dev.ids.online
+- **Deployed:** 2026-04-21
+- **Commit:** 88e4dcb

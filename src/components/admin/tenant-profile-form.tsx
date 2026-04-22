@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { Loader2, Clock, Info, AlertTriangle, Mail, Receipt, Forward } from "lucide-react";
+import { Loader2, Clock, Info, AlertTriangle, Mail, Receipt, Forward, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -107,6 +107,10 @@ export function TenantProfileForm({
   const [emailForwardingAddress, setEmailForwardingAddress] = useState(
     tenant.email_forwarding_address ?? ""
   );
+  // OPH-94: Excel sheet name filter
+  const [excelSheetName, setExcelSheetName] = useState(
+    tenant.excel_sheet_name ?? ""
+  );
   // OPH-28: ERP config selector
   const [erpConfigId, setErpConfigId] = useState<string | null>(
     tenant.erp_config_id ?? null
@@ -158,6 +162,8 @@ export function TenantProfileForm({
     setEmailResultsConfidence(tenant.email_results_confidence_enabled);
     setEmailPostprocess(tenant.email_postprocess_enabled);
     setErpConfigId(tenant.erp_config_id ?? null);
+    // OPH-94: Reset excel sheet name
+    setExcelSheetName(tenant.excel_sheet_name ?? "");
     // OPH-63: Reset forwarding state
     setEmailForwardingEnabled(tenant.email_forwarding_enabled);
     setEmailForwardingAddress(tenant.email_forwarding_address ?? "");
@@ -203,6 +209,7 @@ export function TenantProfileForm({
       erp_config_id: erpConfigId,
       email_forwarding_enabled: emailForwardingEnabled,
       email_forwarding_address: emailForwardingAddress || null,
+      excel_sheet_name: excelSheetName || null,
       billing_model: billingModel,
       setup_fee: parseFee(setupFee),
       monthly_fee: parseFee(monthlyFee),
@@ -659,6 +666,29 @@ export function TenantProfileForm({
                   Aktivieren Sie die Weiterleitung, um eine Adresse zu konfigurieren.
                 </p>
               )}
+            </div>
+          </div>
+
+          {/* OPH-94: Excel sheet filter */}
+          <div className="rounded-lg border p-4 space-y-4">
+            <div className="flex items-center gap-2 mb-1">
+              <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Excel-Extraktion</span>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="excel-sheet-name">Excel-Blattname</Label>
+              <Input
+                id="excel-sheet-name"
+                value={excelSheetName}
+                onChange={(e) => setExcelSheetName(e.target.value)}
+                placeholder="z.B. Order Form"
+                maxLength={100}
+              />
+              <p className="text-xs text-muted-foreground">
+                Wenn gesetzt, wird bei Excel-Bestellungen nur das Blatt mit
+                diesem Namen extrahiert. Leer lassen = alle Blätter.
+              </p>
             </div>
           </div>
 

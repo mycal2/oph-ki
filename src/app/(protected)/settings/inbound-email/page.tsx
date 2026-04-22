@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Copy, Check, Mail, Info } from "lucide-react";
+import { Copy, Check, Mail, Info, FileSpreadsheet } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -19,6 +19,10 @@ export default function InboundEmailSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // OPH-94: Excel sheet filter (read-only for tenant admins)
+  const [excelSheetName, setExcelSheetName] = useState<string | null>(null);
+  const [excelSheetLoading, setExcelSheetLoading] = useState(true);
 
   const fetchAddress = useCallback(async () => {
     try {
@@ -39,9 +43,27 @@ export default function InboundEmailSettingsPage() {
     }
   }, []);
 
+  // OPH-94: Fetch the tenant's Excel sheet filter setting
+  const fetchExcelSheetFilter = useCallback(async () => {
+    try {
+      setExcelSheetLoading(true);
+      const res = await fetch("/api/settings/excel-sheet-filter");
+      if (!res.ok) return;
+      const json = (await res.json()) as ApiResponse<{ excel_sheet_name: string | null }>;
+      if (json.success && json.data) {
+        setExcelSheetName(json.data.excel_sheet_name);
+      }
+    } catch {
+      // Non-critical — silently ignore
+    } finally {
+      setExcelSheetLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchAddress();
-  }, [fetchAddress]);
+    fetchExcelSheetFilter();
+  }, [fetchAddress, fetchExcelSheetFilter]);
 
   async function handleCopy() {
     if (!inboundAddress) return;
@@ -177,6 +199,46 @@ export default function InboundEmailSettingsPage() {
               Maximale Anhangsgröße: 25 MB pro Datei
             </p>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* OPH-94: Excel sheet filter (read-only for tenant admins) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileSpreadsheet className="h-5 w-5" />
+            Excel-Extraktion
+          </CardTitle>
+          <CardDescription>
+            Konfiguration für die Verarbeitung von Excel-Bestellungen.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {excelSheetLoading ? (
+            <Skeleton className="h-10 w-full" />
+          ) : excelSheetName ? (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Excel-Blattname</p>
+              <div className="rounded-md border bg-muted/50 px-4 py-3 text-sm">
+                {excelSheetName}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Bei Excel-Bestellungen wird nur das Blatt mit diesem Namen
+                extrahiert. Diese Einstellung wird vom Plattform-Administrator
+                verwaltet.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Excel-Blattname</p>
+              <p className="text-sm text-muted-foreground">
+                Nicht konfiguriert — alle Blätter werden extrahiert.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Diese Einstellung wird vom Plattform-Administrator verwaltet.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -604,6 +604,17 @@ export const updateTenantSchema = z.object({
     ])
     .transform((val) => (val === "" ? null : val))
     .optional(),
+  /** OPH-94: Name of the Excel sheet to extract. Empty/null = all sheets. */
+  excel_sheet_name: z
+    .union([
+      z.string()
+        .max(100, "Blattname darf maximal 100 Zeichen lang sein.")
+        .trim(),
+      z.literal(""),
+      z.null(),
+    ])
+    .transform((val) => (val === "" ? null : val))
+    .optional(),
 });
 
 /** Invite user on behalf of a specific tenant (platform admin). */
