@@ -324,54 +324,55 @@ export async function matchArticleNumbers(
 
     const candidates: MatchCandidate[] = [];
 
-    // Access GTIN from the line item if present (may be in description or a custom field)
-    // For now, we don't have a dedicated GTIN field on CanonicalLineItem,
-    // but we check if the description or dealer_article_number could be a GTIN.
+    // Use dealer_article_number if available, otherwise fall back to article_number
+    // so that number-based matching (GTIN, REF, keywords) still fires even when
+    // dealers like Dam Medical only put a reference in the article_number field.
+    const lookupNumber = item.dealer_article_number || item.article_number || null;
 
     for (let i = 0; i < catalogEntries.length; i++) {
       const entry = catalogEntries[i];
       const entryKeywords = catalogKeywords[i];
 
-      // 1. GTIN exact match: check if dealer_article_number matches catalog GTIN
-      if (entry.gtin && item.dealer_article_number) {
-        const itemGtin = item.dealer_article_number.trim();
-        if (itemGtin.length >= 8 && itemGtin === entry.gtin.trim()) {
+      // 1. Article number match: extracted/dealer number matches catalog article_number
+      if (lookupNumber) {
+        const lookupLower = lookupNumber.trim().toLowerCase();
+        if (lookupLower === entry.article_number.trim().toLowerCase()) {
           candidates.push({
             catalogEntry: entry,
             score: 1.0,
-            reason: `GTIN-Übereinstimmung: '${itemGtin}' = Katalog-GTIN`,
+            reason: `Artikelnummer-Übereinstimmung: '${lookupNumber}' = Katalog '${entry.article_number}'`,
           });
           continue;
         }
       }
 
-      // 2. REF number match: check if dealer_article_number matches catalog ref_no
-      if (entry.ref_no && item.dealer_article_number) {
-        const dealerArt = item.dealer_article_number.trim().toLowerCase();
-        if (dealerArt === entry.ref_no.trim().toLowerCase()) {
+      // 2. REF number match: extracted/dealer number matches catalog ref_no
+      if (entry.ref_no && lookupNumber) {
+        const lookupLower = lookupNumber.trim().toLowerCase();
+        if (lookupLower === entry.ref_no.trim().toLowerCase()) {
           candidates.push({
             catalogEntry: entry,
             score: 0.98,
-            reason: `Ref.-Nr.-Übereinstimmung: Händler-Art.-Nr. '${item.dealer_article_number}' = Ref.-Nr. von '${entry.article_number}'`,
+            reason: `Ref.-Nr.-Übereinstimmung: '${lookupNumber}' = Ref.-Nr. von '${entry.article_number}'`,
           });
           continue;
         }
       }
 
-      // 3. Dealer article number vs catalog keywords (exact, case-insensitive)
-      if (item.dealer_article_number && entryKeywords.length > 0) {
-        const dealerArtLower = item.dealer_article_number.trim().toLowerCase();
-        if (dealerArtLower && entryKeywords.includes(dealerArtLower)) {
+      // 3. Extracted/dealer number vs catalog keywords (exact, case-insensitive)
+      if (lookupNumber && entryKeywords.length > 0) {
+        const lookupLower = lookupNumber.trim().toLowerCase();
+        if (lookupLower && entryKeywords.includes(lookupLower)) {
           candidates.push({
             catalogEntry: entry,
             score: 0.95,
-            reason: `Alias-Übereinstimmung: Händler-Art.-Nr. '${item.dealer_article_number}' gefunden in Suchbegriffen`,
+            reason: `Alias-Übereinstimmung: '${lookupNumber}' gefunden in Suchbegriffen`,
           });
           continue;
         }
       }
 
-      // 3. Description vs catalog keywords (exact keyword match)
+      // 4. Description vs catalog keywords (exact keyword match)
       if (item.description && entryKeywords.length > 0) {
         const descLower = normalizeText(item.description);
         const keywordMatch = entryKeywords.find((kw) => descLower === kw || (descLower.includes(kw) && kw.length >= 4));
@@ -385,7 +386,7 @@ export async function matchArticleNumbers(
         }
       }
 
-      // 4. Fuzzy name match: description vs catalog name + keywords
+      // 5. Fuzzy name match: description vs catalog name + keywords
       if (item.description) {
         // Compute similarity against catalog name
         const nameSim = textSimilarity(item.description, entry.name);
