@@ -166,7 +166,8 @@ CREATE TABLE public.tenants (
   email_results_enabled            boolean NOT NULL DEFAULT true,
   email_results_format             text    NOT NULL DEFAULT 'standard_csv' CHECK (email_results_format IN ('standard_csv','tenant_format')),
   email_results_confidence_enabled boolean NOT NULL DEFAULT true,
-  email_postprocess_enabled        boolean NOT NULL DEFAULT false
+  email_postprocess_enabled        boolean NOT NULL DEFAULT false,
+  excel_sheet_name                 text    NULL CHECK (excel_sheet_name IS NULL OR length(excel_sheet_name) <= 100)
 );
 
 -- user_profiles (FK → auth.users, tenants)
