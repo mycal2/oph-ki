@@ -430,7 +430,8 @@ export function DocumentPreviewPanel({ orderId }: DocumentPreviewPanelProps) {
   }
 
   const activeFile = files[activeFileIndex];
-  const isPdf = activeFile?.mimeType === "application/pdf";
+  const isPdf = activeFile?.mimeType === "application/pdf" ||
+    (activeFile?.mimeType === "application/octet-stream" && activeFile?.filename.toLowerCase().endsWith(".pdf"));
   const isImage = /^image\/(jpeg|jpg|png|webp|tiff|bmp)$/.test(activeFile?.mimeType ?? "");
   const isText = activeFile ? isTextFile(activeFile) : false;
   const isSpreadsheet = activeFile ? isSpreadsheetFile(activeFile) : false;
