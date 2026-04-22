@@ -1,6 +1,6 @@
 # OPH-94: Tenant Excel Sheet Filter
 
-## Status: In Review
+## Status: Deployed
 **Created:** 2026-04-22
 **Last Updated:** 2026-04-22
 
@@ -175,4 +175,9 @@ tenant field updates via the `updateTenantSchema`. `GET /api/admin/tenants/[id]`
 _To be added by /qa_
 
 ## Deployment
-_To be added by /deploy_
+
+- **Production:** https://oph-ki.ids.online
+- **Staging:** https://oph-ki-staging.ids.online
+- **Development:** https://oph-ki-dev.ids.online
+- **Deployed:** 2026-04-22
+- **Commit:** 15f7789
