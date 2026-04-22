@@ -19,6 +19,7 @@ interface CustomerCatalogEntry {
   email: string | null;
   phone: string | null;
   keywords: string | null;
+  dealer_id: string | null;
 }
 
 /** Result of customer matching, to be merged into the sender. */
@@ -98,6 +99,7 @@ const FUZZY_NAME_THRESHOLD = 0.70;
  * Match extracted sender information against the tenant's customer catalog.
  *
  * Priority cascade (first match wins):
+ *   0. Dealer-linked catalog entry (highest — tenant-managed customer number)
  *   1. Email exact match (confidence 0.97)
  *   2. Customer number exact match (confirm existing, source "catalog_exact")
  *   3. Keyword exact match vs. company_name (confidence 0.87)
@@ -110,7 +112,8 @@ const FUZZY_NAME_THRESHOLD = 0.70;
 export async function matchCustomerNumber(
   adminClient: SupabaseClient,
   sender: CanonicalSender | null,
-  tenantId: string
+  tenantId: string,
+  dealerId?: string | null
 ): Promise<CanonicalSender | null> {
   // No sender info at all -> skip (EC-4)
   if (!sender) return sender;
@@ -124,7 +127,7 @@ export async function matchCustomerNumber(
   while (hasMore) {
     const { data: page, error } = await adminClient
       .from("customer_catalog")
-      .select("customer_number, company_name, email, phone, keywords")
+      .select("customer_number, company_name, email, phone, keywords, dealer_id")
       .eq("tenant_id", tenantId)
       .range(offset, offset + PAGE_SIZE - 1);
 
@@ -157,7 +160,26 @@ export async function matchCustomerNumber(
     email: (row.email as string | null) ?? null,
     phone: (row.phone as string | null) ?? null,
     keywords: (row.keywords as string | null) ?? null,
+    dealer_id: (row.dealer_id as string | null) ?? null,
   }));
+
+  // --- Priority 0: Dealer-linked catalog entry (highest priority) ---
+  // When the dealer is identified, the tenant-managed customer_number for that
+  // dealer takes precedence over anything extracted from the order.
+  // If the catalog entry exists but has no customer_number, fall through
+  // so the extracted number (from order or email) can still be used.
+  if (dealerId) {
+    const dealerEntry = entries.find((e) => e.dealer_id === dealerId);
+    if (dealerEntry && dealerEntry.customer_number) {
+      return {
+        ...sender,
+        customer_number: dealerEntry.customer_number,
+        customer_number_source: "catalog_exact",
+        customer_number_match_reason: `Katalog-Treffer (Händler-Zuordnung): ${dealerEntry.company_name}`,
+      };
+    }
+    // Dealer entry exists but has no customer_number → fall through to other priorities
+  }
 
   // --- Priority 1: Email exact match ---
   if (sender.email) {
