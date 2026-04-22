@@ -710,7 +710,8 @@ export async function POST(
           const matchedSender = await matchCustomerNumber(
             adminClient,
             finalExtractedData.order.sender,
-            tenantId
+            tenantId,
+            resolvedDealerId
           );
           if (matchedSender) {
             finalExtractedData = {
