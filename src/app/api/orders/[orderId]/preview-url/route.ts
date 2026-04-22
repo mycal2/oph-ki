@@ -127,6 +127,7 @@ export async function GET(
       // Render PDFs, images, text files, and spreadsheets inline; force download for other file types
       const isInlineViewable =
         mimeType === "application/pdf" ||
+        lowerFilename.endsWith(".pdf") ||
         mimeType.startsWith("image/") ||
         mimeType === "text/plain" ||
         filename === "email_body.txt" ||
