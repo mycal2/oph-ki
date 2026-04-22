@@ -50,6 +50,8 @@ export interface Tenant {
   salesforce_enabled: boolean;
   /** OPH-73: Unique subdomain slug for the Salesforce App (e.g. "meisinger" → meisinger.ids.online). */
   salesforce_slug: string | null;
+  /** OPH-94: Name of the Excel sheet to extract. NULL = use all sheets. */
+  excel_sheet_name: string | null;
 }
 
 export interface UserProfile {

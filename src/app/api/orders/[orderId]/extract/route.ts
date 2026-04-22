@@ -333,6 +333,17 @@ export async function POST(
     // --- OPH-25: Read order subject for extraction context ---
     const orderSubject = (order.subject as string | null) ?? null;
 
+    // --- OPH-94: Fetch tenant's Excel sheet filter ---
+    let excelSheetName: string | null = null;
+    if (tenantId) {
+      const { data: tenantRow } = await adminClient
+        .from("tenants")
+        .select("excel_sheet_name")
+        .eq("id", tenantId)
+        .single();
+      excelSheetName = (tenantRow?.excel_sheet_name as string) ?? null;
+    }
+
     // --- Call Claude extraction ---
     try {
       const result = await extractOrderData({
@@ -342,6 +353,7 @@ export async function POST(
         mappingsContext,
         columnMappingContext,
         emailSubject: orderSubject,
+        excelSheetName,
       });
 
       // --- AI-based dealer matching from extracted sender info ---
