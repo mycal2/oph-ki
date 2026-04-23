@@ -146,7 +146,7 @@ export default function UploadPage() {
         <CardHeader>
           <CardTitle>Dateien auswählen</CardTitle>
           <CardDescription>
-            Unterstützte Formate: .eml, .pdf, .xlsx, .xls, .csv · Max. 25 MB
+            Unterstützte Formate: .eml, .pdf, .xlsx, .xls, .csv, .xml · Max. 25 MB
             pro Datei · Max. 10 Dateien
           </CardDescription>
         </CardHeader>
