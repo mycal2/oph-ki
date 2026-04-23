@@ -3,6 +3,7 @@ import type { ContentBlockParam } from "@anthropic-ai/sdk/resources/messages";
 import * as XLSX from "xlsx";
 import { parseEml } from "@/lib/eml-parser";
 import { sanitizeHints } from "@/lib/validations";
+import { isPeppolUblXml, parsePeppolXml } from "@/lib/peppol-xml-parser";
 import type { CanonicalOrderData } from "@/lib/types";
 
 const SCHEMA_VERSION = "1.0.0";
@@ -245,7 +246,8 @@ function resolveImageMediaType(mimeType: string, ext: string): ClaudeImageMediaT
 
 /**
  * Extracts order data from files using Claude API.
- * Handles PDF (multimodal), .eml (parsed), Excel (converted to text), CSV, and images (OPH-69).
+ * Handles PDF (multimodal), .eml (parsed), Excel (converted to text), CSV, XML (OPH-95), and images (OPH-69).
+ * PEPPOL UBL XML files are parsed deterministically without an AI call.
  */
 export async function extractOrderData(
   input: ExtractionInput
@@ -257,6 +259,77 @@ export async function extractOrderData(
 
   const model = process.env.EXTRACTION_MODEL ?? DEFAULT_MODEL;
   const anthropic = new Anthropic({ apiKey });
+
+  // ---------------------------------------------------------------------------
+  // OPH-95: Deterministic PEPPOL UBL XML parsing (no AI needed)
+  // If ALL files are PEPPOL UBL XML, parse deterministically and return early.
+  // This is faster, cheaper (no Claude API call), and always correct for the
+  // well-defined PEPPOL standard.
+  // ---------------------------------------------------------------------------
+  const xmlFiles = input.files.filter((f) => {
+    const ext = f.originalFilename.toLowerCase().split(".").pop() ?? "";
+    return ext === "xml" || f.mimeType === "application/xml" || f.mimeType === "text/xml";
+  });
+  const nonXmlFiles = input.files.filter((f) => !xmlFiles.includes(f));
+
+  // Pure PEPPOL XML extraction: all files are XML and all are PEPPOL UBL
+  if (xmlFiles.length > 0 && nonXmlFiles.length === 0) {
+    const peppolResults: CanonicalOrderData[] = [];
+    for (const xmlFile of xmlFiles) {
+      const xmlText = xmlFile.content.toString("utf-8");
+      if (isPeppolUblXml(xmlText)) {
+        const result = parsePeppolXml(xmlText);
+        if (result) {
+          peppolResults.push(result);
+        }
+      }
+    }
+
+    // If ALL XML files were successfully parsed as PEPPOL UBL, return deterministic result
+    if (peppolResults.length === xmlFiles.length && peppolResults.length > 0) {
+      // Use the first result as base (most orders have a single XML file)
+      const primary = peppolResults[0];
+      primary.extraction_metadata.source_files = xmlFiles.map((f) => f.originalFilename);
+
+      // Merge line items from additional XML files (multi-XML edge case)
+      if (peppolResults.length > 1) {
+        for (let i = 1; i < peppolResults.length; i++) {
+          const offset = primary.order.line_items.length;
+          for (const item of peppolResults[i].order.line_items) {
+            primary.order.line_items.push({
+              ...item,
+              position: offset + item.position,
+            });
+          }
+        }
+      }
+
+      // Apply dealer info if available
+      if (input.dealer) {
+        primary.order.dealer = {
+          id: input.dealer.id,
+          name: input.dealer.name,
+        };
+        primary.extraction_metadata.dealer_hints_applied = !!input.dealer.extractionHints;
+      }
+
+      // Add email subject if available
+      if (input.emailSubject) {
+        primary.order.email_subject = input.emailSubject;
+      }
+
+      console.log(
+        `OPH-95: Deterministic PEPPOL UBL extraction for order ${input.orderId}: ${primary.order.line_items.length} line items, no Claude API call needed.`
+      );
+
+      return {
+        extractedData: primary,
+        inputTokens: 0,
+        outputTokens: 0,
+      };
+    }
+    // If some XML files were not PEPPOL, fall through to AI extraction below
+  }
 
   // Build content blocks from files
   const contentBlocks: ContentBlockParam[] = [];
@@ -431,6 +504,18 @@ export async function extractOrderData(
         contentBlocks.push({
           type: "text",
           text: `## CSV Document: ${file.originalFilename}\n${csvText}`,
+        });
+        break;
+      }
+
+      case "xml": {
+        // OPH-95: XML files — pass raw text to Claude for AI extraction.
+        // This case is reached when: (a) the XML is not PEPPOL UBL, or
+        // (b) it's mixed with non-XML files that require Claude anyway.
+        const xmlText = file.content.toString("utf-8");
+        contentBlocks.push({
+          type: "text",
+          text: `## XML Document: ${file.originalFilename}\nThis is an XML order document. Extract order data from the structured XML elements.\n\n${xmlText}`,
         });
         break;
       }

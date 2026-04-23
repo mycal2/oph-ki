@@ -9,7 +9,7 @@ interface FileDropzoneProps {
   disabled?: boolean;
 }
 
-const ACCEPTED = ".eml,.pdf,.xlsx,.xls,.csv";
+const ACCEPTED = ".eml,.pdf,.xlsx,.xls,.csv,.xml";
 
 export function FileDropzone({ onFilesAdded, disabled }: FileDropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -93,7 +93,7 @@ export function FileDropzone({ onFilesAdded, disabled }: FileDropzoneProps) {
             : "Dateien hierher ziehen oder klicken zum Auswählen"}
         </p>
         <p className="text-xs text-muted-foreground">
-          .eml, .pdf, .xlsx, .xls, .csv · max. 25 MB · bis zu 10 Dateien
+          .eml, .pdf, .xlsx, .xls, .csv, .xml · max. 25 MB · bis zu 10 Dateien
         </p>
       </div>
       <input

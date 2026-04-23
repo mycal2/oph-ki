@@ -124,7 +124,7 @@ export async function GET(
       const mimeType = file.mime_type as string;
       const filename = file.original_filename as string;
       const lowerFilename = filename.toLowerCase();
-      // Render PDFs, images, text files, and spreadsheets inline; force download for other file types
+      // Render PDFs, images, text files, spreadsheets, and XML inline; force download for other file types
       const isInlineViewable =
         mimeType === "application/pdf" ||
         lowerFilename.endsWith(".pdf") ||
@@ -136,7 +136,10 @@ export async function GET(
         mimeType === "text/csv" ||
         lowerFilename.endsWith(".xlsx") ||
         lowerFilename.endsWith(".xls") ||
-        lowerFilename.endsWith(".csv");
+        lowerFilename.endsWith(".csv") ||
+        mimeType === "application/xml" ||
+        mimeType === "text/xml" ||
+        lowerFilename.endsWith(".xml");
       const urlOptions = isInlineViewable
         ? undefined
         : { download: filename };
