@@ -30,7 +30,7 @@ export interface UploadFileEntry {
   dealer?: UploadDealerResult;
 }
 
-const ALLOWED_EXTENSIONS = [".eml", ".pdf", ".xlsx", ".xls", ".csv"];
+const ALLOWED_EXTENSIONS = [".eml", ".pdf", ".xlsx", ".xls", ".csv", ".xml"];
 const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 const MAX_FILES = 10;
 

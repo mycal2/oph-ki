@@ -87,7 +87,7 @@ export function DealerTestDialog({
               Datei auswählen
               <input
                 type="file"
-                accept=".eml,.pdf,.xlsx,.xls,.csv"
+                accept=".eml,.pdf,.xlsx,.xls,.csv,.xml"
                 onChange={handleFileSelect}
                 className="hidden"
                 disabled={isMutating}
