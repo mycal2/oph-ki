@@ -1,6 +1,6 @@
 # OPH-95: XML Order File Support (Ingestion, Extraction & Table Preview)
 
-## Status: In Progress
+## Status: Deployed
 **Created:** 2026-04-23
 **Last Updated:** 2026-04-23
 
@@ -169,4 +169,8 @@ No additional frontend dependencies (DOMParser is built-in).
 _To be added by /qa_
 
 ## Deployment
-_To be added by /deploy_
+- **Deployed:** 2026-04-23
+- **Production:** https://oph-ki.ids.online
+- **Staging:** https://oph-ki-staging.ids.online
+- **Dev:** https://oph-ki-dev.ids.online
+- **Commit:** 79c201a
