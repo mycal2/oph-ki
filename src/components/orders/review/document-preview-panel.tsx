@@ -224,22 +224,119 @@ function formatPrice(value: number | null): string {
 }
 
 /**
+ * Simple XML syntax highlighter — returns React elements with colored spans.
+ * Tokenizes tags, attributes, attribute values, comments, and text content.
+ */
+function highlightXml(xml: string): React.ReactNode[] {
+  const nodes: React.ReactNode[] = [];
+  // Regex to match XML tokens: comments, CDATA, processing instructions, tags, and text
+  const tokenRegex = /<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<\?[\s\S]*?\?>|<\/?[^>]+\/?>|[^<]+/g;
+  let match: RegExpExecArray | null;
+  let key = 0;
+
+  while ((match = tokenRegex.exec(xml)) !== null) {
+    const token = match[0];
+
+    if (token.startsWith("<!--")) {
+      // Comment
+      nodes.push(<span key={key++} className="text-zinc-500 italic">{token}</span>);
+    } else if (token.startsWith("<?")) {
+      // Processing instruction (<?xml ... ?>)
+      nodes.push(<span key={key++} className="text-zinc-400">{token}</span>);
+    } else if (token.startsWith("<")) {
+      // Tag — tokenize the inside for attributes
+      highlightTag(token, nodes, key);
+      key += 1;
+    } else {
+      // Text content
+      const trimmed = token.trim();
+      if (trimmed.length > 0) {
+        nodes.push(<span key={key++} className="text-zinc-200">{token}</span>);
+      } else {
+        nodes.push(<span key={key++}>{token}</span>);
+      }
+    }
+  }
+
+  return nodes;
+}
+
+function highlightTag(tag: string, nodes: React.ReactNode[], baseKey: number) {
+  // Split tag into parts: tag name, attributes, closing bracket
+  const parts: React.ReactNode[] = [];
+  // Match: < or </ , tag name, then pairs of attr=value, then > or />
+  const attrRegex = /([a-zA-Z_][\w:.-]*)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'))?/g;
+
+  // Find the tag name boundary
+  const isClosing = tag.startsWith("</");
+  const isSelfClosing = tag.endsWith("/>");
+  const prefix = isClosing ? "</" : "<";
+  const suffix = isSelfClosing ? "/>" : ">";
+
+  // Strip prefix and suffix to get inner content
+  const inner = tag.slice(prefix.length, tag.length - suffix.length).trim();
+
+  // First token in inner is the tag name
+  const spaceIdx = inner.search(/\s/);
+  const tagName = spaceIdx === -1 ? inner : inner.slice(0, spaceIdx);
+  const attrsPart = spaceIdx === -1 ? "" : inner.slice(spaceIdx);
+
+  parts.push(<span key="b1" className="text-zinc-500">{prefix}</span>);
+  parts.push(<span key="tn" className="text-sky-400">{tagName}</span>);
+
+  if (attrsPart.trim().length > 0) {
+    let attrMatch: RegExpExecArray | null;
+    let lastIndex = 0;
+    attrRegex.lastIndex = 0;
+    let attrKey = 0;
+
+    while ((attrMatch = attrRegex.exec(attrsPart)) !== null) {
+      // Whitespace before attr
+      if (attrMatch.index > lastIndex) {
+        parts.push(<span key={`ws${attrKey}`}>{attrsPart.slice(lastIndex, attrMatch.index)}</span>);
+      }
+      const attrName = attrMatch[1];
+      const attrVal = attrMatch[2] ?? attrMatch[3];
+
+      parts.push(<span key={`an${attrKey}`} className="text-amber-300">{attrName}</span>);
+      if (attrVal !== undefined) {
+        parts.push(<span key={`eq${attrKey}`} className="text-zinc-500">=</span>);
+        parts.push(<span key={`av${attrKey}`} className="text-emerald-400">&quot;{attrVal}&quot;</span>);
+      }
+      lastIndex = attrMatch.index + attrMatch[0].length;
+      attrKey++;
+    }
+    if (lastIndex < attrsPart.length) {
+      parts.push(<span key="trail">{attrsPart.slice(lastIndex)}</span>);
+    }
+  }
+
+  parts.push(<span key="b2" className="text-zinc-500">{suffix}</span>);
+
+  nodes.push(<span key={baseKey}>{parts}</span>);
+}
+
+/**
  * Inline XML preview sub-component.
  * Fetches the file from the signed URL, parses as PEPPOL UBL if possible,
- * and renders a structured order table. Falls back to a message for non-PEPPOL XML.
+ * and renders a structured order table. Also offers a raw XML tab with syntax highlighting.
  */
 function XmlFilePreview({ file }: { file: FilePreviewUrl }) {
   const [parsedOrder, setParsedOrder] = useState<PeppolParsedOrder | null>(null);
+  const [rawXml, setRawXml] = useState<string | null>(null);
   const [isSupported, setIsSupported] = useState(true);
   const [isLoadingXml, setIsLoadingXml] = useState(true);
   const [xmlError, setXmlError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"table" | "xml">("table");
 
   useEffect(() => {
     let cancelled = false;
     setIsLoadingXml(true);
     setXmlError(null);
     setParsedOrder(null);
+    setRawXml(null);
     setIsSupported(true);
+    setActiveTab("table");
 
     async function fetchAndParse() {
       try {
@@ -253,10 +350,14 @@ function XmlFilePreview({ file }: { file: FilePreviewUrl }) {
         }
 
         const xmlText = await res.text();
+        if (!cancelled) {
+          setRawXml(xmlText);
+        }
 
         if (!isPeppolUbl(xmlText)) {
           if (!cancelled) {
             setIsSupported(false);
+            setActiveTab("xml");
           }
           return;
         }
@@ -267,6 +368,7 @@ function XmlFilePreview({ file }: { file: FilePreviewUrl }) {
             setParsedOrder(result);
           } else {
             setIsSupported(false);
+            setActiveTab("xml");
           }
         }
       } catch {
@@ -285,6 +387,12 @@ function XmlFilePreview({ file }: { file: FilePreviewUrl }) {
       cancelled = true;
     };
   }, [file.signedUrl]);
+
+  // Memoize highlighted XML to avoid re-tokenizing on every render
+  const highlightedXml = useMemo(() => {
+    if (!rawXml) return null;
+    return highlightXml(rawXml);
+  }, [rawXml]);
 
   // Loading state
   if (isLoadingXml) {
@@ -320,123 +428,148 @@ function XmlFilePreview({ file }: { file: FilePreviewUrl }) {
     );
   }
 
-  // Unsupported XML format fallback
-  if (!isSupported || !parsedOrder) {
-    return (
-      <div className="w-full h-[500px] lg:h-full min-h-[400px] rounded-md border bg-muted/20 flex flex-col items-center justify-center text-center px-4">
-        <Code2 className="h-10 w-10 text-muted-foreground/40 mb-3" />
-        <p className="text-sm font-medium mb-1">
-          XML-Format wird nicht als Tabellenvorschau unterstützt
-        </p>
-        <p className="text-xs text-muted-foreground mb-4">
-          Die Datei kann heruntergeladen werden, um sie extern zu betrachten.
-        </p>
-        <Button variant="outline" size="sm" asChild className="gap-1.5">
-          <a
-            href={file.signedUrl}
-            download={file.filename}
-            aria-label={`${file.filename} herunterladen`}
-          >
-            <Download className="h-3.5 w-3.5" />
-            Datei herunterladen
-          </a>
-        </Button>
-      </div>
-    );
-  }
-
-  // PEPPOL UBL table preview
-  const { header, lineItems } = parsedOrder;
+  const hasPeppolTable = isSupported && parsedOrder;
+  const header = parsedOrder?.header;
+  const lineItems = parsedOrder?.lineItems ?? [];
 
   return (
     <div className="w-full h-[500px] lg:h-full min-h-[400px] rounded-md border bg-background flex flex-col overflow-hidden">
-      {/* Order header section */}
-      <div className="shrink-0 border-b bg-muted/30 px-4 py-3">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
-          <div>
-            <span className="text-muted-foreground text-xs font-medium">Bestellnummer</span>
-            <p className="font-semibold">{header.orderNumber ?? "-"}</p>
-          </div>
-          <div>
-            <span className="text-muted-foreground text-xs font-medium">Bestelldatum</span>
-            <p className="font-semibold">{header.issueDate ?? "-"}</p>
-          </div>
-          <div>
-            <span className="text-muted-foreground text-xs font-medium">Käufer</span>
-            <p className="font-semibold truncate" title={header.buyerName ?? undefined}>
-              {header.buyerName ?? "-"}
-            </p>
-          </div>
-        </div>
+      {/* Tab bar */}
+      <div className="flex gap-0 border-b bg-muted/30 shrink-0">
+        {hasPeppolTable && (
+          <button
+            onClick={() => setActiveTab("table")}
+            className={cn(
+              "px-3 py-1.5 text-xs font-medium whitespace-nowrap border-b-2 transition-colors",
+              activeTab === "table"
+                ? "border-primary text-primary bg-background"
+                : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
+            )}
+            aria-selected={activeTab === "table"}
+            role="tab"
+          >
+            <Table2 className="h-3 w-3 inline-block mr-1 -mt-0.5" />
+            Tabelle
+          </button>
+        )}
+        <button
+          onClick={() => setActiveTab("xml")}
+          className={cn(
+            "px-3 py-1.5 text-xs font-medium whitespace-nowrap border-b-2 transition-colors",
+            activeTab === "xml"
+              ? "border-primary text-primary bg-background"
+              : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
+          )}
+          aria-selected={activeTab === "xml"}
+          role="tab"
+        >
+          <Code2 className="h-3 w-3 inline-block mr-1 -mt-0.5" />
+          XML
+        </button>
       </div>
 
-      {/* Line items table */}
-      {lineItems.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center text-center px-4">
-          <Table2 className="h-10 w-10 text-muted-foreground/40 mb-3" />
-          <p className="text-sm text-muted-foreground">Keine Positionen in dieser Bestellung.</p>
-        </div>
-      ) : (
-        <div
-          className="flex-1 overflow-auto min-h-0"
-          role="region"
-          aria-label={`XML-Bestellvorschau: ${file.filename}`}
+      {/* Table view */}
+      {activeTab === "table" && hasPeppolTable && (
+        <>
+          {/* Order header section */}
+          <div className="shrink-0 border-b bg-muted/30 px-4 py-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+              <div>
+                <span className="text-muted-foreground text-xs font-medium">Bestellnummer</span>
+                <p className="font-semibold">{header?.orderNumber ?? "-"}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground text-xs font-medium">Bestelldatum</span>
+                <p className="font-semibold">{header?.issueDate ?? "-"}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground text-xs font-medium">Käufer</span>
+                <p className="font-semibold truncate" title={header?.buyerName ?? undefined}>
+                  {header?.buyerName ?? "-"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Line items table */}
+          {lineItems.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-center px-4">
+              <Table2 className="h-10 w-10 text-muted-foreground/40 mb-3" />
+              <p className="text-sm text-muted-foreground">Keine Positionen in dieser Bestellung.</p>
+            </div>
+          ) : (
+            <div
+              className="flex-1 overflow-auto min-h-0"
+              role="region"
+              aria-label={`XML-Bestellvorschau: ${file.filename}`}
+            >
+              <table className="text-xs border-collapse w-max min-w-full">
+                <thead className="sticky top-0 z-10">
+                  <tr>
+                    <th className="bg-muted/80 backdrop-blur-sm border-b border-r px-2 py-1.5 text-left font-semibold text-foreground whitespace-nowrap">
+                      Pos.
+                    </th>
+                    <th className="bg-muted/80 backdrop-blur-sm border-b border-r px-2 py-1.5 text-left font-semibold text-foreground whitespace-nowrap">
+                      Artikel-Nr (Hersteller)
+                    </th>
+                    <th className="bg-muted/80 backdrop-blur-sm border-b border-r px-2 py-1.5 text-left font-semibold text-foreground whitespace-nowrap">
+                      Händler-Art.-Nr
+                    </th>
+                    <th className="bg-muted/80 backdrop-blur-sm border-b border-r px-2 py-1.5 text-left font-semibold text-foreground whitespace-nowrap">
+                      Beschreibung
+                    </th>
+                    <th className="bg-muted/80 backdrop-blur-sm border-b border-r px-2 py-1.5 text-right font-semibold text-foreground whitespace-nowrap">
+                      Menge
+                    </th>
+                    <th className="bg-muted/80 backdrop-blur-sm border-b border-r px-2 py-1.5 text-right font-semibold text-foreground whitespace-nowrap">
+                      Einzelpreis
+                    </th>
+                    <th className="bg-muted/80 backdrop-blur-sm border-b px-2 py-1.5 text-right font-semibold text-foreground whitespace-nowrap">
+                      Gesamtpreis
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lineItems.map((item, idx) => (
+                    <tr key={idx} className="hover:bg-muted/20">
+                      <td className="border-b border-r px-2 py-1 text-foreground/80 whitespace-nowrap text-center">
+                        {item.position}
+                      </td>
+                      <td className="border-b border-r px-2 py-1 text-foreground/80 whitespace-nowrap font-mono">
+                        {item.articleNumber ?? "-"}
+                      </td>
+                      <td className="border-b border-r px-2 py-1 text-foreground/80 whitespace-nowrap font-mono">
+                        {item.dealerArticleNumber ?? "-"}
+                      </td>
+                      <td className="border-b border-r px-2 py-1 text-foreground/80">
+                        {item.description || "-"}
+                      </td>
+                      <td className="border-b border-r px-2 py-1 text-foreground/80 whitespace-nowrap text-right tabular-nums">
+                        {item.quantity != null ? item.quantity : "-"}
+                      </td>
+                      <td className="border-b border-r px-2 py-1 text-foreground/80 whitespace-nowrap text-right tabular-nums">
+                        {formatPrice(item.unitPrice)}
+                      </td>
+                      <td className="border-b px-2 py-1 text-foreground/80 whitespace-nowrap text-right tabular-nums">
+                        {formatPrice(item.totalPrice)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Raw XML view with syntax highlighting */}
+      {activeTab === "xml" && (
+        <pre
+          className="flex-1 overflow-auto min-h-0 bg-zinc-950 p-4 text-[11px] leading-relaxed font-mono whitespace-pre-wrap break-words"
+          aria-label={`XML-Quellcode: ${file.filename}`}
         >
-          <table className="text-xs border-collapse w-max min-w-full">
-            <thead className="sticky top-0 z-10">
-              <tr>
-                <th className="bg-muted/80 backdrop-blur-sm border-b border-r px-2 py-1.5 text-left font-semibold text-foreground whitespace-nowrap">
-                  Pos.
-                </th>
-                <th className="bg-muted/80 backdrop-blur-sm border-b border-r px-2 py-1.5 text-left font-semibold text-foreground whitespace-nowrap">
-                  Artikel-Nr (Hersteller)
-                </th>
-                <th className="bg-muted/80 backdrop-blur-sm border-b border-r px-2 py-1.5 text-left font-semibold text-foreground whitespace-nowrap">
-                  Händler-Art.-Nr
-                </th>
-                <th className="bg-muted/80 backdrop-blur-sm border-b border-r px-2 py-1.5 text-left font-semibold text-foreground whitespace-nowrap">
-                  Beschreibung
-                </th>
-                <th className="bg-muted/80 backdrop-blur-sm border-b border-r px-2 py-1.5 text-right font-semibold text-foreground whitespace-nowrap">
-                  Menge
-                </th>
-                <th className="bg-muted/80 backdrop-blur-sm border-b border-r px-2 py-1.5 text-right font-semibold text-foreground whitespace-nowrap">
-                  Einzelpreis
-                </th>
-                <th className="bg-muted/80 backdrop-blur-sm border-b px-2 py-1.5 text-right font-semibold text-foreground whitespace-nowrap">
-                  Gesamtpreis
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {lineItems.map((item, idx) => (
-                <tr key={idx} className="hover:bg-muted/20">
-                  <td className="border-b border-r px-2 py-1 text-foreground/80 whitespace-nowrap text-center">
-                    {item.position}
-                  </td>
-                  <td className="border-b border-r px-2 py-1 text-foreground/80 whitespace-nowrap font-mono">
-                    {item.articleNumber ?? "-"}
-                  </td>
-                  <td className="border-b border-r px-2 py-1 text-foreground/80 whitespace-nowrap font-mono">
-                    {item.dealerArticleNumber ?? "-"}
-                  </td>
-                  <td className="border-b border-r px-2 py-1 text-foreground/80">
-                    {item.description || "-"}
-                  </td>
-                  <td className="border-b border-r px-2 py-1 text-foreground/80 whitespace-nowrap text-right tabular-nums">
-                    {item.quantity != null ? item.quantity : "-"}
-                  </td>
-                  <td className="border-b border-r px-2 py-1 text-foreground/80 whitespace-nowrap text-right tabular-nums">
-                    {formatPrice(item.unitPrice)}
-                  </td>
-                  <td className="border-b px-2 py-1 text-foreground/80 whitespace-nowrap text-right tabular-nums">
-                    {formatPrice(item.totalPrice)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+          {highlightedXml}
+        </pre>
       )}
     </div>
   );
