@@ -149,6 +149,8 @@ const SUPPORTED_DOCUMENT_MIME_TYPES = new Set([
   "message/rfc822",
   "application/octet-stream",
   "text/plain",
+  "application/xml",
+  "text/xml",
 ]);
 
 /**
