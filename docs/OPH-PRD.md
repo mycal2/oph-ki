@@ -105,6 +105,7 @@ Eine mandantenfähige SaaS-Plattform ("Order Intelligence Platform"), die Dental
 | P1 | OPH-92: Platform Admin Tenant Context Switcher | Deployed |
 | P1 | OPH-93: Clarification Order Status | Deployed |
 | P1 | OPH-94: Tenant Excel Sheet Filter | Deployed |
+| P1 | OPH-95: XML Order File Support (Ingestion, Extraction & Table Preview) | Planned |
 
 ## Success Metrics
 - Bearbeitungszeit pro Bestellung: von ~15 Min. manuell auf < 3 Min. mit System

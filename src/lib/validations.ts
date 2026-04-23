@@ -100,7 +100,7 @@ export type UpdateUserNameInput = z.infer<typeof updateUserNameSchema>;
 /**
  * OPH-2: Upload validation schemas.
  */
-const ALLOWED_EXTENSIONS_ZOD = [".eml", ".pdf", ".xlsx", ".xls", ".csv"] as const;
+const ALLOWED_EXTENSIONS_ZOD = [".eml", ".pdf", ".xlsx", ".xls", ".csv", ".xml"] as const;
 
 export const uploadPresignSchema = z.object({
   filename: z
@@ -109,7 +109,7 @@ export const uploadPresignSchema = z.object({
     .max(255, "Dateiname ist zu lang.")
     .refine(
       (name) => ALLOWED_EXTENSIONS_ZOD.some((ext) => name.toLowerCase().endsWith(ext)),
-      { message: "Dateiformat nicht erlaubt. Erlaubt: .eml, .pdf, .xlsx, .xls, .csv" }
+      { message: "Dateiformat nicht erlaubt. Erlaubt: .eml, .pdf, .xlsx, .xls, .csv, .xml" }
     ),
   fileSize: z
     .number()
