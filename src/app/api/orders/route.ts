@@ -130,6 +130,7 @@ export async function GET(
         extraction_status,
         extracted_data,
         source,
+        clarification_note,
         dealers ( name ),
         uploader:user_profiles!orders_uploaded_by_fkey ( first_name, last_name ),
         tenants ( name )
@@ -261,6 +262,7 @@ export async function GET(
           null,
         tenant_name: isPlatformAdmin ? (tenantData?.name ?? null) : null,
         source: (order.source as string | null) ?? null,
+        clarification_note: (order.clarification_note as string | null) ?? null,
         // Carry extracted order number for search
         _order_number: extractOrderNumber(order.extracted_data),
       };
