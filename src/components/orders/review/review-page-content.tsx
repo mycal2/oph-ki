@@ -17,10 +17,12 @@ import {
 } from "@/components/ui/dialog";
 import { ReviewPageHeader } from "./review-page-header";
 import { ClarificationDialog } from "./clarification-dialog";
+import { ReviewLockBanner, LockExpiredBanner } from "./review-lock-banner";
 import { DocumentPreviewPanel } from "./document-preview-panel";
 import { OrderEditForm } from "./order-edit-form";
 import { DealerSection } from "@/components/orders/dealer";
 import { useAutoSave } from "@/hooks/use-auto-save";
+import { useOrderLock } from "@/hooks/use-order-lock";
 import { useCurrentUserRole } from "@/hooks/use-current-user-role";
 import type {
   OrderForReview,
@@ -41,7 +43,9 @@ interface ReviewPageContentProps {
  */
 export function ReviewPageContent({ orderId }: ReviewPageContentProps) {
   const router = useRouter();
-  const { isPlatformAdmin } = useCurrentUserRole();
+  const { isPlatformAdmin, isTenantAdmin } = useCurrentUserRole();
+  const lock = useOrderLock(orderId);
+  const isReadOnly = lock.isLockedByOther;
   const [order, setOrder] = useState<OrderForReview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -71,7 +75,7 @@ export function ReviewPageContent({ orderId }: ReviewPageContentProps) {
     onConflict: () => {
       setError("Diese Bestellung wurde von einem anderen Benutzer geändert. Bitte laden Sie die Seite neu.");
     },
-    enabled: !!order && order.status !== "exported",
+    enabled: !!order && order.status !== "exported" && !isReadOnly,
   });
 
   // Fetch order data
@@ -462,6 +466,19 @@ export function ReviewPageContent({ orderId }: ReviewPageContentProps) {
 
   return (
     <div className="space-y-6">
+      {/* OPH-96: Lock banners */}
+      {lock.isLockedByOther && lock.lockedByName && lock.lockedAt && (
+        <ReviewLockBanner
+          lockedByName={lock.lockedByName}
+          lockedAt={lock.lockedAt}
+          canOverride={isPlatformAdmin || isTenantAdmin}
+          onReleaseLock={lock.releaseLock}
+        />
+      )}
+      {lock.lockExpired && (
+        <LockExpiredBanner onReload={() => window.location.reload()} />
+      )}
+
       {/* Header */}
       <ReviewPageHeader
         orderId={orderId}
@@ -480,6 +497,7 @@ export function ReviewPageContent({ orderId }: ReviewPageContentProps) {
         onReExtract={() => setShowReExtractConfirm(true)}
         onClarify={() => setShowClarificationDialog(true)}
         onResolveClarification={handleResolveClarification}
+        isReadOnly={isReadOnly}
       />
 
       {/* Dealer info */}
@@ -493,6 +511,7 @@ export function ReviewPageContent({ orderId }: ReviewPageContentProps) {
         onDealerChanged={handleDealerChanged}
         onDealerReset={handleDealerReset}
         isPlatformAdmin={isPlatformAdmin}
+        disabled={isReadOnly}
       />
 
       {/* Error banner */}
@@ -509,7 +528,7 @@ export function ReviewPageContent({ orderId }: ReviewPageContentProps) {
         <DocumentPreviewPanel orderId={orderId} />
 
         {/* Right: Edit Form */}
-        <OrderEditForm data={reviewData} onChange={handleDataChange} />
+        <OrderEditForm data={reviewData} onChange={handleDataChange} disabled={isReadOnly} />
       </div>
 
       {/* Re-extract confirmation dialog */}
