@@ -32,6 +32,8 @@ interface ReviewPageHeaderProps {
   onClarify: () => void;
   /** OPH-93: Called when user clicks "Klärung abgeschlossen". */
   onResolveClarification: () => void;
+  /** OPH-96: Whether the order is locked by another user (read-only mode). */
+  isReadOnly?: boolean;
 }
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
@@ -98,10 +100,12 @@ export function ReviewPageHeader({
   onReExtract,
   onClarify,
   onResolveClarification,
+  isReadOnly,
 }: ReviewPageHeaderProps) {
   const router = useRouter();
 
   const anyActionInProgress = isApproving || isChecking || isReExtracting || isClarifying || isResolvingClarification;
+  const disableActions = anyActionInProgress || !!isReadOnly;
   const showCheckButton = CHECKABLE_STATUSES.includes(orderStatus);
   const showClarifyButton = CLARIFIABLE_STATUSES.includes(orderStatus);
   const showApproveButton = APPROVABLE_STATUSES.includes(orderStatus);
@@ -138,7 +142,7 @@ export function ReviewPageHeader({
             variant="outline"
             size="sm"
             onClick={onReExtract}
-            disabled={anyActionInProgress}
+            disabled={disableActions}
             className="gap-1.5"
           >
             {isReExtracting ? (
@@ -154,7 +158,7 @@ export function ReviewPageHeader({
               variant="outline"
               size="sm"
               onClick={onClarify}
-              disabled={anyActionInProgress || autoSaveStatus === "saving"}
+              disabled={disableActions || autoSaveStatus === "saving"}
               className="gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50 hover:text-amber-800"
             >
               {isClarifying ? (
@@ -171,7 +175,7 @@ export function ReviewPageHeader({
               variant="outline"
               size="sm"
               onClick={onResolveClarification}
-              disabled={anyActionInProgress || autoSaveStatus === "saving"}
+              disabled={disableActions || autoSaveStatus === "saving"}
               className="gap-1.5"
             >
               {isResolvingClarification ? (
@@ -188,7 +192,7 @@ export function ReviewPageHeader({
               variant="outline"
               size="sm"
               onClick={onCheck}
-              disabled={anyActionInProgress || autoSaveStatus === "saving"}
+              disabled={disableActions || autoSaveStatus === "saving"}
               className="gap-1.5"
             >
               {isChecking ? (
@@ -204,7 +208,7 @@ export function ReviewPageHeader({
             <Button
               size="sm"
               onClick={onApprove}
-              disabled={!canApprove || anyActionInProgress || autoSaveStatus === "saving"}
+              disabled={!canApprove || disableActions || autoSaveStatus === "saving"}
               className="gap-1.5"
             >
               {isApproving ? (
