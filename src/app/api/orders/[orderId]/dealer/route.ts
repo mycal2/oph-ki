@@ -165,7 +165,58 @@ export async function PATCH(
       );
     }
 
-    // 9. Fetch the overrider's display name for the UI
+    // 9. Auto-create customer catalog entry if it doesn't exist (OPH-49 parity)
+    const orderTenantId = order.tenant_id as string;
+    try {
+      const { data: existingEntry } = await adminClient
+        .from("customer_catalog")
+        .select("id")
+        .eq("tenant_id", orderTenantId)
+        .eq("dealer_id", dealerId)
+        .maybeSingle();
+
+      if (!existingEntry) {
+        const { data: dealerFull } = await adminClient
+          .from("dealers")
+          .select("name, known_sender_addresses, street, postal_code, city, country")
+          .eq("id", dealerId)
+          .single();
+
+        if (dealerFull) {
+          const dealerName = dealerFull.name as string;
+
+          // Check if a manual entry with the same company_name already exists
+          const { data: nameMatch } = await adminClient
+            .from("customer_catalog")
+            .select("id")
+            .eq("tenant_id", orderTenantId)
+            .ilike("company_name", dealerName)
+            .maybeSingle();
+
+          if (!nameMatch) {
+            const addresses = dealerFull.known_sender_addresses as string[] | null;
+            const dealerEmail = addresses && addresses.length > 0 ? addresses[0] : null;
+
+            await adminClient.from("customer_catalog").insert({
+              tenant_id: orderTenantId,
+              dealer_id: dealerId,
+              company_name: dealerName,
+              street: (dealerFull.street as string) ?? null,
+              postal_code: (dealerFull.postal_code as string) ?? null,
+              city: (dealerFull.city as string) ?? null,
+              country: (dealerFull.country as string) ?? null,
+              email: dealerEmail,
+              keywords: dealerName,
+            });
+          }
+        }
+      }
+    } catch (autoCreateError) {
+      // Non-critical: log but don't fail the dealer override
+      console.error("Error auto-creating customer catalog entry on manual dealer assign:", autoCreateError);
+    }
+
+    // 10. Fetch the overrider's display name for the UI
     const { data: profile } = await adminClient
       .from("user_profiles")
       .select("first_name, last_name")
