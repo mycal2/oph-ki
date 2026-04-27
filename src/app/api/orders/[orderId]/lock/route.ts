@@ -30,6 +30,7 @@ async function authenticate() {
 
   return {
     userId: user.id,
+    email: user.email ?? null,
     tenantId: meta?.tenant_id ?? null,
     isPlatformAdmin: meta?.role === "platform_admin",
     isTenantAdmin: meta?.role === "tenant_admin",
@@ -157,9 +158,10 @@ export async function POST(
     .eq("id", auth.userId)
     .single();
 
-  const displayName = profile
+  const fullName = profile
     ? `${profile.first_name} ${profile.last_name}`.trim()
-    : "Unbekannt";
+    : "";
+  const displayName = fullName || auth.email || "Unbekannt";
 
   // Delete any expired lock for this order, then insert
   await adminClient.from("order_locks").delete().eq("order_id", orderId);
