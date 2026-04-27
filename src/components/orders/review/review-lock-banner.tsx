@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 
 interface ReviewLockBannerProps {
-  lockedByName: string;
+  lockedByName: string | null;
   lockedAt: string;
   canOverride: boolean;
   onReleaseLock: () => Promise<boolean>;
@@ -49,7 +49,7 @@ export function ReviewLockBanner({
         <Lock className="h-4 w-4 text-amber-600" />
         <AlertDescription className="flex items-center justify-between gap-4">
           <span>
-            Wird gerade von <strong>{lockedByName}</strong> bearbeitet.
+            Wird gerade von <strong>{lockedByName || "einem anderen Benutzer"}</strong> bearbeitet.
             Die Seite ist schreibgeschützt.
             <span className="text-amber-600 ml-2 text-xs">
               Gesperrt seit {formatLockedTime(lockedAt)} Uhr
@@ -77,7 +77,7 @@ export function ReviewLockBanner({
               Sperre aufheben
             </DialogTitle>
             <DialogDescription>
-              Sperre von <strong>{lockedByName}</strong> aufheben?
+              Sperre von <strong>{lockedByName || "diesem Benutzer"}</strong> aufheben?
               Diese Person verliert ungespeicherte Änderungen.
             </DialogDescription>
           </DialogHeader>

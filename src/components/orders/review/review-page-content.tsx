@@ -467,7 +467,7 @@ export function ReviewPageContent({ orderId }: ReviewPageContentProps) {
   return (
     <div className="space-y-6">
       {/* OPH-96: Lock banners */}
-      {lock.isLockedByOther && lock.lockedByName && lock.lockedAt && (
+      {lock.isLockedByOther && lock.lockedAt && (
         <ReviewLockBanner
           lockedByName={lock.lockedByName}
           lockedAt={lock.lockedAt}
