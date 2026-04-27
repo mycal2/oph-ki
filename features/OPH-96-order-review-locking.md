@@ -76,7 +76,110 @@ When multiple users from the same tenant have access to the order review page, t
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Overview
+
+This feature adds a thin locking layer on top of the existing review page. No existing components are restructured — we add a new hook, a new banner component, three new API routes, and one new database table. The lock lifecycle (acquire → heartbeat → release) is fully managed in a single custom hook that `ReviewPageContent` calls on mount.
+
+---
+
+### A) Component Structure
+
+```
+Order Review Page (existing — review-page-content.tsx)
++-- ReviewLockBanner (NEW — shown only when order is locked by another user)
+|   +-- "Wird gerade von [Name] bearbeitet. Gesperrt seit [HH:MM Uhr]."
+|   +-- "Sperre aufheben" button (visible to tenant admins + platform admins only)
+|   +-- BreakLockDialog (confirmation dialog before admin override)
++-- ReviewPageHeader (existing — action buttons disabled when read-only)
++-- OrderEditForm (existing — all fields disabled when read-only)
++-- DealerSection (existing — disabled when read-only)
++-- DocumentPreviewPanel (existing — read-only viewing still works)
+
+Custom Hook: useOrderLock (NEW)
++-- Acquires lock on mount
++-- Sends heartbeat every 4 minutes while mounted
++-- Releases lock on unmount (page leave)
++-- Returns: { isLocked, lockedByName, lockedAt, isOwnLock, acquireLock, releaseLock }
+```
+
+---
+
+### B) Data Model
+
+**New table: `order_locks`**
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `order_id` | UUID (Primary Key) | One lock per order at most. FK to `orders`. |
+| `tenant_id` | UUID | Ensures locks are scoped to a tenant. |
+| `locked_by_user_id` | UUID | Who holds the lock. |
+| `locked_by_name` | Text | Display name (denormalized to avoid a join on every poll). |
+| `locked_at` | Timestamp | When the lock was first acquired. |
+| `expires_at` | Timestamp | Extended on every heartbeat. Automatically expired by checking `NOW() > expires_at`. |
+
+Using `order_id` as the primary key means the database enforces that only one lock can ever exist per order at a time. Lock acquisition is an atomic upsert: "create the lock, but only if no active (non-expired) lock exists for this order."
+
+No new columns are added to the existing `orders` table.
+
+---
+
+### C) API Routes
+
+Three new lightweight endpoints, all under the existing `/api/orders/[orderId]/` path:
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/orders/[orderId]/lock` | `POST` | Acquire lock. Returns success (lock granted) or conflict (locked by another user + their name). |
+| `/api/orders/[orderId]/lock` | `PUT` | Heartbeat — extend `expires_at` by 15 minutes. Fast: single DB row update. |
+| `/api/orders/[orderId]/lock` | `DELETE` | Release lock. Used on page leave and admin override. Only the lock holder (or an admin) can release. |
+| `/api/orders/[orderId]/lock` | `GET` | Poll current lock status. Used by the second user's 60-second refresh to detect when lock drops. |
+
+All endpoints verify the requesting user belongs to the same tenant as the order (or is a platform admin).
+
+---
+
+### D) Tech Decisions
+
+**1. Separate `order_locks` table (not columns on `orders`)**
+
+Adding lock columns to the `orders` table would work, but using a separate table makes the upsert atomic without a complex conditional update. `order_id` as the PK provides a unique constraint the database enforces automatically — no application-level race conditions possible. It also keeps the `orders` table clean.
+
+**2. Heartbeat every 4 minutes, expiry at 15 minutes**
+
+This gives ~3 missed heartbeats before a lock expires — generous enough for temporary network hiccups (phone call, slow Wi-Fi) without permanently blocking colleagues. The 15-minute window is the right balance between "still being edited" and "forgotten open tab."
+
+**3. Client-side polling (60 seconds) instead of WebSockets**
+
+WebSockets would give instant notification when a lock drops, but add significant infrastructure complexity. Since the lock scenario is relatively infrequent (most teams have 1–2 reviewers), a 60-second poll is perfectly acceptable. The second user waits at most 1 minute after the lock is released before they can edit. No additional packages needed.
+
+**4. `beforeunload` + `visibilitychange` for lock release**
+
+When a user navigates away or closes the tab, the browser fires these events. We use them to call the release endpoint (a `navigator.sendBeacon` call, which browsers guarantee fires even when the page is closing, unlike a regular `fetch`). This covers the "forgot to close" case for clean navigation. For hard closes (power cut, crash), the 15-minute expiry is the fallback.
+
+**5. Denormalized `locked_by_name` in the lock table**
+
+Rather than joining to `user_profiles` on every lock poll, we store the display name at lock time. This makes the GET (poll) endpoint a single-row lookup — very cheap to query every 60 seconds across potentially many concurrent users.
+
+---
+
+### E) Files to Create / Modify
+
+| File | Change | What changes |
+|------|--------|-------------|
+| `supabase/migrations/YYYYMMDD_order_locks.sql` | Create | New `order_locks` table with unique PK on `order_id`, RLS policies |
+| `src/app/api/orders/[orderId]/lock/route.ts` | Create | POST / PUT / DELETE / GET handlers |
+| `src/hooks/use-order-lock.ts` | Create | Client hook — acquire, heartbeat interval, release on unmount |
+| `src/components/orders/review/review-lock-banner.tsx` | Create | Banner shown when locked by another user; admin override button |
+| `src/components/orders/review/review-page-content.tsx` | Modify | Add `useOrderLock`, pass `isReadOnly` flag down to form/header/dealer section |
+| `src/components/orders/review/review-page-header.tsx` | Modify | Accept `isReadOnly` prop — disable all action buttons when true |
+| `src/components/orders/review/order-edit-form.tsx` | Modify | Accept `isReadOnly` prop — disable all inputs when true |
+
+---
+
+### F) Dependencies
+
+No new npm packages needed. All mechanisms (polling interval, `beforeunload`, `sendBeacon`) are built into the browser. The database work uses the existing Supabase client.
 
 ## QA Test Results
 _To be added by /qa_
