@@ -25,6 +25,8 @@ interface DealerSectionProps {
   onDealerReset?: (result: DealerResetResponse) => void;
   /** OPH-66: Whether the current user is a platform admin (controls reset button visibility). */
   isPlatformAdmin?: boolean;
+  /** OPH-96: Disable all action buttons when order is locked by another user. */
+  disabled?: boolean;
 }
 
 /**
@@ -41,6 +43,7 @@ export function DealerSection({
   onDealerChanged,
   onDealerReset,
   isPlatformAdmin = false,
+  disabled = false,
 }: DealerSectionProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
@@ -130,7 +133,7 @@ export function DealerSection({
             size="sm"
             className="h-7 gap-1 text-xs text-green-700 hover:text-green-800 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-950/30"
             onClick={handleConfirmProposal}
-            disabled={isConfirming}
+            disabled={isConfirming || disabled}
             aria-label="KI-Vorschlag bestätigen"
           >
             {isConfirming ? (
@@ -147,6 +150,7 @@ export function DealerSection({
         size="sm"
         className="h-7 gap-1 text-xs text-muted-foreground hover:text-foreground"
         onClick={() => setDialogOpen(true)}
+        disabled={disabled}
         aria-label="Händler korrigieren"
       >
         <Pencil className="h-3 w-3" />
@@ -160,6 +164,7 @@ export function DealerSection({
           size="sm"
           className="h-7 gap-1 text-xs text-destructive/70 hover:text-destructive hover:bg-destructive/10"
           onClick={() => setResetDialogOpen(true)}
+          disabled={disabled}
           aria-label="Händler zurücksetzen"
         >
           <RotateCcw className="h-3 w-3" />

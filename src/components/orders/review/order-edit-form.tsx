@@ -33,6 +33,8 @@ import type {
 interface OrderEditFormProps {
   data: CanonicalOrderData;
   onChange: (data: CanonicalOrderData) => void;
+  /** OPH-96: Disable all inputs when order is locked by another user. */
+  disabled?: boolean;
 }
 
 /** Creates an empty address object. */
@@ -66,7 +68,7 @@ function newLineItem(position: number): CanonicalLineItem {
  * Contains header fields, line items table, address sections, totals, and notes.
  * All changes are passed to the parent via onChange for auto-save.
  */
-export function OrderEditForm({ data, onChange }: OrderEditFormProps) {
+export function OrderEditForm({ data, onChange, disabled }: OrderEditFormProps) {
   const [deliveryOpen, setDeliveryOpen] = useState(false);
   const [billingOpen, setBillingOpen] = useState(false);
 
@@ -164,6 +166,7 @@ export function OrderEditForm({ data, onChange }: OrderEditFormProps) {
         <CardTitle className="text-base">Bestelldaten bearbeiten</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
+        <fieldset disabled={disabled} className="space-y-6 contents">
         {/* Low confidence warning */}
         {isLowConfidence && (
           <Alert
@@ -394,6 +397,7 @@ export function OrderEditForm({ data, onChange }: OrderEditFormProps) {
             rows={3}
           />
         </div>
+        </fieldset>
       </CardContent>
     </Card>
   );

@@ -63,6 +63,7 @@ export function useCurrentUserRole() {
 
   const isPlatformAdmin = role === "platform_admin";
   const isPlatformAdminOrViewer = isPlatformAdmin || role === "platform_viewer";
+  const isTenantAdmin = role === "tenant_admin";
 
-  return { role, userId, isLoading, isPlatformAdmin, isPlatformAdminOrViewer, salesforceEnabled };
+  return { role, userId, isLoading, isPlatformAdmin, isPlatformAdminOrViewer, isTenantAdmin, salesforceEnabled };
 }
