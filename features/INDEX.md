@@ -107,6 +107,7 @@
 | OPH-93 | Clarification Order Status | Deployed | [OPH-93-clarification-order-status.md](OPH-93-clarification-order-status.md) | 2026-04-21 |
 | OPH-94 | Tenant Excel Sheet Filter | Deployed | [OPH-94-tenant-excel-sheet-filter.md](OPH-94-tenant-excel-sheet-filter.md) | 2026-04-22 |
 | OPH-95 | XML Order File Support (Ingestion, Extraction & Table Preview) | Deployed | [OPH-95-xml-order-file-support.md](OPH-95-xml-order-file-support.md) | 2026-04-23 |
+| OPH-96 | Order Review Locking (Concurrent Edit Prevention) | Planned | [OPH-96-order-review-locking.md](OPH-96-order-review-locking.md) | 2026-04-27 |
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-96
+## Next Available ID: OPH-97
