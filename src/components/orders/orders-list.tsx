@@ -25,6 +25,12 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -536,16 +542,34 @@ export function OrdersList() {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1">
-                          <Badge
-                            variant={STATUS_VARIANTS[order.status]}
-                            className={`text-xs w-fit gap-1 ${STATUS_CLASSNAMES[order.status] ?? ""}`}
-                          >
-                            {(order.status === "uploaded" ||
-                              order.status === "processing") && (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            )}
-                            {STATUS_LABELS[order.status]}
-                          </Badge>
+                          {order.status === "clarification" && order.clarification_note ? (
+                            <TooltipProvider delayDuration={200}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge
+                                    variant={STATUS_VARIANTS[order.status]}
+                                    className={`text-xs w-fit gap-1 cursor-default ${STATUS_CLASSNAMES[order.status] ?? ""}`}
+                                  >
+                                    {STATUS_LABELS[order.status]}
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs text-xs">
+                                  {order.clarification_note}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <Badge
+                              variant={STATUS_VARIANTS[order.status]}
+                              className={`text-xs w-fit gap-1 ${STATUS_CLASSNAMES[order.status] ?? ""}`}
+                            >
+                              {(order.status === "uploaded" ||
+                                order.status === "processing") && (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              )}
+                              {STATUS_LABELS[order.status]}
+                            </Badge>
+                          )}
                           {order.extraction_status &&
                             order.extraction_status !== "extracted" && (
                               <ExtractionStatusBadge
