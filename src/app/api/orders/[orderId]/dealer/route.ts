@@ -96,7 +96,7 @@ export async function PATCH(
     // 5. Verify the order exists and belongs to this tenant
     let orderQuery = adminClient
       .from("orders")
-      .select("id, tenant_id, updated_at")
+      .select("id, tenant_id, updated_at, extracted_data")
       .eq("id", orderId);
 
     if (!isPlatformAdmin && tenantId) {
@@ -197,9 +197,16 @@ export async function PATCH(
             const addresses = dealerFull.known_sender_addresses as string[] | null;
             const dealerEmail = addresses && addresses.length > 0 ? addresses[0] : null;
 
+            // Try to pull customer number from extracted order data
+            const extractedData = order.extracted_data as Record<string, unknown> | null;
+            const orderData = extractedData?.order as Record<string, unknown> | undefined;
+            const senderData = orderData?.sender as Record<string, unknown> | undefined;
+            const extractedCustomerNumber = (senderData?.customer_number as string | null) || null;
+
             await adminClient.from("customer_catalog").insert({
               tenant_id: orderTenantId,
               dealer_id: dealerId,
+              customer_number: extractedCustomerNumber,
               company_name: dealerName,
               street: (dealerFull.street as string) ?? null,
               postal_code: (dealerFull.postal_code as string) ?? null,
