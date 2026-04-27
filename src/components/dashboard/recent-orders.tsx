@@ -6,6 +6,12 @@ import { FileText, Upload, AlertCircle, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -182,12 +188,30 @@ export function RecentOrders() {
                     <span>--</span>
                   )}
                 </span>
-                <Badge
-                  variant={STATUS_VARIANTS[order.status]}
-                  className={`shrink-0 ml-auto ${STATUS_CLASSNAMES[order.status] ?? ""}`}
-                >
-                  {STATUS_LABELS[order.status]}
-                </Badge>
+                {order.status === "clarification" && order.clarification_note ? (
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge
+                          variant={STATUS_VARIANTS[order.status]}
+                          className={`shrink-0 ml-auto cursor-default ${STATUS_CLASSNAMES[order.status] ?? ""}`}
+                        >
+                          {STATUS_LABELS[order.status]}
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs text-xs">
+                        {order.clarification_note}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : (
+                  <Badge
+                    variant={STATUS_VARIANTS[order.status]}
+                    className={`shrink-0 ml-auto ${STATUS_CLASSNAMES[order.status] ?? ""}`}
+                  >
+                    {STATUS_LABELS[order.status]}
+                  </Badge>
+                )}
               </Link>
             ))}
           </div>
