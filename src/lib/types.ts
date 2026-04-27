@@ -246,6 +246,8 @@ export interface OrderListItem {
   tenant_name: string | null;
   /** OPH-83: Order source — e.g. "salesforce_app" for field rep orders. */
   source: string | null;
+  /** OPH-93: Free-text clarification note shown as tooltip on the Klärung badge. */
+  clarification_note: string | null;
 }
 
 /** Response from PATCH /api/orders/[orderId]/dealer */
