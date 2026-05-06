@@ -626,6 +626,11 @@ export const adminInviteUserSchema = z.object({
   role: z.enum(["tenant_user", "tenant_admin", "sales_rep"], {
     message: "Bitte wählen Sie eine gültige Rolle.",
   }),
+  /**
+   * OPH-97: When true, skip Postmark email and return the raw invite link in
+   * the response so the admin can copy & forward it through their own channel.
+   */
+  generateLinkOnly: z.boolean().optional().default(false),
 });
 
 export type CreateTenantInput = z.infer<typeof createTenantSchema>;

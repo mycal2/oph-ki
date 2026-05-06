@@ -58,6 +58,7 @@ export default function AdminTenantDetailPage({ params }: PageProps) {
     inviteUser,
     toggleUserStatus,
     resendInvite,
+    regenerateInviteLink,
     resetPassword,
     isMutating,
     mutationError,
@@ -169,8 +170,12 @@ export default function AdminTenantDetailPage({ params }: PageProps) {
 
   // User management callbacks
   const handleInviteUser = useCallback(
-    async (email: string, role: "tenant_user" | "tenant_admin") => {
-      return inviteUser(tenantId, { email, role });
+    async (
+      email: string,
+      role: "tenant_user" | "tenant_admin" | "sales_rep",
+      generateLinkOnly: boolean
+    ) => {
+      return inviteUser(tenantId, { email, role, generateLinkOnly });
     },
     [tenantId, inviteUser]
   );
@@ -187,6 +192,13 @@ export default function AdminTenantDetailPage({ params }: PageProps) {
       return resendInvite(tenantId, userId);
     },
     [tenantId, resendInvite]
+  );
+
+  const handleRegenerateInviteLink = useCallback(
+    async (userId: string) => {
+      return regenerateInviteLink(tenantId, userId);
+    },
+    [tenantId, regenerateInviteLink]
   );
 
   const handleResetPassword = useCallback(
@@ -394,10 +406,13 @@ export default function AdminTenantDetailPage({ params }: PageProps) {
             tenantId={tenantId}
             tenantName={tenant.name}
             currentUserId={currentUserId}
+            tenantStatus={tenant.status}
+            salesforceEnabled={tenant.salesforce_enabled}
             onFetchUsers={fetchTenantUsers}
             onInviteUser={handleInviteUser}
             onToggleUserStatus={handleToggleUserStatus}
             onResendInvite={handleResendInvite}
+            onRegenerateInviteLink={handleRegenerateInviteLink}
             onResetPassword={handleResetPassword}
             isMutating={isMutating}
           />

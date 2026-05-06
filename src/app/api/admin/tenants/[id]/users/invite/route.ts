@@ -44,7 +44,7 @@ export async function POST(
       );
     }
 
-    const { email, role } = parsed.data;
+    const { email, role, generateLinkOnly } = parsed.data;
 
     // Verify tenant exists and is active/trial
     const { data: tenant, error: tenantError } = await adminClient
@@ -115,23 +115,65 @@ export async function POST(
       );
     }
 
+    // BUG-1: If anything below fails, we must roll back the just-created auth
+    // user — otherwise the admin retrying with the same email will get 409.
+    const rollback = async (reason: string) => {
+      console.error(`Invite rollback (${reason}) for user ${invitedUserId}`);
+      try {
+        await adminClient.auth.admin.deleteUser(invitedUserId);
+      } catch (err) {
+        console.error("Invite rollback failed to delete user:", err);
+      }
+    };
+
     // Set app_metadata so getUser() returns tenant_id and role
     // (generateLink `data` only sets user_metadata, not app_metadata)
-    await adminClient.auth.admin.updateUserById(invitedUserId, {
-      app_metadata: {
-        tenant_id: tenantId,
-        role,
-        user_status: "active",
-      },
-    });
+    const { error: metadataError } = await adminClient.auth.admin.updateUserById(
+      invitedUserId,
+      {
+        app_metadata: {
+          tenant_id: tenantId,
+          role,
+          user_status: "active",
+        },
+      }
+    );
 
-    // Send invite email via Postmark
+    if (metadataError) {
+      await rollback("metadata update failed");
+      return NextResponse.json(
+        { success: false, error: "Benutzer konnte nicht konfiguriert werden." },
+        { status: 500 }
+      );
+    }
+
     const actionLink = linkData?.properties?.action_link;
     if (!actionLink) {
       console.error("Invite: No action_link returned from generateLink.");
+      await rollback("missing action_link");
       return NextResponse.json(
         { success: false, error: "Einladungslink konnte nicht generiert werden." },
         { status: 500 }
+      );
+    }
+
+    // OPH-97: "Link generieren" mode -- skip Postmark, return the raw invite
+    // link so the admin can forward it manually.
+    if (generateLinkOnly) {
+      // CONCERN-1: The link is a 24h auth-token equivalent; never let it be
+      // cached by intermediate proxies, browsers, or service workers.
+      return NextResponse.json(
+        {
+          success: true,
+          data: { userId: invitedUserId, email, inviteLink: actionLink },
+        },
+        {
+          status: 201,
+          headers: {
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            Pragma: "no-cache",
+          },
+        }
       );
     }
 

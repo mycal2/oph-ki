@@ -18,10 +18,29 @@ interface UseAdminTenantsReturn {
   updateTenant: (id: string, data: UpdateTenantInput) => Promise<Tenant | null>;
   fetchTenant: (id: string) => Promise<Tenant | null>;
   fetchTenantUsers: (id: string) => Promise<TenantUserListItem[]>;
-  inviteUser: (tenantId: string, data: AdminInviteUserInput) => Promise<{ ok: boolean; error?: string }>;
+  /**
+   * Invites a user. When `generateLinkOnly` is true, the API skips email
+   * delivery and returns the raw invite link via `inviteLink` for the admin
+   * to forward through their own channel (OPH-97).
+   */
+  inviteUser: (
+    tenantId: string,
+    data: AdminInviteUserInput
+  ) => Promise<{ ok: boolean; error?: string; inviteLink?: string }>;
   toggleUserStatus: (tenantId: string, userId: string, status: "active" | "inactive") => Promise<boolean>;
   /** OPH-38: Resend invitation email for an unconfirmed user. */
   resendInvite: (tenantId: string, userId: string) => Promise<{ ok: boolean; error?: string }>;
+  /**
+   * OPH-97: Generate a new invite link for an unconfirmed user without sending
+   * email. Returns the link so the admin can forward it through their own channel.
+   */
+  regenerateInviteLink: (
+    tenantId: string,
+    userId: string
+  ) => Promise<
+    | { ok: true; inviteLink?: string; email?: string }
+    | { ok: false; error: string }
+  >;
   /** OPH-38: Trigger password reset email for an active user. */
   resetPassword: (tenantId: string, userId: string) => Promise<{ ok: boolean; error?: string }>;
   exportCsv: () => Promise<void>;
@@ -164,14 +183,20 @@ export function useAdminTenants(): UseAdminTenantsReturn {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
         });
-        const json = (await res.json()) as ApiResponse;
+        const json = (await res.json()) as ApiResponse<{
+          userId: string;
+          email: string;
+          inviteLink?: string;
+        }>;
 
         if (!res.ok || !json.success) {
           const errMsg = json.error ?? "Einladung konnte nicht gesendet werden.";
           return { ok: false, error: errMsg };
         }
 
-        return { ok: true };
+        // OPH-97: When the admin chose "Link generieren" the API returns the
+        // raw invite URL so the UI can show it in a copy-to-clipboard dialog.
+        return { ok: true, inviteLink: json.data?.inviteLink };
       } catch {
         return { ok: false, error: "Verbindungsfehler beim Senden der Einladung." };
       } finally {
@@ -231,6 +256,42 @@ export function useAdminTenants(): UseAdminTenantsReturn {
         return { ok: true };
       } catch {
         return { ok: false, error: "Verbindungsfehler beim Senden der Einladung." };
+      } finally {
+        setIsMutating(false);
+      }
+    },
+    []
+  );
+
+  // OPH-97: Generate a fresh invite link for an unconfirmed user without
+  // sending email. Returns the raw link so the admin can forward it manually.
+  const regenerateInviteLink = useCallback(
+    async (tenantId: string, userId: string) => {
+      setIsMutating(true);
+      setMutationError(null);
+
+      try {
+        const res = await fetch(
+          `/api/admin/tenants/${tenantId}/users/${userId}/resend-invite?mode=link`,
+          { method: "POST" }
+        );
+        const json = (await res.json()) as ApiResponse<{
+          inviteLink: string;
+          email: string;
+        }>;
+
+        if (!res.ok || !json.success) {
+          const errMsg = json.error ?? "Link konnte nicht generiert werden.";
+          return { ok: false as const, error: errMsg };
+        }
+
+        return {
+          ok: true as const,
+          inviteLink: json.data?.inviteLink,
+          email: json.data?.email,
+        };
+      } catch {
+        return { ok: false as const, error: "Verbindungsfehler beim Generieren des Links." };
       } finally {
         setIsMutating(false);
       }
@@ -300,6 +361,7 @@ export function useAdminTenants(): UseAdminTenantsReturn {
     inviteUser,
     toggleUserStatus,
     resendInvite,
+    regenerateInviteLink,
     resetPassword,
     exportCsv,
     isMutating,
