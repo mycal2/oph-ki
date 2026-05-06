@@ -119,20 +119,26 @@ export async function POST(
     }
 
     const actionLink = linkData?.properties?.action_link;
-    if (!actionLink) {
-      console.error("Resend invite: No action_link returned from generateLink.");
+    const hashedToken = linkData?.properties?.hashed_token;
+    if (!actionLink || !hashedToken) {
+      console.error("Resend invite: Missing action_link or hashed_token from generateLink.");
       return NextResponse.json(
         { success: false, error: "Einladungslink konnte nicht generiert werden." },
         { status: 500 }
       );
     }
 
+    // Wrap the Supabase token in a URL on our own domain — see /auth/confirm.
+    const wrappedInviteLink =
+      `${siteUrl}/auth/confirm?token_hash=${encodeURIComponent(hashedToken)}` +
+      `&type=invite&next=${encodeURIComponent("/invite/accept")}`;
+
     // OPH-97: Skip email and return the link for the admin to forward manually.
     if (generateLinkOnly) {
       return NextResponse.json(
         {
           success: true,
-          data: { inviteLink: actionLink, email: authUser.email },
+          data: { inviteLink: wrappedInviteLink, email: authUser.email },
         },
         {
           headers: {
@@ -156,7 +162,7 @@ export async function POST(
     await sendResendInviteEmail({
       serverApiToken: postmarkToken,
       toEmail: authUser.email,
-      inviteLink: actionLink,
+      inviteLink: wrappedInviteLink,
       siteUrl,
     });
 
