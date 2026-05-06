@@ -9,15 +9,17 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
  * POST /api/admin/tenants/[id]/users/[userId]/resend-invite
  *
  * OPH-38: Re-sends an invitation email to a user who has not yet confirmed their account.
- * Uses Supabase Admin SDK to generate a new invite link, then sends it via Postmark.
+ * OPH-97: Supports `?mode=link` to skip the email and return the raw invite link
+ * so the platform admin can forward it through their own channel.
  * Platform admin only.
  */
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string; userId: string }> }
 ): Promise<NextResponse> {
   try {
     const { id: tenantId, userId } = await params;
+    const generateLinkOnly = request.nextUrl.searchParams.get("mode") === "link";
 
     if (!UUID_REGEX.test(tenantId) || !UUID_REGEX.test(userId)) {
       return NextResponse.json(
@@ -122,6 +124,22 @@ export async function POST(
       return NextResponse.json(
         { success: false, error: "Einladungslink konnte nicht generiert werden." },
         { status: 500 }
+      );
+    }
+
+    // OPH-97: Skip email and return the link for the admin to forward manually.
+    if (generateLinkOnly) {
+      return NextResponse.json(
+        {
+          success: true,
+          data: { inviteLink: actionLink, email: authUser.email },
+        },
+        {
+          headers: {
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            Pragma: "no-cache",
+          },
+        }
       );
     }
 

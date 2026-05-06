@@ -7,6 +7,7 @@ import {
   PowerOff,
   UserPlus,
   MailPlus,
+  Link as LinkIcon,
   KeyRound,
   Shield,
   ShieldOff,
@@ -40,6 +41,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { TenantInviteDialog } from "@/components/admin/tenant-invite-dialog";
+import { InviteLinkDialog } from "@/components/admin/invite-link-dialog";
 import { RoleChangeConfirmDialog } from "@/components/admin/role-change-confirm-dialog";
 import type { RoleChangeRequest } from "@/components/admin/role-change-confirm-dialog";
 import type { TenantUserListItem, UserRole, UserStatus } from "@/lib/types";
@@ -65,11 +67,17 @@ interface TenantUsersTabProps {
   tenantName: string;
   /** Current logged-in user's ID — used to hide self-targeted actions (BUG-2). */
   currentUserId?: string | null;
+  /** BUG-4: Trial / inactive tenants disable the invite form. */
+  tenantStatus?: "active" | "inactive" | "trial";
+  /** BUG-3: When true, "Außendienst" becomes a selectable role. */
+  salesforceEnabled?: boolean;
   onFetchUsers: (tenantId: string) => Promise<TenantUserListItem[]>;
   onInviteUser: (
     email: string,
-    role: "tenant_user" | "tenant_admin"
-  ) => Promise<{ ok: boolean; error?: string }>;
+    role: "tenant_user" | "tenant_admin" | "sales_rep",
+    /** OPH-97: When true, the API returns a copyable invite link instead of sending email. */
+    generateLinkOnly: boolean
+  ) => Promise<{ ok: boolean; error?: string; inviteLink?: string }>;
   onToggleUserStatus: (
     userId: string,
     status: "active" | "inactive"
@@ -77,6 +85,13 @@ interface TenantUsersTabProps {
   onResendInvite: (
     userId: string
   ) => Promise<{ ok: boolean; error?: string }>;
+  /** OPH-97: Generate a fresh invite link for an unconfirmed user (no email). */
+  onRegenerateInviteLink?: (
+    userId: string
+  ) => Promise<
+    | { ok: true; inviteLink?: string; email?: string }
+    | { ok: false; error: string }
+  >;
   onResetPassword: (
     userId: string
   ) => Promise<{ ok: boolean; error?: string }>;
@@ -87,16 +102,32 @@ export function TenantUsersTab({
   tenantId,
   tenantName,
   currentUserId,
+  tenantStatus = "active",
+  salesforceEnabled = false,
   onFetchUsers,
   onInviteUser,
   onToggleUserStatus,
   onResendInvite,
+  onRegenerateInviteLink,
   onResetPassword,
   isMutating,
 }: TenantUsersTabProps) {
   const [users, setUsers] = useState<TenantUserListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [inviteOpen, setInviteOpen] = useState(false);
+
+  // OPH-97: State for the post-creation copyable link dialog.
+  // `inviteLinkInfo` controls the open state; `lastInviteLinkInfo` keeps the
+  // last value so the dialog props remain stable during the close animation
+  // (BUG-8 — prevents the email line from blanking out mid-fade).
+  const [inviteLinkInfo, setInviteLinkInfo] = useState<{
+    inviteLink: string;
+    email: string;
+  } | null>(null);
+  const [lastInviteLinkInfo, setLastInviteLinkInfo] = useState<{
+    inviteLink: string;
+    email: string;
+  } | null>(null);
 
   // BUG-6: Confirmation dialog state for user deactivation
   const [confirmUserToggle, setConfirmUserToggle] = useState<{
@@ -215,13 +246,40 @@ export function TenantUsersTab({
 
   const handleInvite = async (
     email: string,
-    role: "tenant_user" | "tenant_admin"
+    role: "tenant_user" | "tenant_admin" | "sales_rep",
+    generateLinkOnly: boolean
   ) => {
-    const result = await onInviteUser(email, role);
+    const result = await onInviteUser(email, role, generateLinkOnly);
     if (result.ok) {
+      // Refresh the user list whether the invite went out by email or as a link.
       loadUsers();
     }
     return result;
+  };
+
+  // OPH-97: Surface the generated invite link in a separate copy dialog.
+  const handleLinkGenerated = (inviteLink: string, email: string) => {
+    const info = { inviteLink, email };
+    setInviteLinkInfo(info);
+    setLastInviteLinkInfo(info);
+  };
+
+  // OPH-97 (BUG-9): Re-generate the invite link for an unconfirmed user and
+  // open the copy dialog. Used when the admin closed the original link dialog
+  // before copying, or when email delivery is misconfigured.
+  const handleRegenerateLink = async (userId: string) => {
+    if (!onRegenerateInviteLink) return;
+    const result = await onRegenerateInviteLink(userId);
+    if (result.ok) {
+      if (result.inviteLink && result.email) {
+        handleLinkGenerated(result.inviteLink, result.email);
+      } else {
+        toast.error("Link konnte nicht generiert werden.");
+      }
+      loadUsers();
+    } else {
+      toast.error(result.error);
+    }
   };
 
   return (
@@ -377,6 +435,17 @@ export function TenantUsersTab({
                                   Einladung erneut senden
                                 </DropdownMenuItem>
                               )}
+                            {/* OPH-97 (BUG-9): Re-generate copyable invite link */}
+                            {!u.email_confirmed_at &&
+                              u.status === "active" &&
+                              onRegenerateInviteLink && (
+                                <DropdownMenuItem
+                                  onClick={() => handleRegenerateLink(u.id)}
+                                >
+                                  <LinkIcon className="mr-2 h-4 w-4" />
+                                  Link erneut generieren
+                                </DropdownMenuItem>
+                              )}
                             {/* OPH-38: Password reset */}
                             {u.status === "active" && (
                               <DropdownMenuItem
@@ -484,8 +553,21 @@ export function TenantUsersTab({
         open={inviteOpen}
         onOpenChange={setInviteOpen}
         tenantName={tenantName}
+        tenantStatus={tenantStatus}
+        salesforceEnabled={salesforceEnabled}
         onInvite={handleInvite}
+        onLinkGenerated={handleLinkGenerated}
         isMutating={isMutating}
+      />
+
+      {/* OPH-97: Copy-to-clipboard dialog for the generated invite link */}
+      <InviteLinkDialog
+        open={!!inviteLinkInfo}
+        onOpenChange={(open) => {
+          if (!open) setInviteLinkInfo(null);
+        }}
+        inviteLink={lastInviteLinkInfo?.inviteLink ?? null}
+        email={lastInviteLinkInfo?.email}
       />
 
       {/* BUG-6: Confirmation dialog for user deactivation/reactivation */}
