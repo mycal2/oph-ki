@@ -148,16 +148,24 @@ export async function POST(
     }
 
     const actionLink = linkData?.properties?.action_link;
-    if (!actionLink) {
-      console.error("Invite: No action_link returned from generateLink.");
-      await rollback("missing action_link");
+    const hashedToken = linkData?.properties?.hashed_token;
+    if (!actionLink || !hashedToken) {
+      console.error("Invite: Missing action_link or hashed_token from generateLink.");
+      await rollback("missing action_link / hashed_token");
       return NextResponse.json(
         { success: false, error: "Einladungslink konnte nicht generiert werden." },
         { status: 500 }
       );
     }
 
-    // OPH-97: "Link generieren" mode -- skip Postmark, return the raw invite
+    // Wrap the Supabase token in a URL on our own domain. /auth/confirm calls
+    // verifyOtp server-side and then redirects to /invite/accept, so the user
+    // sees an oph-ki.ids.online link instead of <project>.supabase.co.
+    const wrappedInviteLink =
+      `${siteUrl}/auth/confirm?token_hash=${encodeURIComponent(hashedToken)}` +
+      `&type=invite&next=${encodeURIComponent("/invite/accept")}`;
+
+    // OPH-97: "Link generieren" mode -- skip Postmark, return the wrapped invite
     // link so the admin can forward it manually.
     if (generateLinkOnly) {
       // CONCERN-1: The link is a 24h auth-token equivalent; never let it be
@@ -165,7 +173,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: true,
-          data: { userId: invitedUserId, email, inviteLink: actionLink },
+          data: { userId: invitedUserId, email, inviteLink: wrappedInviteLink },
         },
         {
           status: 201,
@@ -195,7 +203,7 @@ export async function POST(
     await sendInviteEmail({
       serverApiToken: postmarkToken,
       toEmail: email,
-      inviteLink: actionLink,
+      inviteLink: wrappedInviteLink,
       tenantName: tenant.name as string,
       siteUrl,
     });
