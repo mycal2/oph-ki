@@ -1,8 +1,9 @@
 # OPH-97: Platform Admin — Generate Copyable Invite Link
 
-## Status: In Review
+## Status: Deployed
 **Created:** 2026-05-06
 **Last Updated:** 2026-05-06
+**Deployed:** 2026-05-06 — dev, staging, production (https://oph-ki.ids.online)
 
 ## Dependencies
 - Requires: OPH-8 (Admin: Mandanten-Management) — tenant user management UI
