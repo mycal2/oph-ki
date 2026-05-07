@@ -1,6 +1,6 @@
 # OPH-98: i18n Infrastructure
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-05-07
 **Last Updated:** 2026-05-07
 

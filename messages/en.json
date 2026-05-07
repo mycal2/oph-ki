@@ -1,0 +1,156 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "loading": "Loading...",
+    "submitting": "Saving...",
+    "search": "Search",
+    "filter": "Filter",
+    "yes": "Yes",
+    "no": "No",
+    "confirm": "Confirm",
+    "error": "Error",
+    "success": "Success",
+    "unknownError": "An unknown error occurred.",
+    "connectionError": "Connection error. Please try again.",
+    "tryAgain": "Try again",
+    "required": "Required",
+    "optional": "Optional",
+    "tenantSuffix": "GmbH — 100% subsidiary of VDDI"
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in",
+      "description": "Sign in with your email and password.",
+      "emailLabel": "Email",
+      "emailPlaceholder": "name@company.com",
+      "emailAriaLabel": "Email address",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Your password",
+      "passwordAriaLabel": "Password",
+      "submit": "Sign in",
+      "submitting": "Signing in...",
+      "forgotPassword": "Forgot password?",
+      "trialBannerTitle": "Your account is a trial account.",
+      "trialBannerBody": "Please use email forwarding to process orders. Web login is not available during the trial period.",
+      "trialBannerHint": "Forward order emails to your assigned address.",
+      "errors": {
+        "auth_callback_failed": "Authentication failed. Please try again.",
+        "account_inactive": "Your account is deactivated. Please contact your administrator.",
+        "tenant_inactive": "Your tenant is deactivated. Please contact platform support.",
+        "session_expired": "Your session has expired. Please sign in again."
+      }
+    },
+    "forgotPassword": {
+      "title": "Forgot password",
+      "description": "Enter your email address and we'll send you a link to reset your password.",
+      "submit": "Send link",
+      "submitting": "Sending...",
+      "backToLogin": "Back to sign in",
+      "successTitle": "Email sent",
+      "successDescription": "If an account with the email address <strong>{email}</strong> exists, you will shortly receive an email with a link to reset your password."
+    },
+    "resetPassword": {
+      "title": "Set new password",
+      "description": "Enter your new password.",
+      "newPasswordLabel": "New password",
+      "newPasswordPlaceholder": "At least 8 characters",
+      "newPasswordAriaLabel": "New password",
+      "confirmPasswordLabel": "Confirm password",
+      "confirmPasswordPlaceholder": "Repeat password",
+      "confirmPasswordAriaLabel": "Confirm password",
+      "submit": "Save password",
+      "submitting": "Saving...",
+      "establishingSession": "Establishing session...",
+      "successTitle": "Password changed",
+      "successDescription": "Your password has been reset successfully. You can now sign in with your new password.",
+      "goToLogin": "Go to sign in",
+      "errors": {
+        "sessionFailed": "Session could not be established. Please request a new link.",
+        "invalidLink": "Invalid reset link. Please request a new link."
+      }
+    },
+    "acceptInvite": {
+      "title": "Accept invitation",
+      "descriptionWithTenant": "You have been invited to <strong>{tenant}</strong>. Set your password to activate your account.",
+      "descriptionPlain": "Set your password to activate your account.",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "At least 8 characters",
+      "passwordAriaLabel": "Password",
+      "confirmPasswordLabel": "Confirm password",
+      "confirmPasswordPlaceholder": "Repeat password",
+      "confirmPasswordAriaLabel": "Confirm password",
+      "submit": "Set up account",
+      "submitting": "Setting up account...",
+      "establishingSession": "Establishing session...",
+      "successTitle": "Welcome to the team!",
+      "successDescription": "Your account has been set up successfully. You will be redirected to the dashboard...",
+      "errors": {
+        "passwordsMismatch": "Passwords do not match.",
+        "passwordTooShort": "Password must be at least 8 characters long.",
+        "sessionFailed": "Session could not be established. Please request a new invitation.",
+        "invalidLink": "Invalid invitation link. Please request a new invitation.",
+        "noSession": "No valid session. Please use the link from your invitation email.",
+        "accountSetupFailed": "Account could not be set up. Please try again."
+      }
+    }
+  },
+  "orders": {
+    "title": "Orders",
+    "upload": "Upload order",
+    "status": {
+      "pending": "Pending",
+      "processing": "Processing",
+      "review": "Ready for review",
+      "verified": "Verified",
+      "exported": "Exported",
+      "clarification": "Clarification",
+      "error": "Error"
+    },
+    "review": {
+      "title": "Review order",
+      "save": "Save",
+      "export": "Export"
+    },
+    "empty": {
+      "title": "No orders yet",
+      "description": "Upload your first order or forward an email."
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "profile": "Profile",
+    "team": "Team",
+    "articleCatalog": "Article catalog",
+    "customerCatalog": "Customer catalog",
+    "dealerMappings": "Dealer mappings",
+    "inboundEmail": "Inbound email",
+    "dataProtection": "Data protection"
+  },
+  "admin": {
+    "title": "Administration",
+    "tenants": "Tenants",
+    "dealers": "Dealers",
+    "users": "Users",
+    "erpConfigs": "ERP configurations"
+  },
+  "salesforce": {
+    "home": "Home",
+    "search": "Search",
+    "basket": "Basket",
+    "history": "History",
+    "checkout": "Checkout",
+    "submitOrder": "Submit order"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcomeBack": "Welcome back, {name}. Here is an overview of your workspace.",
+    "welcomeBackNoName": "Welcome back. Here is an overview of your workspace.",
+    "metaDescription": "Your IDS.online dashboard."
+  }
+}
