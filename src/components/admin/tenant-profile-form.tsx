@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { Loader2, Clock, Info, AlertTriangle, Mail, Receipt, Forward, FileSpreadsheet } from "lucide-react";
+import { Loader2, Clock, Info, AlertTriangle, Mail, Receipt, Forward, FileSpreadsheet, Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,6 +42,18 @@ const STATUS_OPTIONS: { value: TenantStatus; label: string }[] = [
   { value: "inactive", label: "Inaktiv" },
   { value: "trial", label: "Testphase" },
 ];
+
+// OPH-99: Tenant-level language preference options.
+// Native + English form for clarity (e.g. "Deutsch (German)").
+const LANGUAGE_OPTIONS: {
+  value: "de" | "en";
+  label: string;
+}[] = [
+  { value: "de", label: "Deutsch (German)" },
+  { value: "en", label: "English (English)" },
+];
+
+const LANGUAGE_NOT_SET_VALUE = "__not_set__";
 
 // OPH-52: Billing model defaults (business constants, not user data)
 type BillingModel = "pay-per-use" | "license-based" | "flat-rate";
@@ -141,6 +153,10 @@ export function TenantProfileForm({
   const [costPerOrder, setCostPerOrder] = useState<string>(
     tenant.cost_per_order != null ? String(tenant.cost_per_order) : ""
   );
+  // OPH-99: Tenant-level language preference (null = not set → falls back to "de")
+  const [preferredLocale, setPreferredLocale] = useState<"de" | "en" | null>(
+    tenant.preferred_locale ?? null
+  );
   // Track whether the user manually edited price fields (to trigger confirmation on model switch)
   const billingPricesManuallyEdited = useRef(false);
   // Pending billing model change (for confirmation dialog)
@@ -174,6 +190,8 @@ export function TenantProfileForm({
     setCostPerOrder(
       tenant.cost_per_order != null ? String(tenant.cost_per_order) : ""
     );
+    // OPH-99: Reset language preference
+    setPreferredLocale(tenant.preferred_locale ?? null);
     billingPricesManuallyEdited.current = false;
   }, [tenant]);
 
@@ -214,6 +232,8 @@ export function TenantProfileForm({
       setup_fee: parseFee(setupFee),
       monthly_fee: parseFee(monthlyFee),
       cost_per_order: parseFee(costPerOrder),
+      // OPH-99: Tenant-level language preference (null clears it).
+      preferred_locale: preferredLocale,
     };
     await onSave(data);
   };
@@ -688,6 +708,49 @@ export function TenantProfileForm({
               <p className="text-xs text-muted-foreground">
                 Wenn gesetzt, wird bei Excel-Bestellungen nur das Blatt mit
                 diesem Namen extrahiert. Leer lassen = alle Blätter.
+              </p>
+            </div>
+          </div>
+
+          {/* OPH-99: Tenant-level language preference */}
+          <div className="rounded-lg border p-4 space-y-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Languages className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Sprache / Language</span>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="tenant-preferred-locale">
+                Standard-Sprache
+              </Label>
+              <Select
+                value={preferredLocale ?? LANGUAGE_NOT_SET_VALUE}
+                onValueChange={(v) =>
+                  setPreferredLocale(
+                    v === LANGUAGE_NOT_SET_VALUE
+                      ? null
+                      : (v as "de" | "en")
+                  )
+                }
+              >
+                <SelectTrigger id="tenant-preferred-locale">
+                  <SelectValue placeholder="Nicht festgelegt" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={LANGUAGE_NOT_SET_VALUE}>
+                    Nicht festgelegt (Standard: Deutsch)
+                  </SelectItem>
+                  {LANGUAGE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Standard-Sprache der Benutzeroberfläche für alle Benutzer
+                dieses Mandanten. Einzelne Benutzer können diese
+                Voreinstellung überschreiben.
               </p>
             </div>
           </div>

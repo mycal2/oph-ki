@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { requirePlatformAdmin, isErrorResponse, checkAdminRateLimit } from "@/lib/admin-auth";
 import { updateTenantSchema } from "@/lib/validations";
-import type { Tenant } from "@/lib/types";
+import type { AppMetadata, Tenant } from "@/lib/types";
+import { TENANT_LOCALE_COOKIE_NAME, isLocale } from "@/i18n/routing";
+import {
+  tenantLocaleCookieOptions,
+  tenantLocaleClearOptions,
+} from "@/lib/i18n/locale-cookie";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -163,7 +168,37 @@ export async function PATCH(
       );
     }
 
-    return NextResponse.json({ success: true, data: updated as unknown as Tenant });
+    const response = NextResponse.json({
+      success: true,
+      data: updated as unknown as Tenant,
+    });
+
+    // OPH-99 BUG-2: When the platform admin edits the language for *their own*
+    // tenant, write the tenant_locale cookie on the response so the change
+    // takes effect on the admin's next navigation — matching the behaviour of
+    // /api/settings/language.
+    if (input.preferred_locale !== undefined) {
+      const callerTenantId = (user.app_metadata as AppMetadata | undefined)?.tenant_id;
+      if (callerTenantId === id) {
+        const host = request.headers.get("host");
+        if (isLocale(input.preferred_locale)) {
+          response.cookies.set({
+            name: TENANT_LOCALE_COOKIE_NAME,
+            value: input.preferred_locale,
+            ...tenantLocaleCookieOptions(host),
+          });
+        } else {
+          // null → clear the cookie so resolveLocale falls back to default.
+          response.cookies.set({
+            name: TENANT_LOCALE_COOKIE_NAME,
+            value: "",
+            ...tenantLocaleClearOptions(host),
+          });
+        }
+      }
+    }
+
+    return response;
   } catch (error) {
     console.error("Error in PATCH /api/admin/tenants/[id]:", error);
     return NextResponse.json(

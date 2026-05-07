@@ -52,6 +52,8 @@ export interface Tenant {
   salesforce_slug: string | null;
   /** OPH-94: Name of the Excel sheet to extract. NULL = use all sheets. */
   excel_sheet_name: string | null;
+  /** OPH-99: Tenant-level UI language preference. NULL = not set, falls back to system default. */
+  preferred_locale: "de" | "en" | null;
 }
 
 export interface UserProfile {
