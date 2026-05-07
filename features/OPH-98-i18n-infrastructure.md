@@ -48,7 +48,104 @@ Supported locales in this phase: **de** (German, default) and **en** (English).
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### System Overview
+
+```
+User makes a request
+        │
+        ▼
+Middleware (src/middleware.ts)
+  └── passes preferred_locale cookie through unchanged
+        │
+        ▼
+Root Layout (src/app/layout.tsx)
+  └── reads preferred_locale cookie
+  └── calls resolveLocale([cookieValue]) → "de" | "en"
+  └── loads messages/de.json or messages/en.json
+  └── wraps entire app in <NextIntlClientProvider locale messages>
+        │
+        ├──▶ Protected Layout  (OPH app pages)
+        │       └── components call useTranslations() / getTranslations()
+        │
+        └──▶ Salesforce Layout  (/sf/* pages)
+                └── components call useTranslations() / getTranslations()
+```
+
+No URL changes. The locale lives in a cookie; routes stay identical.
+
+### New Files & Folders
+
+```
+messages/
+  de.json         ← All German strings, organised by page area
+  en.json         ← Matching English strings, same keys
+
+src/
+  i18n/
+    request.ts    ← next-intl config: how to find the active locale per request
+    routing.ts    ← Declares supported locales (de, en) + default (de)
+  lib/
+    i18n/
+      resolve-locale.ts   ← resolveLocale(preferences[]) utility function
+```
+
+No new pages, no new DB tables.
+
+### Translation File Structure
+
+Both `de.json` and `en.json` share the same key hierarchy:
+
+```
+messages/
+  de.json / en.json
+    ├── common          ← Shared: "Speichern", "Abbrechen", "Laden..."
+    ├── auth            ← Login, password reset, invite accept
+    ├── orders          ← Orders list, upload, review, export
+    ├── settings        ← Tenant settings, team, article catalog
+    ├── admin           ← Admin panel (tenants, dealers, ERP configs)
+    └── salesforce      ← Salesforce App (/sf/*)
+```
+
+TypeScript enforces key existence at compile time — accessing a missing key is a build error.
+
+### Locale Resolution
+
+`resolveLocale(preferences: string[])` in `src/lib/i18n/`:
+- Accepts an ordered preference list (user pref → tenant pref → fallback)
+- Returns the first valid locale (`"de"` or `"en"`)
+- Falls back to `"de"` if the list is empty or all values are null/unknown
+- OPH-99 and OPH-100 supply values to this list; they don't own the logic
+
+### Cookie Bridge
+
+```
+Name:      preferred_locale
+Values:    "de" | "en"
+Written:   OPH-99 (tenant settings) and OPH-100 (user profile)
+Read:      Root layout (server-side, every request)
+Absent:    resolveLocale() returns "de" — no behaviour change from today
+httpOnly:  false (must be readable server-side via cookies() API)
+SameSite:  Lax, Secure in production, path: /
+```
+
+This cookie is the only coupling point between the infrastructure and the preference features.
+
+### Tech Decision: Cookie-Based Locale (No URL Prefix)
+
+| Option | Why not chosen |
+|---|---|
+| URL prefix (`/de/…`) | Breaks every existing URL, bookmark, and redirect in the app |
+| Cookie-based (chosen) | Zero URL changes; works with existing auth middleware |
+| Browser Accept-Language only | Ignores stored user/tenant preference |
+
+`next-intl` supports both modes. We use "without i18n routing" (no URL prefix).
+
+### Dependencies
+
+| Package | Purpose |
+|---|---|
+| `next-intl` | App Router–native i18n — `useTranslations`, `getTranslations`, `NextIntlClientProvider`, plural support, date/number formatting |
 
 ## QA Test Results
 _To be added by /qa_
