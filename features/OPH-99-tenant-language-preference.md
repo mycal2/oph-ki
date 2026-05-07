@@ -42,7 +42,94 @@ Tenant admins can set a preferred UI language for their entire tenant. This lang
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Component Structure
+
+OPH-99 extends two existing surfaces — no new pages needed.
+
+```
+Tenant Settings (/settings/profile or /settings/general)
+  └── Language Preference Card  (NEW)
+        └── Language selector: Deutsch | English
+        └── Save button → PATCH /api/settings/language
+              └── On success: tenant_locale cookie set → locale active on next navigation
+
+Admin Tenant Detail Page (/admin/tenants/[id])
+  └── Tenant Profile Form (existing, extended)
+        └── Language Preference Field  (NEW — one additional row)
+              └── Selector: Not set | Deutsch | English
+              └── Saves via existing PATCH /api/admin/tenants/[id]
+```
+
+### Data Model
+
+One new nullable column on the existing `tenants` table:
+
+```
+tenants (existing):
+  + preferred_locale  TEXT, nullable
+                      Allowed values: "de" | "en"
+                      null = not set → system falls back to "de"
+```
+
+The `Tenant` TypeScript type gains one optional field: `preferred_locale`.
+
+### API Changes
+
+New tenant-admin endpoint:
+```
+PATCH /api/settings/language
+  Auth:   tenant_admin role only (checked server-side)
+  Body:   { preferred_locale: "de" | "en" }
+  Effect: saves to tenants.preferred_locale, sets tenant_locale cookie on response
+```
+
+Extended existing platform-admin endpoint:
+```
+PATCH /api/admin/tenants/[id]  (already exists)
+  Change: accept preferred_locale in the request body + validation schema
+```
+
+### Locale Propagation (How All Tenant Users Pick Up the Change)
+
+The protected layout already fetches the tenant record on every authenticated
+page load. OPH-99 adds one step to that fetch:
+
+```
+Every authenticated page load:
+  1. Layout fetches tenant record (already happens today)
+  2. If user has no personal preference (OPH-100 domain):
+       → read tenant.preferred_locale
+       → write it to the tenant_locale cookie on the response
+  3. request.ts resolves: user_locale cookie → tenant_locale cookie → "de"
+
+Result: all tenant users see the tenant language on every page,
+        automatically, without any personal action
+```
+
+### Two-Cookie Design (tenant_locale + user_locale)
+
+OPH-99 writes `tenant_locale`. OPH-100 writes `user_locale`. They stay independent:
+
+| Single cookie | Two cookies (chosen) |
+|---|---|
+| Can't tell if value was set by tenant or user | Each feature owns its scope cleanly |
+| OPH-100 must know tenant value to avoid overwriting | OPH-100 simply writes user_locale |
+| Messy ownership between two features | resolveLocale() takes both as ordered inputs |
+
+`resolveLocale(preferences[])` already accepts an ordered list — adding a second cookie input requires no structural change to OPH-98.
+
+### Permission Summary
+
+| Action | Role | Endpoint |
+|---|---|---|
+| Read `preferred_locale` | Any authenticated user | Via tenant record in layout |
+| Write (tenant settings) | `tenant_admin` | `PATCH /api/settings/language` |
+| Write (admin panel) | `platform_admin` | `PATCH /api/admin/tenants/[id]` |
+| DB write guard | Service role via RLS | Supabase RLS policy on `tenants` |
+
+### Dependencies
+No new packages — everything comes from OPH-98.
 
 ## QA Test Results
 _To be added by /qa_
