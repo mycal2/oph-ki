@@ -108,7 +108,178 @@ Platform-admin pages (`/admin/*`) are **out of scope** — they are used only by
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### What's already translated (no work needed)
+The following namespaces are complete from OPH-98–100:
+- `common.*` — Save, Cancel, Delete, Edit, Try again, connection errors, etc.
+- `auth.*` — Login, forgot password, reset password, accept invite
+- `settings.tenantLanguage.*` — Tenant language card
+- `settings.userLanguage.*` — User language card
+- `dashboard.title`, `dashboard.welcomeBack` — Dashboard greeting
+- `orders.status.*` — Order status labels (pending, review, exported, etc.)
+- `salesforce.*` nav labels — Home, Search, Basket, History, Checkout, Submit order
+
+Everything else is hardcoded German and needs to be migrated.
+
+---
+
+### Execution Plan: 8 Batches
+
+Migration is split into 8 logical batches. **Batch 0 is a prerequisite for all others.** Batches 1–7 run in parallel across the two product areas (tenant app + Salesforce App).
+
+```
+Batch 0 — Foundation (prerequisite)
+  Glossary file: docs/i18n-glossary.md
+  ESLint warn rule: configured once, applies to all in-scope files
+
+Batch 1 — Layout & Navigation (tenant)
+  Sidebar, top navigation, user menu, environment banner
+
+Batch 2 — Dashboard (tenant)
+  Recent orders panel, action tiles, stats cards
+
+Batch 3 — Orders: List & Upload (tenant)
+  Orders list, filter bar, upload dropzone, upload file list,
+  delete order dialog, extraction status badge
+
+Batch 4 — Orders: Review & Detail (tenant)
+  Order review page (all sub-components), order detail header/content,
+  file list, email body panel, extraction result preview
+
+Batch 5 — Orders: Export, Dealer & Preview (tenant)
+  Export dialog/button/preview, dealer badge/dialogs,
+  public magic-link preview page
+
+Batch 6 — Settings (tenant)
+  Team management (table, invite dialog, edit name dialog),
+  article catalog, customer catalog, dealer mappings,
+  tenant logo upload, inbound email settings, data retention settings
+
+Batch 7 — Salesforce App (sales reps)
+  SF header, home dashboard, article search, basket,
+  checkout (3 steps), order history, order detail, SF profile
+```
+
+---
+
+### Message Key Namespace Map
+
+Each product area owns its own namespace. Max 2 levels deep to keep keys readable.
+
+```
+messages/de.json (and en.json — identical structure)
+│
+├── common.*          ← shared: Save, Cancel, Delete, errors, etc. (EXISTS)
+├── auth.*            ← login/password/invite flows (EXISTS)
+├── layout.*          ← NEW: sidebar, top-nav, user menu, banners
+├── dashboard.*       ← PARTIAL: add stats, recent orders, tiles
+├── orders.*
+│   ├── status.*      ← EXISTS
+│   ├── review.*      ← PARTIAL: expand with all review strings
+│   ├── list.*        ← NEW
+│   ├── upload.*      ← NEW
+│   ├── detail.*      ← NEW
+│   ├── export.*      ← NEW
+│   ├── dealer.*      ← NEW
+│   └── preview.*     ← NEW
+├── settings.*
+│   ├── tenantLanguage.*  ← EXISTS
+│   ├── userLanguage.*    ← EXISTS
+│   ├── team.*            ← NEW
+│   ├── articleCatalog.*  ← NEW
+│   ├── customerCatalog.* ← NEW
+│   ├── dealerMappings.*  ← NEW
+│   ├── inboundEmail.*    ← NEW
+│   ├── dataProtection.*  ← NEW
+│   └── logo.*            ← NEW
+├── salesforce.*
+│   ├── (nav labels EXISTS)
+│   ├── login.*      ← NEW
+│   ├── header.*     ← NEW
+│   ├── home.*       ← NEW
+│   ├── search.*     ← NEW
+│   ├── basket.*     ← NEW
+│   ├── checkout.*   ← NEW
+│   ├── orders.*     ← NEW
+│   └── profile.*    ← NEW
+└── errors.*         ← NEW: 404, error boundary messages
+```
+
+Strings that appear in multiple places (e.g. "Bestellung löschen" confirmation text) live in `common.*` rather than being duplicated in two namespaces.
+
+---
+
+### ESLint Guardrail
+
+**Package to install:** `eslint-plugin-i18next` (1 new dev dependency)
+
+This is an established, purpose-built rule for catching hardcoded strings in JSX. It will warn (not error) when a literal string appears directly in JSX markup — the same pattern as forgetting to wrap `"Speichern"` in a `t()` call.
+
+**Configuration:**
+- Rule level: `warn` (developers see yellow squiggles in VS Code; CI does not fail)
+- Excluded from the rule: `/admin/*`, `/messages/`, test files, type files
+
+Once installed, it prevents regressions immediately — any developer adding a new hardcoded string gets an instant warning in their editor.
+
+---
+
+### Glossary File
+
+A single markdown file at `docs/i18n-glossary.md` lists every domain-specific German term alongside its agreed English translation. It is **written before any translation work begins** to ensure all 8 batches use consistent terminology.
+
+Key terms to lock (from the spec):
+
+| German | English |
+|---|---|
+| Mandant | Tenant |
+| Bestellung | Order |
+| Händler | Dealer |
+| Stammdaten | Master Data |
+| Kundenstamm | Customer Catalog |
+| Artikelstamm | Article Catalog |
+| Kundennummer | Customer Number |
+| Artikelnummer | Article Number |
+| Lieferantenartikelnummer | Supplier Article Number |
+| Außendienstler | Sales Rep |
+| Prüfung / Prüfen | Review |
+| Extraktion | Extraction |
+| ERP-Export | ERP Export |
+| Zeilenposition | Line Item |
+| Mandantenverwaltung | Tenant Management |
+| Abmelden | Sign Out |
+| Bestellhistorie | Order History |
+
+---
+
+### New Dependencies
+
+| Package | Purpose |
+|---|---|
+| `eslint-plugin-i18next` | Warns on hardcoded strings in JSX — prevents i18n regressions |
+
+No other new packages needed. `next-intl` is already installed and fully configured.
+
+---
+
+### What Does NOT Change
+- No database changes
+- No API changes
+- No changes to locale resolution logic (OPH-98)
+- No changes to the cookie system (OPH-99/100)
+- Out-of-scope files (`/admin/*`) are untouched
+
+---
+
+### Execution Order Summary
+
+```
+1. Write docs/i18n-glossary.md
+2. Install eslint-plugin-i18next, configure .eslintrc
+3. Run Batch 1 (Layout) + Batch 7 (Salesforce) in parallel
+4. Run Batch 2 (Dashboard) + continue SF cleanup
+5. Run Batches 3–6 (Orders + Settings) in sequence
+6. Final QA pass: verify every in-scope page renders in English
+```
 
 ## QA Test Results
 _To be added by /qa_
