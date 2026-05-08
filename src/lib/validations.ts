@@ -615,7 +615,28 @@ export const updateTenantSchema = z.object({
     ])
     .transform((val) => (val === "" ? null : val))
     .optional(),
+  /** OPH-99: Tenant-level UI language preference. Null = not set, falls back to system default. */
+  preferred_locale: z
+    .enum(["de", "en"], {
+      message: "Ungültige Sprache. Erlaubt: de, en.",
+    })
+    .nullable()
+    .optional(),
 });
+
+/**
+ * OPH-99: Tenant-level Language Preference validation schema.
+ * Used by PATCH /api/settings/language for tenant_admin self-service.
+ */
+export const tenantLanguageSchema = z.object({
+  preferred_locale: z
+    .enum(["de", "en"], {
+      message: "Ungültige Sprache. Erlaubt: de, en.",
+    })
+    .nullable(),
+});
+
+export type TenantLanguageInput = z.infer<typeof tenantLanguageSchema>;
 
 /** Invite user on behalf of a specific tenant (platform admin). */
 export const adminInviteUserSchema = z.object({

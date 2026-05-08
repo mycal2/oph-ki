@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +18,8 @@ import { createClient } from "@/lib/supabase/client";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 
 export function AcceptInviteForm() {
+  const t = useTranslations("auth.acceptInvite");
+  const tCommon = useTranslations("common");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -48,11 +51,11 @@ export function AcceptInviteForm() {
               window.history.replaceState(null, "", window.location.pathname);
             } else {
               console.error("Failed to set session from hash:", sessionError?.message);
-              setError("Sitzung konnte nicht hergestellt werden. Bitte fordern Sie eine neue Einladung an.");
+              setError(t("errors.sessionFailed"));
             }
           });
       } else {
-        setError("Ungültiger Einladungslink. Bitte fordern Sie eine neue Einladung an.");
+        setError(t("errors.invalidLink"));
       }
     } else {
       // No hash — user may already have a session (e.g., page refresh)
@@ -63,11 +66,11 @@ export function AcceptInviteForm() {
             setTenantName(data.session.user.user_metadata.tenant_name);
           }
         } else {
-          setError("Keine gültige Sitzung. Bitte verwenden Sie den Link aus Ihrer Einladungs-E-Mail.");
+          setError(t("errors.noSession"));
         }
       });
     }
-  }, []);
+  }, [t]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -75,13 +78,13 @@ export function AcceptInviteForm() {
     setError(null);
 
     if (password !== confirmPassword) {
-      setError("Passwörter stimmen nicht überein.");
+      setError(t("errors.passwordsMismatch"));
       setIsLoading(false);
       return;
     }
 
     if (password.length < 8) {
-      setError("Passwort muss mindestens 8 Zeichen lang sein.");
+      setError(t("errors.passwordTooShort"));
       setIsLoading(false);
       return;
     }
@@ -94,7 +97,7 @@ export function AcceptInviteForm() {
 
       if (updateError) {
         console.error("Accept invite error:", updateError.message);
-        setError("Konto konnte nicht eingerichtet werden. Bitte versuchen Sie es erneut.");
+        setError(t("errors.accountSetupFailed"));
       } else {
         setSuccess(true);
         setTimeout(() => {
@@ -102,7 +105,7 @@ export function AcceptInviteForm() {
         }, 2000);
       }
     } catch {
-      setError("Verbindungsfehler. Bitte versuchen Sie es erneut.");
+      setError(tCommon("connectionError"));
     } finally {
       setIsLoading(false);
     }
@@ -116,12 +119,9 @@ export function AcceptInviteForm() {
             <CheckCircle2 className="h-6 w-6 text-green-600" />
           </div>
           <CardTitle className="text-2xl font-bold">
-            Willkommen im Team!
+            {t("successTitle")}
           </CardTitle>
-          <CardDescription>
-            Ihr Konto wurde erfolgreich eingerichtet. Sie werden zum Dashboard
-            weitergeleitet...
-          </CardDescription>
+          <CardDescription>{t("successDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="flex justify-center">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -133,20 +133,14 @@ export function AcceptInviteForm() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl font-bold">
-          Einladung annehmen
-        </CardTitle>
+        <CardTitle className="text-2xl font-bold">{t("title")}</CardTitle>
         <CardDescription>
-          {tenantName ? (
-            <>
-              Sie wurden zur <strong>{tenantName}</strong> eingeladen. Setzen Sie
-              Ihr Passwort, um Ihr Konto zu aktivieren.
-            </>
-          ) : (
-            <>
-              Setzen Sie Ihr Passwort, um Ihr Konto zu aktivieren.
-            </>
-          )}
+          {tenantName
+            ? t.rich("descriptionWithTenant", {
+                tenant: tenantName,
+                strong: (chunks) => <strong>{chunks}</strong>,
+              })
+            : t("descriptionPlain")}
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
@@ -158,31 +152,31 @@ export function AcceptInviteForm() {
             </Alert>
           )}
           <div className="space-y-2">
-            <Label htmlFor="password">Passwort</Label>
+            <Label htmlFor="password">{t("passwordLabel")}</Label>
             <Input
               id="password"
               type="password"
-              placeholder="Mindestens 8 Zeichen"
+              placeholder={t("passwordPlaceholder")}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={8}
               disabled={isLoading || !sessionReady}
-              aria-label="Passwort"
+              aria-label={t("passwordAriaLabel")}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Passwort bestätigen</Label>
+            <Label htmlFor="confirmPassword">{t("confirmPasswordLabel")}</Label>
             <Input
               id="confirmPassword"
               type="password"
-              placeholder="Passwort wiederholen"
+              placeholder={t("confirmPasswordPlaceholder")}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
               minLength={8}
               disabled={isLoading || !sessionReady}
-              aria-label="Passwort bestätigen"
+              aria-label={t("confirmPasswordAriaLabel")}
             />
           </div>
         </CardContent>
@@ -195,15 +189,15 @@ export function AcceptInviteForm() {
             {isLoading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Konto einrichten...
+                {t("submitting")}
               </>
             ) : !sessionReady ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Sitzung wird hergestellt...
+                {t("establishingSession")}
               </>
             ) : (
-              "Konto einrichten"
+              t("submit")
             )}
           </Button>
         </CardFooter>

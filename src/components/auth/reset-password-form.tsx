@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +20,8 @@ import { createClient } from "@/lib/supabase/client";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 
 export function ResetPasswordForm() {
+  const t = useTranslations("auth.resetPassword");
+  const tCommon = useTranslations("common");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -47,11 +50,11 @@ export function ResetPasswordForm() {
               window.history.replaceState(null, "", window.location.pathname);
             } else {
               console.error("Failed to set session from hash:", sessionError.message);
-              setError("Sitzung konnte nicht hergestellt werden. Bitte fordern Sie einen neuen Link an.");
+              setError(t("errors.sessionFailed"));
             }
           });
       } else {
-        setError("Ungültiger Reset-Link. Bitte fordern Sie einen neuen Link an.");
+        setError(t("errors.invalidLink"));
       }
     } else {
       // No hash — user may already have a session (e.g., page refresh)
@@ -61,7 +64,7 @@ export function ResetPasswordForm() {
         }
       });
     }
-  }, []);
+  }, [t]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -73,10 +76,10 @@ export function ResetPasswordForm() {
       if (result.success) {
         setSuccess(true);
       } else {
-        setError(result.error ?? "Ein unbekannter Fehler ist aufgetreten.");
+        setError(result.error ?? tCommon("unknownError"));
       }
     } catch {
-      setError("Verbindungsfehler. Bitte versuchen Sie es erneut.");
+      setError(tCommon("connectionError"));
     } finally {
       setIsLoading(false);
     }
@@ -90,16 +93,13 @@ export function ResetPasswordForm() {
             <CheckCircle2 className="h-6 w-6 text-green-600" />
           </div>
           <CardTitle className="text-2xl font-bold">
-            Passwort geändert
+            {t("successTitle")}
           </CardTitle>
-          <CardDescription>
-            Ihr Passwort wurde erfolgreich zurückgesetzt. Sie können sich jetzt
-            mit Ihrem neuen Passwort anmelden.
-          </CardDescription>
+          <CardDescription>{t("successDescription")}</CardDescription>
         </CardHeader>
         <CardFooter className="justify-center">
           <Link href="/login">
-            <Button className="font-bold">Zur Anmeldung</Button>
+            <Button className="font-bold">{t("goToLogin")}</Button>
           </Link>
         </CardFooter>
       </Card>
@@ -109,12 +109,8 @@ export function ResetPasswordForm() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl font-bold">
-          Neues Passwort setzen
-        </CardTitle>
-        <CardDescription>
-          Geben Sie Ihr neues Passwort ein.
-        </CardDescription>
+        <CardTitle className="text-2xl font-bold">{t("title")}</CardTitle>
+        <CardDescription>{t("description")}</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
@@ -125,31 +121,31 @@ export function ResetPasswordForm() {
             </Alert>
           )}
           <div className="space-y-2">
-            <Label htmlFor="password">Neues Passwort</Label>
+            <Label htmlFor="password">{t("newPasswordLabel")}</Label>
             <Input
               id="password"
               type="password"
-              placeholder="Mindestens 8 Zeichen"
+              placeholder={t("newPasswordPlaceholder")}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={8}
               disabled={isLoading}
-              aria-label="Neues Passwort"
+              aria-label={t("newPasswordAriaLabel")}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Passwort bestätigen</Label>
+            <Label htmlFor="confirmPassword">{t("confirmPasswordLabel")}</Label>
             <Input
               id="confirmPassword"
               type="password"
-              placeholder="Passwort wiederholen"
+              placeholder={t("confirmPasswordPlaceholder")}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
               minLength={8}
               disabled={isLoading}
-              aria-label="Passwort bestätigen"
+              aria-label={t("confirmPasswordAriaLabel")}
             />
           </div>
         </CardContent>
@@ -162,15 +158,15 @@ export function ResetPasswordForm() {
             {isLoading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Speichern...
+                {t("submitting")}
               </>
             ) : !sessionReady ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Sitzung wird hergestellt...
+                {t("establishingSession")}
               </>
             ) : (
-              "Passwort speichern"
+              t("submit")
             )}
           </Button>
         </CardFooter>

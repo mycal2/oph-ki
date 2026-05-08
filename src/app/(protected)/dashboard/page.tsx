@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Upload } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
 import { DashboardStats } from "@/components/orders/dashboard-stats";
 import { RecentOrders } from "@/components/dashboard/recent-orders";
@@ -9,12 +10,17 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { AppMetadata } from "@/lib/types";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Dashboard | IDS.online",
-  description: "Ihr IDS.online Dashboard.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("dashboard");
+  return {
+    title: `${t("title")} | IDS.online`,
+    description: t("metaDescription"),
+  };
+}
 
 export default async function DashboardPage() {
+  const t = await getTranslations("dashboard");
+  const tOrders = await getTranslations("orders");
   const supabase = await createClient();
   const {
     data: { user },
@@ -72,15 +78,17 @@ export default async function DashboardPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold md:text-3xl">Dashboard</h1>
+          <h1 className="text-2xl font-bold md:text-3xl">{t("title")}</h1>
           <p className="text-muted-foreground mt-1">
-            Willkommen zur{"\u00fc"}ck{firstName ? `, ${firstName}` : ""}. Hier ist eine {"\u00dc"}bersicht Ihres Arbeitsbereichs.
+            {firstName
+              ? t("welcomeBack", { name: firstName })
+              : t("welcomeBackNoName")}
           </p>
         </div>
         <Button asChild className="sm:shrink-0">
           <Link href="/orders/upload">
             <Upload className="h-4 w-4" />
-            Bestellung hochladen
+            {tOrders("upload")}
           </Link>
         </Button>
       </div>

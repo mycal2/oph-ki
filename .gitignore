@@ -48,3 +48,8 @@ supabase/.temp/
 
 # claude code plans
 .claude/plans/
+.claude/scheduled_tasks.lock
+
+# build output captures (temporary)
+.build-output.txt
+.tsc-output.txt

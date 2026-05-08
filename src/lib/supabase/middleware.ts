@@ -1,5 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  TENANT_LOCALE_COOKIE_NAME,
+  isLocale,
+} from "@/i18n/routing";
+import {
+  tenantLocaleCookieOptions,
+  tenantLocaleClearOptions,
+} from "@/lib/i18n/locale-cookie";
 
 /**
  * Supabase session middleware with role-based and status-based access control.
@@ -12,6 +20,11 @@ import { NextResponse, type NextRequest } from "next/server";
  *   - /admin/* -> platform_admin only
  *   - /settings/team -> tenant_admin or platform_admin
  *   - All other protected routes -> any authenticated, active user
+ * - OPH-99: Syncs the `tenant_locale` cookie with `tenants.preferred_locale`
+ *   on every authenticated page request. The DB read is a single indexed PK
+ *   lookup (cheap) and removes the cache-invalidation problem of the previous
+ *   stamp-based design — admin-side language changes now propagate to other
+ *   tenant users on their very next page navigation.
  */
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -263,6 +276,52 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(
         new URL(`https://oph-ki${envSuffix}.ids.online/dashboard`)
       );
+    }
+
+    // OPH-99: Sync the tenant_locale cookie with tenants.preferred_locale.
+    // BUG-1 fix: read on every authenticated page request rather than caching
+    // via a stamp cookie. The cost is one indexed PK lookup; the benefit is
+    // that admin-side changes propagate to all tenant users immediately on
+    // their next page navigation (no 24-hour delay).
+    const tenantId = appMetadata?.tenant_id;
+    if (tenantId) {
+      const existingTenantLocale = request.cookies.get(
+        TENANT_LOCALE_COOKIE_NAME
+      )?.value;
+      try {
+        const { data: tenant } = await supabase
+          .from("tenants")
+          .select("preferred_locale")
+          .eq("id", tenantId)
+          .maybeSingle();
+
+        const stored = (tenant as { preferred_locale: string | null } | null)
+          ?.preferred_locale;
+
+        if (isLocale(stored)) {
+          // Only write when the cookie value is missing or stale, so we don't
+          // emit an identical Set-Cookie on every request.
+          if (existingTenantLocale !== stored) {
+            supabaseResponse.cookies.set({
+              name: TENANT_LOCALE_COOKIE_NAME,
+              value: stored,
+              ...tenantLocaleCookieOptions(hostname),
+            });
+          }
+        } else if (existingTenantLocale) {
+          // Tenant cleared their preference → drop the stale cookie. Use the
+          // same domain attribute that was used to set it so the browser
+          // accepts the deletion.
+          supabaseResponse.cookies.set({
+            name: TENANT_LOCALE_COOKIE_NAME,
+            value: "",
+            ...tenantLocaleClearOptions(hostname),
+          });
+        }
+      } catch (err) {
+        // Locale resolution must never block the request — log and continue.
+        console.error("OPH-99: Failed to sync tenant_locale cookie:", err);
+      }
     }
   }
 
