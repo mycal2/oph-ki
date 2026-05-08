@@ -44,7 +44,92 @@ Any authenticated user can override the tenant-level language preference with th
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### What's already done (no changes needed)
+- `USER_LOCALE_COOKIE_NAME = "user_locale"` declared in `src/i18n/routing.ts`
+- `src/i18n/request.ts` reads `user_locale` cookie first, before `tenant_locale` — locale resolution priority is already wired
+- `src/lib/i18n/locale-cookie.ts` helper is reusable for the user cookie (same domain scoping)
+
+### Component Structure
+
+```
+/settings/profile (existing page)
+  +-- TenantLogoUpload (existing)
+  +-- TenantLanguageSettings (existing — tenant default, admin-only edit)
+  +-- UserLanguageSettings  ← NEW: personal override, all users
+
+/sf/[slug]/profile (existing SF profile page)
+  +-- UserLanguageSettings  ← same component reused
+```
+
+`UserLanguageSettings` is a new component (`src/components/user-language-settings.tsx`), parallel to `TenantLanguageSettings`. No `canEdit` prop — every user edits their own language.
+
+Selector options:
+1. **Deutsch (German)** → `"de"`
+2. **English (English)** → `"en"`
+3. **Unternehmenseinstellung verwenden** → `null` (follow company default)
+
+### Data Model
+
+```
+user_profiles table (existing)
+  + preferred_locale  TEXT NULL
+                      CHECK (preferred_locale IN ('de', 'en'))
+```
+
+NULL means "use company default" — falls back to tenant → system default "de".
+
+### New API Endpoint
+
+`GET/PATCH /api/settings/user-language`
+- Same pattern as OPH-99's `/api/settings/language`
+- No role check — every authenticated, active user may update their own row
+- PATCH writes only `preferred_locale` (other profile fields untouched)
+- On success: sets or clears the `user_locale` cookie on the response using `locale-cookie.ts`
+
+### Middleware Change
+
+Add a user sync block in `src/lib/supabase/middleware.ts` after the OPH-99 tenant sync block (~line 325):
+- Read `user_profiles.preferred_locale` for the authenticated user ID on every authenticated page request
+- If set → write/refresh `user_locale` cookie (only when value differs)
+- If null and cookie exists → clear the stale `user_locale` cookie
+- Errors are caught and logged; they never block the request
+
+Cost: one extra indexed PK lookup on `user_profiles.id` per authenticated page request.
+
+### Cookie Propagation Flow
+
+```
+User clicks Save in UserLanguageSettings
+  → PATCH /api/settings/user-language
+    → DB: user_profiles SET preferred_locale = 'en'
+    → Response: Set-Cookie: user_locale=en; Domain=.ids.online
+  → Next page navigation:
+    → middleware syncs user_locale cookie from DB
+    → request.ts reads user_locale cookie first → locale = "en"
+```
+
+### New Files
+
+| File | Purpose |
+|---|---|
+| `supabase/migrations/051_oph100_user_preferred_locale.sql` | `ALTER TABLE user_profiles ADD COLUMN preferred_locale` with idempotent CHECK constraint |
+| `src/components/user-language-settings.tsx` | Language card UI, parallel to `tenant-language-settings.tsx` |
+| `src/app/api/settings/user-language/route.ts` | GET/PATCH endpoint |
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `src/lib/types.ts` | Add `preferred_locale: "de" \| "en" \| null` to `UserProfile` |
+| `src/lib/validations.ts` | Add `userLanguageSchema` |
+| `src/lib/supabase/middleware.ts` | Add user_locale sync block after tenant sync block |
+| `src/app/(protected)/settings/profile/page.tsx` | Mount `<UserLanguageSettings />` |
+| `src/app/sf/[slug]/profile/page.tsx` | Mount `<UserLanguageSettings />` |
+
+### RLS
+
+`user_profiles` already has RLS. The new `preferred_locale` column inherits the existing policy — no new policies needed.
 
 ## QA Test Results
 _To be added by /qa_
