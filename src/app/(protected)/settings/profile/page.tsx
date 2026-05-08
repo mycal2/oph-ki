@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { TenantLogoUpload } from "@/components/tenant-logo-upload";
 import { TenantLanguageSettings } from "@/components/tenant-language-settings";
+import { UserLanguageSettings } from "@/components/user-language-settings";
 import { useCurrentUserRole } from "@/hooks/use-current-user-role";
 import { createClient } from "@/lib/supabase/client";
 import type { ApiResponse } from "@/lib/types";
@@ -170,6 +171,9 @@ export default function TenantProfileSettingsPage() {
 
         {/* OPH-99: Language preference (read-only for non-admins) */}
         <TenantLanguageSettings canEdit={false} />
+
+        {/* OPH-100: Personal language override — every authenticated user can edit. */}
+        <UserLanguageSettings />
       </div>
     );
   }
@@ -204,6 +208,9 @@ export default function TenantProfileSettingsPage() {
 
       {/* OPH-99: Language preference for the entire tenant */}
       <TenantLanguageSettings canEdit={isTenantAdmin} />
+
+      {/* OPH-100: Personal language override — every authenticated user can edit. */}
+      <UserLanguageSettings />
     </div>
   );
 }

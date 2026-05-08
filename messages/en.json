@@ -130,7 +130,38 @@
     "customerCatalog": "Customer catalog",
     "dealerMappings": "Dealer mappings",
     "inboundEmail": "Inbound email",
-    "dataProtection": "Data protection"
+    "dataProtection": "Data protection",
+    "tenantLanguage": {
+      "title": "Language / Sprache",
+      "description": "Default UI language for all users of this tenant. Individual users can override this preference.",
+      "selectLabel": "Language",
+      "selectAriaLabel": "Select tenant language",
+      "notSetOption": "Not set (system default: German)",
+      "optionGerman": "German (Deutsch)",
+      "optionEnglish": "English",
+      "helperAdmin": "This setting applies to all users of your tenant, unless they have chosen a personal language.",
+      "helperNonAdmin": "Only administrators can change this setting.",
+      "loadError": "Language could not be loaded.",
+      "loadConnectionError": "Connection error while loading the language.",
+      "saveSuccess": "Language saved. The change takes effect on the next navigation.",
+      "saveError": "Language could not be saved.",
+      "saveConnectionError": "Connection error while saving the language."
+    },
+    "userLanguage": {
+      "title": "Language / Sprache",
+      "description": "Personal UI language. Your setting overrides your tenant's default language.",
+      "selectLabel": "Language",
+      "selectAriaLabel": "Select personal language",
+      "notSetOption": "Use company setting",
+      "optionGerman": "German (Deutsch)",
+      "optionEnglish": "English",
+      "helper": "Choose \"Use company setting\" to follow your tenant's language.",
+      "loadError": "Language could not be loaded.",
+      "loadConnectionError": "Connection error while loading the language.",
+      "saveSuccess": "Language saved. The change takes effect on the next navigation.",
+      "saveError": "Language could not be saved.",
+      "saveConnectionError": "Connection error while saving the language."
+    }
   },
   "admin": {
     "title": "Administration",

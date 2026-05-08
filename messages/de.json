@@ -130,7 +130,38 @@
     "customerCatalog": "Kundenstamm",
     "dealerMappings": "Händler-Mappings",
     "inboundEmail": "E-Mail-Eingang",
-    "dataProtection": "Datenschutz"
+    "dataProtection": "Datenschutz",
+    "tenantLanguage": {
+      "title": "Sprache / Language",
+      "description": "Standard-Sprache der Benutzeroberfläche für alle Benutzer dieses Mandanten. Einzelne Benutzer können diese Voreinstellung überschreiben.",
+      "selectLabel": "Sprache",
+      "selectAriaLabel": "Sprache des Mandanten auswählen",
+      "notSetOption": "Nicht festgelegt (System-Standard: Deutsch)",
+      "optionGerman": "Deutsch (German)",
+      "optionEnglish": "English (English)",
+      "helperAdmin": "Diese Einstellung gilt für alle Benutzer Ihres Mandanten, sofern sie keine persönliche Sprache gewählt haben.",
+      "helperNonAdmin": "Nur Administratoren können diese Einstellung ändern.",
+      "loadError": "Sprache konnte nicht geladen werden.",
+      "loadConnectionError": "Verbindungsfehler beim Laden der Sprache.",
+      "saveSuccess": "Sprache gespeichert. Die Änderung wird beim nächsten Seitenwechsel aktiv.",
+      "saveError": "Sprache konnte nicht gespeichert werden.",
+      "saveConnectionError": "Verbindungsfehler beim Speichern der Sprache."
+    },
+    "userLanguage": {
+      "title": "Sprache / Language",
+      "description": "Persönliche Sprache der Benutzeroberfläche. Ihre Einstellung überschreibt die Standard-Sprache Ihres Mandanten.",
+      "selectLabel": "Sprache",
+      "selectAriaLabel": "Persönliche Sprache auswählen",
+      "notSetOption": "Unternehmenseinstellung verwenden",
+      "optionGerman": "Deutsch (German)",
+      "optionEnglish": "English (English)",
+      "helper": "Wählen Sie \"Unternehmenseinstellung verwenden\", um die Sprache Ihres Mandanten zu übernehmen.",
+      "loadError": "Sprache konnte nicht geladen werden.",
+      "loadConnectionError": "Verbindungsfehler beim Laden der Sprache.",
+      "saveSuccess": "Sprache gespeichert. Die Änderung wird beim nächsten Seitenwechsel aktiv.",
+      "saveError": "Sprache konnte nicht gespeichert werden.",
+      "saveConnectionError": "Verbindungsfehler beim Speichern der Sprache."
+    }
   },
   "admin": {
     "title": "Administration",

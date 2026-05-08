@@ -4,6 +4,7 @@ import { User, Mail } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { SalesforceOrderHistory } from "./salesforce-order-history";
+import { UserLanguageSettings } from "@/components/user-language-settings";
 
 interface SalesforceProfileProps {
   slug: string;
@@ -58,6 +59,9 @@ export function SalesforceProfile({
           </CardContent>
         </Card>
       </div>
+
+      {/* OPH-100: Personal language override — sales reps can pick their UI language. */}
+      <UserLanguageSettings />
 
       {/* Order history (reuses OPH-81 component) */}
       <SalesforceOrderHistory slug={slug} />

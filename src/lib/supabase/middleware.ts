@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import {
   TENANT_LOCALE_COOKIE_NAME,
+  USER_LOCALE_COOKIE_NAME,
   isLocale,
 } from "@/i18n/routing";
 import {
@@ -322,6 +323,48 @@ export async function updateSession(request: NextRequest) {
         // Locale resolution must never block the request — log and continue.
         console.error("OPH-99: Failed to sync tenant_locale cookie:", err);
       }
+    }
+
+    // OPH-100: Sync the user_locale cookie with user_profiles.preferred_locale
+    // for the authenticated user. The personal override always wins over the
+    // tenant default in `request.ts` resolution. Cost: one indexed PK lookup
+    // on user_profiles per authenticated page request — same shape as the
+    // tenant lookup above. Errors are caught and logged; never block requests.
+    try {
+      const existingUserLocale = request.cookies.get(
+        USER_LOCALE_COOKIE_NAME
+      )?.value;
+
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("preferred_locale")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      const stored = (profile as { preferred_locale: string | null } | null)
+        ?.preferred_locale;
+
+      if (isLocale(stored)) {
+        // Refresh the cookie only if the value differs, so we don't emit an
+        // identical Set-Cookie on every navigation.
+        if (existingUserLocale !== stored) {
+          supabaseResponse.cookies.set({
+            name: USER_LOCALE_COOKIE_NAME,
+            value: stored,
+            ...tenantLocaleCookieOptions(hostname),
+          });
+        }
+      } else if (existingUserLocale) {
+        // User cleared their override (or row missing) → drop the stale cookie
+        // so the tenant default takes over again on the next request.
+        supabaseResponse.cookies.set({
+          name: USER_LOCALE_COOKIE_NAME,
+          value: "",
+          ...tenantLocaleClearOptions(hostname),
+        });
+      }
+    } catch (err) {
+      console.error("OPH-100: Failed to sync user_locale cookie:", err);
     }
   }
 

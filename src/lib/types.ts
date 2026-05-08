@@ -65,6 +65,8 @@ export interface UserProfile {
   status: UserStatus;
   created_at: string;
   updated_at: string;
+  /** OPH-100: User-level UI language override. NULL = follow tenant default (OPH-99). */
+  preferred_locale: "de" | "en" | null;
 }
 
 /**

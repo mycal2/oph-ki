@@ -124,22 +124,20 @@ export function UserMenu() {
             Dashboard
           </Link>
         </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/settings/profile" className="cursor-pointer">
+            <Building2 className="h-4 w-4" />
+            Mein Profil
+          </Link>
+        </DropdownMenuItem>
         {(userData.role === "tenant_admin" ||
           userData.role === "platform_admin") && (
-          <>
-            <DropdownMenuItem asChild>
-              <Link href="/settings/profile" className="cursor-pointer">
-                <Building2 className="h-4 w-4" />
-                Firmenprofil
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/settings/team" className="cursor-pointer">
-                <Settings className="h-4 w-4" />
-                Teamverwaltung
-              </Link>
-            </DropdownMenuItem>
-          </>
+          <DropdownMenuItem asChild>
+            <Link href="/settings/team" className="cursor-pointer">
+              <Settings className="h-4 w-4" />
+              Teamverwaltung
+            </Link>
+          </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
