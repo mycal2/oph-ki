@@ -111,6 +111,7 @@ Eine mandantenfähige SaaS-Plattform ("Order Intelligence Platform"), die Dental
 | P1 | OPH-98: i18n Infrastructure (next-intl, translation files, locale resolution) | Planned |
 | P1 | OPH-99: Tenant-Level Language Preference | Planned |
 | P1 | OPH-100: User-Level Language Override | Planned |
+| P1 | OPH-101: Full i18n Coverage (Tenant + Salesforce App) | Planned |
 
 ## Success Metrics
 - Bearbeitungszeit pro Bestellung: von ~15 Min. manuell auf < 3 Min. mit System
