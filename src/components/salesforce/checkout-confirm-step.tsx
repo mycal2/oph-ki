@@ -17,6 +17,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -44,13 +45,10 @@ interface CheckoutConfirmStepProps {
   slug: string;
 }
 
-/**
- * OPH-80: Checkout step 3 — Order Review & Submission.
- *
- * Shows full order summary with editable quantities, delete with confirmation,
- * and "Ändern" links on customer/address cards. Submits to POST /api/sf/orders.
- */
 export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
+  const t = useTranslations("salesforce.checkout.confirm");
+  const tCheckout = useTranslations("salesforce.checkout");
+  const tDealer = useTranslations("salesforce.checkout.dealer");
   const router = useRouter();
   const basePath = useSfBasePath(slug);
   const {
@@ -71,7 +69,6 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
     confidenceScore: number;
   } | null>(null);
 
-  // Flow guard: redirect to step 1 if no dealer or empty basket.
   useEffect(() => {
     if (submittedOrder) return;
     if (!isDealerIdentified) {
@@ -86,7 +83,6 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
     setError(null);
 
     try {
-      // Build the order payload matching sfOrderSubmitSchema
       let dealer:
         | { method: "customer_number" | "dropdown"; customerId: string; customerNumber: string; companyName: string }
         | { method: "manual"; companyName: string; contactPerson: string; email: string; phone: string; address: string };
@@ -112,7 +108,7 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
           address: manualDealer.address,
         };
       } else {
-        setError("Kundeninformationen fehlen. Bitte gehen Sie zurück zu Schritt 1.");
+        setError(t("missingCustomer"));
         setIsSubmitting(false);
         return;
       }
@@ -138,16 +134,15 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
       const json: ApiResponse<SalesforceOrderResponse> = await res.json();
 
       if (!json.success) {
-        setError(json.error ?? "Bestellung konnte nicht gesendet werden.");
+        setError(json.error ?? t("submitError"));
         return;
       }
 
-      // Clear basket immediately so the header badge disappears on the confirmation screen
       clearBasket();
       resetCheckout();
       setSubmittedOrder(json.data!);
     } catch {
-      setError("Netzwerkfehler. Bitte versuchen Sie es erneut.");
+      setError(t("networkError"));
     } finally {
       setIsSubmitting(false);
     }
@@ -158,100 +153,97 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
     router.push(`${basePath}/order`);
   }
 
-  // Don't render if guard will redirect (skip when post-submission)
   if (!submittedOrder && (!isDealerIdentified || items.length === 0)) {
     return null;
   }
 
-  // ---- SUCCESS SCREEN ----
   if (submittedOrder) {
     return (
       <div className="flex flex-col items-center text-center py-8">
         <div className="rounded-full bg-primary/10 p-4 mb-4">
           <PartyPopper className="h-8 w-8 text-primary" />
         </div>
-        <h1 className="text-xl font-bold mb-2">Bestellung aufgegeben!</h1>
+        <h1 className="text-xl font-bold mb-2">{t("successTitle")}</h1>
         <p className="text-sm text-muted-foreground mb-6">
-          Ihre Bestellung wurde erfolgreich übermittelt und wird jetzt bearbeitet.
+          {t("successDescription")}
         </p>
 
         <Card className="w-full mb-6">
           <CardContent className="pt-4 pb-4 space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Bestell-ID</span>
+              <span className="text-muted-foreground">{t("orderIdLabel")}</span>
               <span className="font-mono text-xs">
                 {submittedOrder.orderId.slice(0, 8)}...
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Artikel</span>
-              <span>{itemCount} Positionen</span>
+              <span className="text-muted-foreground">{t("itemsLabel")}</span>
+              <span>{t("itemsValue", { count: itemCount })}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Konfidenz</span>
-              <span>{submittedOrder.confidenceScore}%</span>
+              <span className="text-muted-foreground">{t("confidenceLabel")}</span>
+              <span>{t("confidenceValue", { score: submittedOrder.confidenceScore })}</span>
             </div>
           </CardContent>
         </Card>
 
         <Button onClick={handleNewOrder} className="w-full font-semibold">
           <ShoppingCart className="h-4 w-4" />
-          Neue Bestellung
+          {t("newOrder")}
         </Button>
       </div>
     );
   }
 
-  // ---- ORDER REVIEW ----
-
-  const methodLabels: Record<string, string> = {
-    customer_number: "Kundennummer",
-    dropdown: "Aus Liste",
-    manual: "Manuell",
-  };
+  const methodLabel =
+    identificationMethod === "manual"
+      ? tDealer("methodManual")
+      : identificationMethod === "customer_number"
+      ? tDealer("methodCustomerNumber")
+      : identificationMethod === "dropdown"
+      ? tDealer("methodFromList")
+      : "—";
 
   const dealerName =
     selectedCustomer?.company_name ?? manualDealer?.companyName ?? "—";
 
   return (
     <div className="flex flex-col pb-28">
-      {/* Progress indicator */}
       <div className="mb-6">
         <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-          <span className="text-muted-foreground">1. Kunde</span>
+          <span className="text-muted-foreground">{tCheckout("stepCustomer")}</span>
           <Separator className="flex-1" />
-          <span className="text-muted-foreground">2. Lieferung</span>
+          <span className="text-muted-foreground">{tCheckout("stepDelivery")}</span>
           <Separator className="flex-1" />
-          <span className="font-semibold text-primary">3. Bestätigung</span>
+          <span className="font-semibold text-primary">{tCheckout("stepConfirm")}</span>
         </div>
-        <h1 className="text-lg font-semibold">Bestellung prüfen</h1>
+        <h1 className="text-lg font-semibold">{t("title")}</h1>
         <p className="text-sm text-muted-foreground">
-          Bitte prüfen Sie Ihre Bestellung und senden Sie sie ab.
+          {t("subtitle")}
         </p>
       </div>
 
-      {/* Customer summary — with "Ändern" link to step 1 */}
       <Card className="mb-4">
         <CardContent className="pt-4 pb-4">
           <div className="flex items-center gap-2 mb-2">
             <Building2 className="h-4 w-4 text-muted-foreground" />
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-              Kunde
+              {t("customerSection")}
             </span>
             <Badge variant="secondary" className="text-[10px]">
-              {methodLabels[identificationMethod ?? ""] ?? "—"}
+              {methodLabel}
             </Badge>
             <Link
               href={`${basePath}/checkout`}
               className="ml-auto text-xs text-muted-foreground hover:text-foreground"
             >
-              Ändern
+              {t("change")}
             </Link>
           </div>
           <p className="text-sm font-semibold">{dealerName}</p>
           {selectedCustomer && (
             <p className="text-xs text-muted-foreground tabular-nums">
-              Nr. {selectedCustomer.customer_number}
+              {t("customerNumberPrefix", { number: selectedCustomer.customer_number })}
             </p>
           )}
           {selectedCustomer?.city && (
@@ -278,20 +270,19 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
         </CardContent>
       </Card>
 
-      {/* Delivery address — with "Ändern" link to step 2 */}
       {deliveryAddress && (
         <Card className="mb-4">
           <CardContent className="pt-4 pb-4">
             <div className="flex items-center gap-2 mb-2">
               <MapPin className="h-4 w-4 text-muted-foreground" />
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                Abweichende Lieferadresse
+                {t("deliverySection")}
               </span>
               <Link
                 href={`${basePath}/checkout/delivery`}
                 className="ml-auto text-xs text-muted-foreground hover:text-foreground"
               >
-                Ändern
+                {t("change")}
               </Link>
             </div>
             <p className="text-sm">
@@ -310,20 +301,19 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
         </Card>
       )}
 
-      {/* Notes (if set) — with "Ändern" link to step 2 */}
       {notes && (
         <Card className="mb-4">
           <CardContent className="pt-4 pb-4">
             <div className="flex items-center gap-2 mb-2">
               <MessageSquare className="h-4 w-4 text-muted-foreground" />
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                Bemerkungen
+                {t("notesSection")}
               </span>
               <Link
                 href={`${basePath}/checkout/delivery`}
                 className="ml-auto text-xs text-muted-foreground hover:text-foreground"
               >
-                Ändern
+                {t("change")}
               </Link>
             </div>
             <p className="text-sm whitespace-pre-line">{notes}</p>
@@ -331,12 +321,11 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
         </Card>
       )}
 
-      {/* Editable line items */}
       <div className="mb-4">
         <div className="flex items-center gap-2 mb-3">
           <ShoppingCart className="h-4 w-4 text-muted-foreground" />
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            Artikel ({items.length})
+            {t("itemsSection", { count: items.length })}
           </span>
         </div>
         <div className="space-y-2">
@@ -346,7 +335,6 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
         </div>
       </div>
 
-      {/* Error */}
       {error && (
         <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4" />
@@ -354,13 +342,12 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
         </Alert>
       )}
 
-      {/* Sticky footer */}
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background p-4">
         <div className="mx-auto flex max-w-lg gap-3">
           <Button variant="outline" className="shrink-0" asChild>
             <Link href={`${basePath}/checkout/delivery`}>
               <ArrowLeft className="h-4 w-4" />
-              Zurück
+              {tCheckout("back")}
             </Link>
           </Button>
           <Button
@@ -371,12 +358,12 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
             {isSubmitting ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Wird gesendet...
+                {t("submitting")}
               </>
             ) : (
               <>
                 <Check className="h-4 w-4" />
-                Bestellung absenden
+                {t("submit")}
               </>
             )}
           </Button>
@@ -386,17 +373,15 @@ export function CheckoutConfirmStep({ slug }: CheckoutConfirmStepProps) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Editable line item with quantity controls and delete
-// ---------------------------------------------------------------------------
-
 function EditableLineItem({ item }: { item: BasketItem }) {
+  const t = useTranslations("salesforce.checkout.confirm");
+  const tCommon = useTranslations("common");
   const { setQuantity, removeFromBasket } = useBasket();
   const [inputValue, setInputValue] = useState(String(item.quantity));
 
   const handleDecrement = () => {
     const newQty = item.quantity - 1;
-    if (newQty <= 0) return; // use delete button instead
+    if (newQty <= 0) return;
     setQuantity(item.article.id, newQty);
     setInputValue(String(newQty));
   };
@@ -431,7 +416,6 @@ function EditableLineItem({ item }: { item: BasketItem }) {
         </p>
         <p className="text-sm leading-snug truncate">{item.article.name}</p>
 
-        {/* Quantity controls */}
         <div className="mt-2 flex items-center gap-1">
           <Button
             variant="outline"
@@ -439,7 +423,7 @@ function EditableLineItem({ item }: { item: BasketItem }) {
             className="h-7 w-7 shrink-0"
             onClick={handleDecrement}
             disabled={item.quantity <= 1}
-            aria-label="Menge verringern"
+            aria-label={t("decreaseQuantityAriaLabel")}
           >
             <Minus className="h-3 w-3" />
           </Button>
@@ -450,43 +434,42 @@ function EditableLineItem({ item }: { item: BasketItem }) {
             onChange={handleInputChange}
             onBlur={handleInputBlur}
             className="h-7 w-12 text-center tabular-nums text-sm px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-            aria-label={`Menge für ${item.article.name}`}
+            aria-label={t("quantityAriaLabel", { name: item.article.name })}
           />
           <Button
             variant="outline"
             size="icon"
             className="h-7 w-7 shrink-0"
             onClick={handleIncrement}
-            aria-label="Menge erhöhen"
+            aria-label={t("increaseQuantityAriaLabel")}
           >
             <Plus className="h-3 w-3" />
           </Button>
         </div>
       </div>
 
-      {/* Delete with confirmation */}
       <AlertDialog>
         <AlertDialogTrigger asChild>
           <Button
             variant="ghost"
             size="icon"
             className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
-            aria-label={`${item.article.name} entfernen`}
+            aria-label={t("removeAriaLabel", { name: item.article.name })}
           >
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Artikel entfernen?</AlertDialogTitle>
+            <AlertDialogTitle>{t("removeTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              &quot;{item.article.name}&quot; wird aus der Bestellung entfernt.
+              {t("removeDescription", { name: item.article.name })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={() => removeFromBasket(item.article.id)}>
-              Entfernen
+              {t("removeConfirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

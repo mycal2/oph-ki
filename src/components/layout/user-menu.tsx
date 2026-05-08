@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -25,6 +26,7 @@ interface UserData {
 }
 
 export function UserMenu() {
+  const t = useTranslations("layout.userMenu");
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -99,7 +101,7 @@ export function UserMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger
         className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-accent transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
-        aria-label="Benutzermenü öffnen"
+        aria-label={t("openMenuAriaLabel")}
       >
         <Avatar className="h-8 w-8">
           <AvatarFallback className="bg-primary text-primary-foreground text-xs font-bold">
@@ -121,13 +123,13 @@ export function UserMenu() {
         <DropdownMenuItem asChild>
           <Link href="/dashboard" className="cursor-pointer">
             <User className="h-4 w-4" />
-            Dashboard
+            {t("dashboard")}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/settings/profile" className="cursor-pointer">
             <Building2 className="h-4 w-4" />
-            Mein Profil
+            {t("myProfile")}
           </Link>
         </DropdownMenuItem>
         {(userData.role === "tenant_admin" ||
@@ -135,7 +137,7 @@ export function UserMenu() {
           <DropdownMenuItem asChild>
             <Link href="/settings/team" className="cursor-pointer">
               <Settings className="h-4 w-4" />
-              Teamverwaltung
+              {t("teamManagement")}
             </Link>
           </DropdownMenuItem>
         )}
@@ -146,7 +148,7 @@ export function UserMenu() {
           className="cursor-pointer text-destructive focus:text-destructive"
         >
           <LogOut className="h-4 w-4" />
-          {isLoggingOut ? "Abmelden..." : "Abmelden"}
+          {isLoggingOut ? t("signingOut") : t("signOut")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
