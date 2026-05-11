@@ -638,6 +638,21 @@ export const tenantLanguageSchema = z.object({
 
 export type TenantLanguageInput = z.infer<typeof tenantLanguageSchema>;
 
+/**
+ * OPH-100: User-level Language Override validation schema.
+ * Used by PATCH /api/settings/user-language. Any authenticated, active user
+ * may write their own row. NULL means "follow company default" (OPH-99).
+ */
+export const userLanguageSchema = z.object({
+  preferred_locale: z
+    .enum(["de", "en"], {
+      message: "Ungültige Sprache. Erlaubt: de, en.",
+    })
+    .nullable(),
+});
+
+export type UserLanguageInput = z.infer<typeof userLanguageSchema>;
+
 /** Invite user on behalf of a specific tenant (platform admin). */
 export const adminInviteUserSchema = z.object({
   email: z

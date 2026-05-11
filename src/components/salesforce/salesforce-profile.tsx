@@ -1,9 +1,11 @@
 "use client";
 
 import { User, Mail } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { SalesforceOrderHistory } from "./salesforce-order-history";
+import { UserLanguageSettings } from "@/components/user-language-settings";
 
 interface SalesforceProfileProps {
   slug: string;
@@ -24,13 +26,14 @@ export function SalesforceProfile({
   lastName,
   email,
 }: SalesforceProfileProps) {
-  const displayName = [firstName, lastName].filter(Boolean).join(" ") || "—";
+  const t = useTranslations("salesforce.profile");
+  const displayName = [firstName, lastName].filter(Boolean).join(" ") || t("displayNameFallback");
 
   return (
     <div className="flex flex-col gap-6">
       {/* Profile info */}
       <div>
-        <h1 className="text-lg font-semibold mb-3">Mein Profil</h1>
+        <h1 className="text-lg font-semibold mb-3">{t("title")}</h1>
         <Card>
           <CardContent className="pt-4 pb-4 space-y-3">
             <div className="flex items-center gap-3">
@@ -58,6 +61,9 @@ export function SalesforceProfile({
           </CardContent>
         </Card>
       </div>
+
+      {/* OPH-100: Personal language override — sales reps can pick their UI language. */}
+      <UserLanguageSettings />
 
       {/* Order history (reuses OPH-81 component) */}
       <SalesforceOrderHistory slug={slug} />

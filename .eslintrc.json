@@ -1,3 +1,60 @@
 {
-  "extends": "next/core-web-vitals"
+  "extends": ["next/core-web-vitals", "plugin:i18next/recommended"],
+  "plugins": ["i18next"],
+  "rules": {
+    "i18next/no-literal-string": [
+      "warn",
+      {
+        "markupOnly": true,
+        "ignoreAttribute": [
+          "className",
+          "id",
+          "key",
+          "href",
+          "to",
+          "type",
+          "name",
+          "data-testid",
+          "role",
+          "aria-controls",
+          "aria-describedby",
+          "aria-labelledby",
+          "htmlFor",
+          "src",
+          "alt",
+          "rel",
+          "target",
+          "autoComplete",
+          "autoCorrect",
+          "spellCheck",
+          "inputMode",
+          "rows",
+          "min",
+          "max",
+          "step",
+          "maxLength",
+          "size",
+          "side",
+          "align",
+          "variant",
+          "tooltip"
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "src/app/admin/**",
+        "src/components/admin/**",
+        "messages/**",
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.d.ts"
+      ],
+      "rules": {
+        "i18next/no-literal-string": "off"
+      }
+    }
+  ]
 }

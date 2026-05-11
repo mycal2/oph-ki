@@ -25,6 +25,8 @@ const ERROR_KEYS = [
   "account_inactive",
   "tenant_inactive",
   "session_expired",
+  "invite_link_expired",
+  "invalid_invite_link",
 ] as const;
 type LoginErrorKey = (typeof ERROR_KEYS)[number];
 

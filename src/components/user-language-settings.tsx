@@ -25,29 +25,27 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { ApiResponse } from "@/lib/types";
 
 /**
- * OPH-99: Tenant-Level Language Preference card.
+ * OPH-100: User-Level Language Override card.
  *
- * Lets a tenant_admin (or platform_admin) pick the default UI language for the
- * entire tenant. The selection is persisted via PATCH /api/settings/language,
- * which also writes the `tenant_locale` cookie so the change takes effect on
- * the next navigation without a hard reload.
+ * Lets any authenticated user pick a personal UI language that overrides the
+ * tenant default (OPH-99). Selecting "Use company setting" clears the personal
+ * override so the tenant default takes over again.
+ *
+ * Persists via PATCH /api/settings/user-language, which also writes the
+ * `user_locale` cookie so the change takes effect on the next navigation
+ * without a hard reload.
  */
 
 type LocaleValue = "de" | "en" | null;
 
-interface LanguageSettingsResponse {
+interface UserLanguageSettingsResponse {
   preferred_locale: "de" | "en" | null;
-}
-
-interface TenantLanguageSettingsProps {
-  /** When false, the selector is shown read-only (non-admin viewer). */
-  canEdit: boolean;
 }
 
 const NOT_SET_VALUE = "__not_set__";
 
-export function TenantLanguageSettings({ canEdit }: TenantLanguageSettingsProps) {
-  const t = useTranslations("settings.tenantLanguage");
+export function UserLanguageSettings() {
+  const t = useTranslations("settings.userLanguage");
   const tCommon = useTranslations("common");
 
   const [savedLocale, setSavedLocale] = useState<LocaleValue>(null);
@@ -60,8 +58,8 @@ export function TenantLanguageSettings({ canEdit }: TenantLanguageSettingsProps)
     try {
       setIsLoading(true);
       setError(null);
-      const res = await fetch("/api/settings/language");
-      const json = (await res.json()) as ApiResponse<LanguageSettingsResponse>;
+      const res = await fetch("/api/settings/user-language");
+      const json = (await res.json()) as ApiResponse<UserLanguageSettingsResponse>;
 
       if (!res.ok || !json.success || !json.data) {
         setError(json.error ?? t("loadError"));
@@ -82,16 +80,14 @@ export function TenantLanguageSettings({ canEdit }: TenantLanguageSettingsProps)
   }, [fetchLocale]);
 
   const handleSave = useCallback(async () => {
-    if (!canEdit) return;
-
     try {
       setIsSaving(true);
-      const res = await fetch("/api/settings/language", {
+      const res = await fetch("/api/settings/user-language", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ preferred_locale: selectedLocale }),
       });
-      const json = (await res.json()) as ApiResponse<LanguageSettingsResponse>;
+      const json = (await res.json()) as ApiResponse<UserLanguageSettingsResponse>;
 
       if (!res.ok || !json.success || !json.data) {
         toast.error(json.error ?? t("saveError"));
@@ -106,7 +102,7 @@ export function TenantLanguageSettings({ canEdit }: TenantLanguageSettingsProps)
     } finally {
       setIsSaving(false);
     }
-  }, [canEdit, selectedLocale, t]);
+  }, [selectedLocale, t]);
 
   const handleSelectChange = useCallback((value: string) => {
     setSelectedLocale(value === NOT_SET_VALUE ? null : (value as "de" | "en"));
@@ -146,14 +142,14 @@ export function TenantLanguageSettings({ canEdit }: TenantLanguageSettingsProps)
         ) : (
           <>
             <div className="space-y-2">
-              <Label htmlFor="tenant-language-select">{t("selectLabel")}</Label>
+              <Label htmlFor="user-language-select">{t("selectLabel")}</Label>
               <Select
                 value={selectValue}
                 onValueChange={handleSelectChange}
-                disabled={!canEdit || isSaving}
+                disabled={isSaving}
               >
                 <SelectTrigger
-                  id="tenant-language-select"
+                  id="user-language-select"
                   aria-label={t("selectAriaLabel")}
                 >
                   <SelectValue />
@@ -166,25 +162,21 @@ export function TenantLanguageSettings({ canEdit }: TenantLanguageSettingsProps)
                   <SelectItem value="en">{t("optionEnglish")}</SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
-                {canEdit ? t("helperAdmin") : t("helperNonAdmin")}
-              </p>
+              <p className="text-xs text-muted-foreground">{t("helper")}</p>
             </div>
 
-            {canEdit && (
-              <div className="flex justify-end">
-                <Button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={!hasChanges || isSaving}
-                >
-                  {isSaving && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  {tCommon("save")}
-                </Button>
-              </div>
-            )}
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                onClick={handleSave}
+                disabled={!hasChanges || isSaving}
+              >
+                {isSaving && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                {tCommon("save")}
+              </Button>
+            </div>
           </>
         )}
       </CardContent>

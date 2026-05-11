@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   LayoutDashboard,
   Package,
@@ -63,7 +64,6 @@ interface NavItem {
 interface NavGroup {
   title: string;
   items: NavItem[];
-  adminOnly?: boolean;
 }
 
 interface PlatformSubGroup {
@@ -73,83 +73,6 @@ interface PlatformSubGroup {
   items: NavItem[];
 }
 
-const navGroups: NavGroup[] = [
-  {
-    title: "Übersicht",
-    items: [
-      { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
-      { icon: Package, label: "Bestellungen", href: "/orders" },
-    ],
-  },
-  {
-    title: "Stammdaten",
-    items: [
-      { icon: Box, label: "Artikelstamm", href: "/settings/article-catalog" },
-      { icon: Users, label: "Kundenstamm", href: "/settings/customer-catalog" },
-      {
-        icon: ArrowLeftRight,
-        label: "Zuordnungen",
-        href: "/settings/dealer-mappings",
-      },
-    ],
-  },
-  {
-    title: "Einstellungen",
-    items: [
-      { icon: Mail, label: "Eingangs-E-Mail", href: "/settings/inbound-email" },
-      { icon: Shield, label: "Datenschutz", href: "/settings/data-protection" },
-    ],
-  },
-];
-
-const platformSubGroups: PlatformSubGroup[] = [
-  {
-    title: "Dashboard",
-    icon: BarChart3,
-    defaultOpen: true,
-    items: [
-      { icon: BarChart3, label: "Reporting", href: "/admin/dashboard" },
-      { icon: Receipt, label: "Abrechnung", href: "/admin/reports" },
-      { icon: Upload, label: "Upload", href: "/admin/upload" },
-    ],
-  },
-  {
-    title: "Konfiguration",
-    icon: Settings2,
-    defaultOpen: false,
-    items: [
-      { icon: Building2, label: "Mandanten", href: "/admin/tenants" },
-      { icon: Store, label: "Händler", href: "/admin/dealers" },
-      { icon: FileCode, label: "ERP-Mapping", href: "/admin/erp-configs" },
-    ],
-  },
-  {
-    title: "Services",
-    icon: MailWarning,
-    defaultOpen: false,
-    items: [
-      {
-        icon: MailWarning,
-        label: "E-Mail-Quarantäne",
-        href: "/admin/email-quarantine",
-      },
-    ],
-  },
-  {
-    title: "Einstellungen",
-    icon: Settings,
-    defaultOpen: false,
-    items: [
-      { icon: Users, label: "Teamverwaltung", href: "/settings/team" },
-      {
-        icon: Settings,
-        label: "Fehler-Benachrichtigungen",
-        href: "/admin/settings",
-      },
-    ],
-  },
-];
-
 function isActive(href: string, pathname: string): boolean {
   if (href === "/dashboard") {
     return pathname === "/dashboard";
@@ -158,6 +81,7 @@ function isActive(href: string, pathname: string): boolean {
 }
 
 function CollapseToggle() {
+  const t = useTranslations("layout.sidebar");
   const { state, toggleSidebar, isMobile } = useSidebar();
 
   if (isMobile) return null;
@@ -172,7 +96,7 @@ function CollapseToggle() {
           size="icon"
           onClick={toggleSidebar}
           className="h-8 w-8 text-sidebar-foreground/70 hover:text-sidebar-foreground"
-          aria-label={isExpanded ? "Sidebar einklappen" : "Sidebar ausklappen"}
+          aria-label={isExpanded ? t("collapseAriaLabel") : t("expandAriaLabel")}
         >
           {isExpanded ? (
             <ChevronsLeft className="h-4 w-4" />
@@ -182,7 +106,7 @@ function CollapseToggle() {
         </Button>
       </TooltipTrigger>
       <TooltipContent side="right">
-        {isExpanded ? "Einklappen" : "Ausklappen"}
+        {isExpanded ? t("collapseTooltip") : t("expandTooltip")}
       </TooltipContent>
     </Tooltip>
   );
@@ -262,13 +186,89 @@ function PlatformSubGroupItem({
 }
 
 export function AppSidebar() {
+  const t = useTranslations("layout.sidebar");
   const pathname = usePathname();
   const { role, isPlatformAdminOrViewer, salesforceEnabled } = useCurrentUserRole();
   const { setOpenMobile, isMobile } = useSidebar();
 
+  const navGroups: NavGroup[] = [
+    {
+      title: t("groupOverview"),
+      items: [
+        { icon: LayoutDashboard, label: t("dashboard"), href: "/dashboard" },
+        { icon: Package, label: t("orders"), href: "/orders" },
+      ],
+    },
+    {
+      title: t("groupMasterData"),
+      items: [
+        { icon: Box, label: t("articleCatalog"), href: "/settings/article-catalog" },
+        { icon: Users, label: t("customerCatalog"), href: "/settings/customer-catalog" },
+        {
+          icon: ArrowLeftRight,
+          label: t("dealerMappings"),
+          href: "/settings/dealer-mappings",
+        },
+      ],
+    },
+    {
+      title: t("groupSettings"),
+      items: [
+        { icon: Mail, label: t("inboundEmail"), href: "/settings/inbound-email" },
+        { icon: Shield, label: t("dataProtection"), href: "/settings/data-protection" },
+      ],
+    },
+  ];
+
+  const platformSubGroups: PlatformSubGroup[] = [
+    {
+      title: t("platformDashboard"),
+      icon: BarChart3,
+      defaultOpen: true,
+      items: [
+        { icon: BarChart3, label: t("platformReporting"), href: "/admin/dashboard" },
+        { icon: Receipt, label: t("platformBilling"), href: "/admin/reports" },
+        { icon: Upload, label: t("platformUpload"), href: "/admin/upload" },
+      ],
+    },
+    {
+      title: t("platformConfiguration"),
+      icon: Settings2,
+      defaultOpen: false,
+      items: [
+        { icon: Building2, label: t("platformTenants"), href: "/admin/tenants" },
+        { icon: Store, label: t("platformDealers"), href: "/admin/dealers" },
+        { icon: FileCode, label: t("platformErpMapping"), href: "/admin/erp-configs" },
+      ],
+    },
+    {
+      title: t("platformServices"),
+      icon: MailWarning,
+      defaultOpen: false,
+      items: [
+        {
+          icon: MailWarning,
+          label: t("platformEmailQuarantine"),
+          href: "/admin/email-quarantine",
+        },
+      ],
+    },
+    {
+      title: t("platformSettings"),
+      icon: Settings,
+      defaultOpen: false,
+      items: [
+        { icon: Users, label: t("platformTeamManagement"), href: "/settings/team" },
+        {
+          icon: Settings,
+          label: t("platformErrorNotifications"),
+          href: "/admin/settings",
+        },
+      ],
+    },
+  ];
+
   // OPH-82: Show Außendienstler under Stammdaten
-  // - tenant_admin: only when salesforce_enabled = true for their tenant
-  // - platform_admin: always (they manage all tenants)
   const showAussendienst = role === "platform_admin" || (role === "tenant_admin" && salesforceEnabled);
 
   function handleNavigate() {
@@ -284,9 +284,8 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         {navGroups.map((group) => {
-          // OPH-82: Conditionally append Außendienstler to Stammdaten group
-          const items = group.title === "Stammdaten" && showAussendienst
-            ? [...group.items, { icon: Briefcase, label: "Außendienstler", href: "/settings/aussendienstler" }]
+          const items = group.title === t("groupMasterData") && showAussendienst
+            ? [...group.items, { icon: Briefcase, label: t("salesReps"), href: "/settings/aussendienstler" }]
             : group.items;
 
           return (
@@ -319,7 +318,7 @@ export function AppSidebar() {
 
         {isPlatformAdminOrViewer && (
           <SidebarGroup>
-            <SidebarGroupLabel>Plattform</SidebarGroupLabel>
+            <SidebarGroupLabel>{t("groupPlatform")}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {platformSubGroups.map((subGroup) => (

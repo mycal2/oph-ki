@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { ChevronDown, ClipboardList, LogOut, ShoppingCart, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +32,7 @@ interface SalesforceHeaderProps {
  * and tenant manufacturer logo (right).
  */
 export function SalesforceHeader({ tenantName, tenantLogoUrl, slug, userName }: SalesforceHeaderProps) {
+  const t = useTranslations("salesforce.header");
   const [logoError, setLogoError] = useState(false);
   const { itemCount } = useBasket();
   const basePath = useSfBasePath(slug);
@@ -44,14 +46,14 @@ export function SalesforceHeader({ tenantName, tenantLogoUrl, slug, userName }: 
   // Truncate long names for mobile
   const displayName = userName
     ? (userName.length > 20 ? userName.slice(0, 18) + "…" : userName)
-    : "Mein Konto";
+    : t("myAccountFallback");
 
   return (
     <header className="sticky top-0 z-50 border-b bg-background">
       <div className="flex h-14 items-center justify-between px-4">
         {/* Left: IDS.online logo — links to home (OPH-91) */}
         <div className="flex items-center gap-3">
-          <Link href={basePath || "/"} aria-label="Zur Startseite">
+          <Link href={basePath || "/"} aria-label={t("homeLinkAriaLabel")}>
             <Image
               src="/ids-logo.svg"
               alt="IDS.online"
@@ -66,7 +68,7 @@ export function SalesforceHeader({ tenantName, tenantLogoUrl, slug, userName }: 
         {/* Right: Basket icon + User dropdown + Tenant logo */}
         <div className="flex items-center gap-1">
           {/* Basket icon with count badge */}
-          <Link href={`${basePath}/basket`} aria-label="Warenkorb anzeigen">
+          <Link href={`${basePath}/basket`} aria-label={t("basketAriaLabel")}>
             <Button
               variant="ghost"
               size="icon"
@@ -102,26 +104,26 @@ export function SalesforceHeader({ tenantName, tenantLogoUrl, slug, userName }: 
               <DropdownMenuItem asChild>
                 <Link href={`${basePath}/profile`} className="flex items-center gap-2">
                   <User className="h-4 w-4" />
-                  Profil
+                  {t("profile")}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href={`${basePath}/orders`} className="flex items-center gap-2">
                   <ClipboardList className="h-4 w-4" />
-                  Bestellhistorie
+                  {t("orderHistory")}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2">
                 <LogOut className="h-4 w-4" />
-                Abmelden
+                {t("signOut")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
           {/* Tenant logo — links to home (OPH-91) */}
           {tenantLogoUrl && !logoError && (
-            <Link href={basePath || "/"} aria-label="Zur Startseite">
+            <Link href={basePath || "/"} aria-label={t("homeLinkAriaLabel")}>
               <Image
                 src={tenantLogoUrl}
                 alt={tenantName}

@@ -14,6 +14,7 @@ import {
   RefreshCw,
   AlertTriangle,
 } from "lucide-react";
+import { useTranslations, useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -44,38 +45,42 @@ interface SalesforceOrderDetailProps {
   orderId: string;
 }
 
-/** Resolved article for reorder: catalog article + desired quantity. */
 interface ResolvedArticle {
   article: ArticleCatalogItem;
   quantity: number;
 }
 
-/** Maps order status to a German label and badge variant. */
+type StatusKey =
+  | "statusSubmitted"
+  | "statusInReview"
+  | "statusExported"
+  | "statusError"
+  | "statusProcessing";
+
 function getStatusDisplay(status: OrderStatus): {
-  label: string;
+  key: StatusKey;
   variant: "default" | "secondary" | "destructive" | "outline";
 } {
   switch (status) {
     case "extracted":
-      return { label: "Eingereicht", variant: "default" };
+      return { key: "statusSubmitted", variant: "default" };
     case "review":
     case "checked":
-      return { label: "In Prüfung", variant: "secondary" };
+      return { key: "statusInReview", variant: "secondary" };
     case "approved":
     case "exported":
-      return { label: "Exportiert", variant: "outline" };
+      return { key: "statusExported", variant: "outline" };
     case "error":
-      return { label: "Fehler", variant: "destructive" };
+      return { key: "statusError", variant: "destructive" };
     default:
-      return { label: "Verarbeitung", variant: "secondary" };
+      return { key: "statusProcessing", variant: "secondary" };
   }
 }
 
-/** Formats a date string to a readable German date. */
-function formatDate(dateStr: string): string {
+function formatDate(dateStr: string, locale: string): string {
   try {
     const date = new Date(dateStr);
-    return date.toLocaleDateString("de-DE", {
+    return date.toLocaleDateString(locale === "en" ? "en-US" : "de-DE", {
       day: "numeric",
       month: "long",
       year: "numeric",
@@ -87,17 +92,13 @@ function formatDate(dateStr: string): string {
   }
 }
 
-/**
- * OPH-81: Order detail view with reorder functionality.
- *
- * Shows full order details (line items, dealer info, delivery address, notes)
- * and a "Nachbestellen" button that validates articles against the current
- * catalog before adding them to the basket.
- */
 export function SalesforceOrderDetail({
   slug,
   orderId,
 }: SalesforceOrderDetailProps) {
+  const t = useTranslations("salesforce.orders.detail");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
   const basePath = useSfBasePath(slug);
   const router = useRouter();
   const { addToBasket, setQuantity } = useBasket();
@@ -108,12 +109,10 @@ export function SalesforceOrderDetail({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Reorder state
   const [isReordering, setIsReordering] = useState(false);
   const [unavailableArticles, setUnavailableArticles] = useState<string[]>([]);
   const [showUnavailableWarning, setShowUnavailableWarning] = useState(false);
 
-  // Mutable ref to store resolved articles while the warning dialog is shown
   const pendingArticlesRef = useRef<Map<string, ResolvedArticle> | null>(null);
 
   const fetchOrder = useCallback(async () => {
@@ -126,36 +125,31 @@ export function SalesforceOrderDetail({
         await res.json();
 
       if (!json.success) {
-        setError(json.error ?? "Bestellung konnte nicht geladen werden.");
+        setError(json.error ?? t("loadError"));
         return;
       }
 
       setOrder(json.data!);
     } catch {
-      setError("Netzwerkfehler beim Laden der Bestellung.");
+      setError(t("networkError"));
     } finally {
       setIsLoading(false);
     }
-  }, [orderId]);
+  }, [orderId, t]);
 
   useEffect(() => {
     fetchOrder();
   }, [fetchOrder]);
 
-  /** Adds resolved articles to the basket, preserving original quantities. */
   function addArticlesToBasket(articles: Map<string, ResolvedArticle>) {
     for (const { article, quantity } of articles.values()) {
       addToBasket(article);
-      // addToBasket sets quantity to 1 (or increments). Override with the real qty.
       if (quantity > 1) {
         setTimeout(() => setQuantity(article.id, quantity), 0);
       }
     }
   }
 
-  /**
-   * Looks up each line item in the catalog and returns found/not-found results.
-   */
   async function resolveArticles(): Promise<{
     found: Map<string, ResolvedArticle>;
     notFound: string[];
@@ -180,7 +174,6 @@ export function SalesforceOrderDetail({
           await res.json();
 
         if (json.success && json.data!.articles.length > 0) {
-          // Prefer exact match by article number
           const exactMatch = json.data!.articles.find(
             (a) =>
               a.article_number.toLowerCase() ===
@@ -188,7 +181,6 @@ export function SalesforceOrderDetail({
           );
           const match = exactMatch ?? json.data!.articles[0];
 
-          // Sum quantities when the same article appears multiple times
           const existing = found.get(match.id);
           if (existing) {
             existing.quantity += lineItem.quantity;
@@ -210,12 +202,6 @@ export function SalesforceOrderDetail({
     return { found, notFound };
   }
 
-  /**
-   * Reorder flow:
-   * 1. Validate all articles against the live catalog
-   * 2. If some are unavailable, show a warning dialog
-   * 3. On confirmation (or if all are available), add to basket and navigate
-   */
   async function handleReorder() {
     if (!order) return;
 
@@ -228,9 +214,7 @@ export function SalesforceOrderDetail({
       );
 
       if (!hasArticleNumbers) {
-        setError(
-          "Keine Artikelnummern in dieser Bestellung vorhanden. Nachbestellung nicht möglich."
-        );
+        setError(t("noArticleNumbers"));
         setIsReordering(false);
         return;
       }
@@ -238,15 +222,12 @@ export function SalesforceOrderDetail({
       const { found, notFound } = await resolveArticles();
 
       if (found.size === 0) {
-        setError(
-          "Keiner der Artikel ist noch im Katalog verfügbar. Nachbestellung nicht möglich."
-        );
+        setError(t("allUnavailable"));
         setIsReordering(false);
         return;
       }
 
       if (notFound.length > 0) {
-        // Store found articles for use after dialog confirmation
         pendingArticlesRef.current = found;
         setUnavailableArticles(notFound);
         setShowUnavailableWarning(true);
@@ -254,17 +235,15 @@ export function SalesforceOrderDetail({
         return;
       }
 
-      // All articles available — add to basket and navigate
       addArticlesToBasket(found);
       router.push(`${basePath}/basket`);
     } catch {
-      setError("Fehler beim Prüfen der Artikelverfügbarkeit.");
+      setError(t("checkAvailabilityError"));
     } finally {
       setIsReordering(false);
     }
   }
 
-  /** Called when user confirms to proceed despite unavailable articles. */
   function handleReorderProceed() {
     setShowUnavailableWarning(false);
 
@@ -274,11 +253,10 @@ export function SalesforceOrderDetail({
       pendingArticlesRef.current = null;
       router.push(`${basePath}/basket`);
     } else {
-      setError("Keine Artikel konnten zum Warenkorb hinzugefügt werden.");
+      setError(t("noneAdded"));
     }
   }
 
-  // ---- LOADING STATE ----
   if (isLoading) {
     return (
       <div className="flex flex-col gap-4">
@@ -298,7 +276,6 @@ export function SalesforceOrderDetail({
     );
   }
 
-  // ---- ERROR STATE (no order loaded) ----
   if (error && !order) {
     return (
       <div className="flex flex-col gap-4">
@@ -307,14 +284,14 @@ export function SalesforceOrderDetail({
           className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Bestellungen
+          {t("backToOrders")}
         </Link>
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
         <Button variant="outline" onClick={fetchOrder}>
-          Erneut versuchen
+          {t("tryAgain")}
         </Button>
       </div>
     );
@@ -322,65 +299,61 @@ export function SalesforceOrderDetail({
 
   if (!order) return null;
 
-  const { label: statusLabel, variant: statusVariant } = getStatusDisplay(
+  const { key: statusKey, variant: statusVariant } = getStatusDisplay(
     order.status
   );
 
   return (
     <div className="flex flex-col pb-28">
-      {/* Back button */}
       <Link
         href={`${basePath}/orders`}
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
       >
         <ArrowLeft className="h-4 w-4" />
-        Bestellungen
+        {t("backToOrders")}
       </Link>
 
-      {/* Order header */}
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-1">
-          <h1 className="text-lg font-semibold">Bestelldetails</h1>
+          <h1 className="text-lg font-semibold">{t("title")}</h1>
           <Badge
             variant={statusVariant}
             className="text-[10px] whitespace-nowrap"
           >
-            {statusLabel}
+            {t(statusKey)}
           </Badge>
         </div>
         <p className="text-sm text-muted-foreground">
-          {formatDate(order.createdAt)}
+          {formatDate(order.createdAt, locale)}
         </p>
       </div>
 
-      {/* Dealer / Customer info */}
       <Card className="mb-4">
         <CardContent className="pt-4 pb-4">
           <div className="flex items-center gap-2 mb-2">
             <Building2 className="h-4 w-4 text-muted-foreground" />
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-              Kunde
+              {t("customerSection")}
             </span>
           </div>
           <p className="text-sm font-semibold">
-            {order.dealerName ?? order.senderCompanyName ?? "Unbekannt"}
+            {order.dealerName ?? order.senderCompanyName ?? t("customerUnknown")}
           </p>
           {order.customerNumber && (
             <p className="text-xs text-muted-foreground tabular-nums">
-              Nr. {order.customerNumber}
+              {t("customerNumberPrefix", { number: order.customerNumber })}
             </p>
           )}
         </CardContent>
       </Card>
 
-      {/* Delivery address */}
       {order.deliveryAddress && (
         <Card className="mb-4">
           <CardContent className="pt-4 pb-4">
             <div className="flex items-center gap-2 mb-2">
               <MapPin className="h-4 w-4 text-muted-foreground" />
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                Lieferadresse
+                {t("deliverySection")}
               </span>
             </div>
             <p className="text-sm">
@@ -402,14 +375,13 @@ export function SalesforceOrderDetail({
         </Card>
       )}
 
-      {/* Notes */}
       {order.notes && (
         <Card className="mb-4">
           <CardContent className="pt-4 pb-4">
             <div className="flex items-center gap-2 mb-2">
               <MessageSquare className="h-4 w-4 text-muted-foreground" />
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                Bemerkungen
+                {t("notesSection")}
               </span>
             </div>
             <p className="text-sm whitespace-pre-line">{order.notes}</p>
@@ -417,15 +389,14 @@ export function SalesforceOrderDetail({
         </Card>
       )}
 
-      {/* Line items */}
       <div className="mb-4">
         <div className="flex items-center gap-2 mb-3">
           <Package className="h-4 w-4 text-muted-foreground" />
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            Positionen ({order.lineItems.length})
+            {t("itemsSection", { count: order.lineItems.length })}
           </span>
         </div>
-        <div className="space-y-2" role="list" aria-label="Bestellpositionen">
+        <div className="space-y-2" role="list" aria-label={t("itemsAriaLabel")}>
           {order.lineItems.map((item, index) => (
             <div
               key={index}
@@ -444,7 +415,7 @@ export function SalesforceOrderDetail({
               </div>
               <div className="shrink-0 text-right">
                 <p className="text-sm font-semibold tabular-nums">
-                  {item.quantity} {item.unit ?? "Stk"}
+                  {item.quantity} {item.unit ?? t("unitFallback")}
                 </p>
               </div>
             </div>
@@ -452,7 +423,6 @@ export function SalesforceOrderDetail({
         </div>
       </div>
 
-      {/* Reorder error */}
       {error && (
         <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4" />
@@ -460,7 +430,6 @@ export function SalesforceOrderDetail({
         </Alert>
       )}
 
-      {/* Unavailable articles warning dialog */}
       <AlertDialog
         open={showUnavailableWarning}
         onOpenChange={setShowUnavailableWarning}
@@ -469,18 +438,12 @@ export function SalesforceOrderDetail({
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-amber-500" />
-              Artikel nicht verfügbar
+              {t("unavailableTitle")}
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div>
                 <p className="mb-2">
-                  {unavailableArticles.length}{" "}
-                  {unavailableArticles.length === 1
-                    ? "Artikel ist"
-                    : "Artikel sind"}{" "}
-                  nicht mehr im Katalog verfügbar und{" "}
-                  {unavailableArticles.length === 1 ? "wird" : "werden"} nicht
-                  in den Warenkorb übernommen:
+                  {t("unavailableSummary", { count: unavailableArticles.length })}
                 </p>
                 <ul className="list-disc pl-5 space-y-1 text-xs">
                   {unavailableArticles.map((name, i) => (
@@ -491,15 +454,14 @@ export function SalesforceOrderDetail({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={handleReorderProceed}>
-              Trotzdem fortfahren
+              {t("proceedAnyway")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Sticky footer with reorder button */}
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background p-4">
         <div className="mx-auto max-w-lg">
           <Button
@@ -510,12 +472,12 @@ export function SalesforceOrderDetail({
             {isReordering ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Artikel werden geprüft...
+                {t("checkingArticles")}
               </>
             ) : (
               <>
                 <RefreshCw className="h-4 w-4" />
-                Nachbestellen
+                {t("reorder")}
               </>
             )}
           </Button>
