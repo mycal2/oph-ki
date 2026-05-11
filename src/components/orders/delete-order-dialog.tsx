@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import {
   AlertDialog,
@@ -32,6 +33,7 @@ export function DeleteOrderDialog({
   onOpenChange,
   onDeleted,
 }: DeleteOrderDialogProps) {
+  const t = useTranslations("orders.delete");
   const [isDeleting, setIsDeleting] = useState(false);
 
   async function handleDelete() {
@@ -43,15 +45,15 @@ export function DeleteOrderDialog({
       const json = (await res.json()) as ApiResponse<OrderDeleteResponse>;
 
       if (!json.success) {
-        toast.error(json.error ?? "Fehler beim Löschen der Bestellung.");
+        toast.error(json.error ?? t("errorGeneric"));
         return;
       }
 
-      toast.success("Bestellung erfolgreich gelöscht.");
+      toast.success(t("successToast"));
       onOpenChange(false);
       onDeleted();
     } catch {
-      toast.error("Verbindungsfehler beim Löschen der Bestellung.");
+      toast.error(t("errorConnection"));
     } finally {
       setIsDeleting(false);
     }
@@ -61,26 +63,31 @@ export function DeleteOrderDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Bestellung endgültig löschen?</AlertDialogTitle>
+          <AlertDialogTitle>{t("title")}</AlertDialogTitle>
           <AlertDialogDescription asChild>
             <div className="space-y-2">
               <p>
-                Sie sind dabei, die Bestellung{" "}
-                <span className="font-medium text-foreground">{fileName}</span>{" "}
-                zu löschen.
+                {t.rich("intro", {
+                  filename: fileName,
+                  name: (chunks) => (
+                    <span className="font-medium text-foreground">
+                      {chunks}
+                    </span>
+                  ),
+                })}
               </p>
               <p>
-                Diese Bestellung und alle zugehörigen Dateien ({fileCount}{" "}
-                {fileCount === 1 ? "Datei" : "Dateien"}) werden unwiderruflich
-                gelöscht.
+                {fileCount === 1
+                  ? t("consequencesSingle")
+                  : t("consequencesMultiple", { count: fileCount })}
               </p>
-              <p>Dieser Vorgang kann nicht rückgängig gemacht werden.</p>
+              <p>{t("warning")}</p>
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isDeleting}>
-            Abbrechen
+            {t("cancel")}
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => {
@@ -93,7 +100,7 @@ export function DeleteOrderDialog({
             {isDeleting && (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             )}
-            Endgültig löschen
+            {t("confirm")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

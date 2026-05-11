@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useTranslations } from "next-intl";
 import {
   Package,
   CalendarDays,
@@ -60,6 +61,7 @@ function StatTileSkeleton() {
 }
 
 export function DashboardStats() {
+  const t = useTranslations("dashboard.stats");
   const [stats, setStats] = useState<OrderDashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -111,28 +113,28 @@ export function DashboardStats() {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
       <StatTile
-        label="Heute"
+        label={t("today")}
         value={String(stats.today)}
         icon={<Package className={iconClass} />}
       />
       <StatTile
-        label="Diese Woche"
+        label={t("thisWeek")}
         value={String(stats.thisWeek)}
         icon={<CalendarDays className={iconClass} />}
       />
       <StatTile
-        label="Dieser Monat"
+        label={t("thisMonth")}
         value={String(stats.thisMonth)}
         icon={<CalendarRange className={iconClass} />}
       />
       <StatTile
-        label="Offene Bestellungen"
+        label={t("openOrders")}
         value={String(stats.openOrders)}
         icon={<Clock className={iconClass} />}
         variant={stats.openOrders > 0 ? "warning" : "default"}
       />
       <StatTile
-        label="Fehlerrate (7 Tage)"
+        label={t("errorRate7Days")}
         value={`${stats.errorRate7Days.toFixed(1)}%`}
         icon={<AlertTriangle className={iconClass} />}
         variant={stats.errorRate7Days > 10 ? "warning" : "default"}

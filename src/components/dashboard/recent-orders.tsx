@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useTranslations, useLocale } from "next-intl";
 import { FileText, Upload, AlertCircle, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,18 +27,6 @@ import type {
   OrderStatus,
 } from "@/lib/types";
 
-const STATUS_LABELS: Record<OrderStatus, string> = {
-  uploaded: "Hochgeladen",
-  processing: "Wird verarbeitet",
-  extracted: "Extrahiert",
-  review: "In Prüfung",
-  checked: "Geprüft",
-  clarification: "Klärung",
-  approved: "Freigegeben",
-  exported: "Exportiert",
-  error: "Fehler",
-};
-
 const STATUS_VARIANTS: Record<
   OrderStatus,
   "default" | "secondary" | "destructive" | "outline"
@@ -59,9 +48,10 @@ const STATUS_CLASSNAMES: Partial<Record<OrderStatus, string>> = {
   clarification: "border-amber-300 bg-amber-50 text-amber-700",
 };
 
-function formatDate(dateStr: string): string {
+function formatDate(dateStr: string, locale: string): string {
   const date = new Date(dateStr);
-  return date.toLocaleDateString("de-DE", {
+  const bcp47 = locale === "en" ? "en-GB" : "de-DE";
+  return date.toLocaleDateString(bcp47, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -86,6 +76,9 @@ function RecentOrdersSkeleton() {
 }
 
 export function RecentOrders() {
+  const t = useTranslations("dashboard.recentOrders");
+  const tStatus = useTranslations("orders.statusLabels");
+  const locale = useLocale();
   const [orders, setOrders] = useState<OrderListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -100,16 +93,14 @@ export function RecentOrders() {
       if (res.ok && json.success && json.data) {
         setOrders(json.data.orders);
       } else {
-        setError(
-          json.error ?? "Bestellungen konnten nicht geladen werden."
-        );
+        setError(json.error ?? t("loadError"));
       }
     } catch {
-      setError("Bestellungen konnten nicht geladen werden. Bitte Seite neu laden.");
+      setError(t("loadErrorRefresh"));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchOrders();
@@ -120,14 +111,12 @@ export function RecentOrders() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Letzte Bestellungen</CardTitle>
-            <CardDescription>
-              Ihre neuesten Bestellungen und deren Status.
-            </CardDescription>
+            <CardTitle>{t("title")}</CardTitle>
+            <CardDescription>{t("description")}</CardDescription>
           </div>
           {orders.length > 0 && (
             <Button variant="ghost" size="sm" asChild>
-              <Link href="/orders">Alle anzeigen</Link>
+              <Link href="/orders">{t("viewAll")}</Link>
             </Button>
           )}
         </div>
@@ -139,13 +128,9 @@ export function RecentOrders() {
           <div className="flex flex-col items-center justify-center py-8 text-center gap-3">
             <AlertCircle className="h-10 w-10 text-destructive/60" />
             <p className="text-sm text-muted-foreground">{error}</p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={fetchOrders}
-            >
+            <Button variant="outline" size="sm" onClick={fetchOrders}>
               <RefreshCw className="h-4 w-4" />
-              Erneut versuchen
+              {t("tryAgain")}
             </Button>
           </div>
         )}
@@ -155,13 +140,13 @@ export function RecentOrders() {
             <FileText className="h-12 w-12 text-muted-foreground/50" />
             <div>
               <p className="text-sm text-muted-foreground">
-                Noch keine Bestellungen. Laden Sie Ihre erste Bestellung hoch.
+                {t("emptyDescription")}
               </p>
             </div>
             <Button asChild>
               <Link href="/orders/upload">
                 <Upload className="h-4 w-4" />
-                Bestellung hochladen
+                {t("uploadCta")}
               </Link>
             </Button>
           </div>
@@ -176,7 +161,7 @@ export function RecentOrders() {
                 className="flex items-center gap-4 p-3 rounded-md hover:bg-muted/50 transition-colors group"
               >
                 <span className="text-xs text-muted-foreground shrink-0 w-28 tabular-nums">
-                  {formatDate(order.created_at)}
+                  {formatDate(order.created_at, locale)}
                 </span>
                 <span className="text-sm truncate min-w-0 flex-1">
                   {order.dealer_name ?? (
@@ -184,9 +169,7 @@ export function RecentOrders() {
                   )}
                 </span>
                 <span className="text-sm text-muted-foreground truncate hidden sm:block max-w-[200px]">
-                  {order.primary_filename ?? (
-                    <span>--</span>
-                  )}
+                  {order.primary_filename ?? <span>--</span>}
                 </span>
                 {order.status === "clarification" && order.clarification_note ? (
                   <TooltipProvider delayDuration={200}>
@@ -196,7 +179,7 @@ export function RecentOrders() {
                           variant={STATUS_VARIANTS[order.status]}
                           className={`shrink-0 ml-auto cursor-default ${STATUS_CLASSNAMES[order.status] ?? ""}`}
                         >
-                          {STATUS_LABELS[order.status]}
+                          {tStatus(order.status)}
                         </Badge>
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs text-xs">
@@ -209,7 +192,7 @@ export function RecentOrders() {
                     variant={STATUS_VARIANTS[order.status]}
                     className={`shrink-0 ml-auto ${STATUS_CLASSNAMES[order.status] ?? ""}`}
                   >
-                    {STATUS_LABELS[order.status]}
+                    {tStatus(order.status)}
                   </Badge>
                 )}
               </Link>

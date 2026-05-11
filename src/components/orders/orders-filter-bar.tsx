@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,17 +10,29 @@ import type { OrderStatus, OrdersFilterState } from "@/lib/types";
 
 const DEBOUNCE_MS = 400;
 
-const STATUS_TABS: Array<{ value: OrderStatus | "all"; label: string }> = [
-  { value: "all", label: "Alle" },
-  { value: "uploaded", label: "Neu" },
-  { value: "processing", label: "Verarbeitung" },
-  { value: "extracted", label: "Extrahiert" },
-  { value: "review", label: "In Prüfung" },
-  { value: "clarification", label: "Klärung" },
-  { value: "checked", label: "Geprüft" },
-  { value: "approved", label: "Freigegeben" },
-  { value: "exported", label: "Exportiert" },
-  { value: "error", label: "Fehler" },
+type FilterTabKey =
+  | "tabAll"
+  | "tabUploaded"
+  | "tabProcessing"
+  | "tabExtracted"
+  | "tabReview"
+  | "tabClarification"
+  | "tabChecked"
+  | "tabApproved"
+  | "tabExported"
+  | "tabError";
+
+const STATUS_TABS: Array<{ value: OrderStatus | "all"; labelKey: FilterTabKey }> = [
+  { value: "all", labelKey: "tabAll" },
+  { value: "uploaded", labelKey: "tabUploaded" },
+  { value: "processing", labelKey: "tabProcessing" },
+  { value: "extracted", labelKey: "tabExtracted" },
+  { value: "review", labelKey: "tabReview" },
+  { value: "clarification", labelKey: "tabClarification" },
+  { value: "checked", labelKey: "tabChecked" },
+  { value: "approved", labelKey: "tabApproved" },
+  { value: "exported", labelKey: "tabExported" },
+  { value: "error", labelKey: "tabError" },
 ];
 
 interface OrdersFilterBarProps {
@@ -31,6 +44,7 @@ export function OrdersFilterBar({
   filters,
   onFiltersChange,
 }: OrdersFilterBarProps) {
+  const t = useTranslations("orders.list.filters");
   const [searchInput, setSearchInput] = useState(filters.search);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -110,7 +124,7 @@ export function OrdersFilterBar({
               value={tab.value}
               className="text-xs"
             >
-              {tab.label}
+              {t(tab.labelKey)}
             </TabsTrigger>
           ))}
         </TabsList>
@@ -124,16 +138,16 @@ export function OrdersFilterBar({
           <Input
             value={searchInput}
             onChange={(e) => handleSearchChange(e.target.value)}
-            placeholder="Händler oder Bestellnummer suchen..."
+            placeholder={t("searchPlaceholder")}
             className="pl-9 pr-8"
-            aria-label="Bestellungen durchsuchen"
+            aria-label={t("searchAriaLabel")}
           />
           {searchInput && (
             <button
               type="button"
               onClick={() => handleSearchChange("")}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              aria-label="Suche löschen"
+              aria-label={t("clearSearchAriaLabel")}
             >
               <X className="h-4 w-4" />
             </button>
@@ -147,15 +161,15 @@ export function OrdersFilterBar({
             value={filters.dateFrom}
             onChange={handleDateFromChange}
             className="w-[140px]"
-            aria-label="Datum von"
+            aria-label={t("dateFromAriaLabel")}
           />
-          <span className="text-sm text-muted-foreground">bis</span>
+          <span className="text-sm text-muted-foreground">{t("dateSeparator")}</span>
           <Input
             type="date"
             value={filters.dateTo}
             onChange={handleDateToChange}
             className="w-[140px]"
-            aria-label="Datum bis"
+            aria-label={t("dateToAriaLabel")}
           />
         </div>
 
@@ -168,7 +182,7 @@ export function OrdersFilterBar({
             className="shrink-0"
           >
             <X className="h-4 w-4" />
-            Filter zurücksetzen
+            {t("clearFilters")}
           </Button>
         )}
       </div>
