@@ -38,9 +38,11 @@ main  →  develop  →  staging  →  production
 - Feature work happens on `main`
 - `/deploy dev` → merge main → develop, push (deploy latest code for internal testing)
 - `/deploy staging` → merge develop → staging, push (promote what was tested on dev for customer testing)
-- `/deploy prod` → verify staging was tested, deploy main via `npx vercel --prod` (go live)
+- `/deploy prod` → verify staging was tested, deploy via explicit `npx vercel --prod` (go live)
 
 **Important:** This is a promotion pipeline. Staging only gets code that was tested on dev. Production only deploys after customer confirmation on staging.
+
+**Production auto-deploy is disabled in Vercel.** The Production Branch in Vercel project settings points to a non-existent branch (`production`), so pushing to `main` only creates a Preview deployment — it never reaches production automatically. The ONLY way to deploy production is `npx vercel --prod`, which runs only inside the `/deploy prod` workflow after explicit confirmation. This guardrail prevents accidental prod deploys caused by docs/spec commits to `main`.
 
 ---
 
@@ -117,8 +119,8 @@ Before deploying, present a summary and ask for explicit confirmation:
 Use `AskUserQuestion` with options: "Deploy to production" / "Cancel"
 
 #### 3. Deploy
-- `npx vercel --prod`
-- Or: Vercel auto-deploys on push to `main` (code should already be on main)
+- `npx vercel --prod` — this is the ONLY way to deploy production. Pushing to `main` does NOT auto-deploy prod (Vercel's Production Branch points to a non-existent branch).
+- Run this from a clean checkout of the commit you want to ship.
 
 #### 4. Post-Deployment Verification
 - [ ] https://oph-ki.ids.online loads correctly
