@@ -260,7 +260,11 @@
       "loadConnectionError": "Connection error while loading the language.",
       "saveSuccess": "Language saved. The change takes effect on the next navigation.",
       "saveError": "Language could not be saved.",
-      "saveConnectionError": "Connection error while saving the language."
+      "saveConnectionError": "Connection error while saving the language.",
+      "savedDialogTitle": "Language saved",
+      "savedDialogDescription": "Reload the page so the new language is applied everywhere.",
+      "savedDialogReload": "Reload page",
+      "savedDialogLater": "Later"
     }
   },
   "admin": {

@@ -260,7 +260,11 @@
       "loadConnectionError": "Verbindungsfehler beim Laden der Sprache.",
       "saveSuccess": "Sprache gespeichert. Die Änderung wird beim nächsten Seitenwechsel aktiv.",
       "saveError": "Sprache konnte nicht gespeichert werden.",
-      "saveConnectionError": "Verbindungsfehler beim Speichern der Sprache."
+      "saveConnectionError": "Verbindungsfehler beim Speichern der Sprache.",
+      "savedDialogTitle": "Sprache gespeichert",
+      "savedDialogDescription": "Damit die neue Sprache überall angewendet wird, laden Sie die Seite bitte neu.",
+      "savedDialogReload": "Seite neu laden",
+      "savedDialogLater": "Später"
     }
   },
   "admin": {
