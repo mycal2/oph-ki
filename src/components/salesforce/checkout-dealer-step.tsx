@@ -12,6 +12,7 @@ import {
   Building2,
   UserPlus,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,19 +31,12 @@ const PAGE_SIZE = 20;
 
 interface CheckoutDealerStepProps {
   slug: string;
-  /** Whether the tenant has any customer catalog entries at all. */
   hasCustomers: boolean;
 }
 
-/**
- * OPH-78: Checkout step 1 — Dealer Identification.
- *
- * Unified search flow (modeled after article search):
- *   1. Single search field — searches customer number AND dealer name
- *   2. Results list with selection
- *   3. "Händler nicht gefunden?" → reveals manual entry form
- */
 export function CheckoutDealerStep({ slug, hasCustomers }: CheckoutDealerStepProps) {
+  const t = useTranslations("salesforce.checkout.dealer");
+  const tCheckout = useTranslations("salesforce.checkout");
   const {
     selectedCustomer,
     manualDealer,
@@ -54,10 +48,8 @@ export function CheckoutDealerStep({ slug, hasCustomers }: CheckoutDealerStepPro
   } = useCheckout();
   const basePath = useSfBasePath(slug);
 
-  // Show manual entry (either via "not found" or when no customers exist)
   const [showManualEntry, setShowManualEntry] = useState(!hasCustomers);
 
-  // Reset flow if dealer identification is cleared
   const handleReset = () => {
     clearDealerIdentification();
     setShowManualEntry(!hasCustomers);
@@ -65,24 +57,20 @@ export function CheckoutDealerStep({ slug, hasCustomers }: CheckoutDealerStepPro
 
   return (
     <div className="flex flex-col pb-28">
-      {/* Progress indicator */}
       <div className="mb-6">
         <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-          <span className="font-semibold text-primary">1. Kunde</span>
+          <span className="font-semibold text-primary">{tCheckout("stepCustomer")}</span>
           <Separator className="flex-1" />
-          <span>2. Lieferung</span>
+          <span>{tCheckout("stepDelivery")}</span>
           <Separator className="flex-1" />
-          <span>3. Bestätigung</span>
+          <span>{tCheckout("stepConfirm")}</span>
         </div>
-        <h1 className="text-lg font-semibold">Kunde auswählen</h1>
+        <h1 className="text-lg font-semibold">{t("title")}</h1>
         <p className="text-sm text-muted-foreground">
-          {hasCustomers
-            ? "Suchen Sie nach Kundennummer oder Kundenname."
-            : "Geben Sie die Kundendaten manuell ein."}
+          {hasCustomers ? t("subtitleWithCustomers") : t("subtitleNoCustomers")}
         </p>
       </div>
 
-      {/* Dealer search (only if tenant has customers) */}
       {hasCustomers && !isDealerIdentified && (
         <DealerSearch
           onSelect={(customer) => {
@@ -93,7 +81,6 @@ export function CheckoutDealerStep({ slug, hasCustomers }: CheckoutDealerStepPro
         />
       )}
 
-      {/* Dealer summary card (shown after selection) */}
       {isDealerIdentified && (
         <DealerSummaryCard
           customer={selectedCustomer}
@@ -103,7 +90,6 @@ export function CheckoutDealerStep({ slug, hasCustomers }: CheckoutDealerStepPro
         />
       )}
 
-      {/* Manual entry (shown when search fails or no customers) */}
       {showManualEntry && !isDealerIdentified && (
         <div className={hasCustomers ? "mt-6" : ""}>
           {hasCustomers && <Separator className="mb-6" />}
@@ -114,13 +100,12 @@ export function CheckoutDealerStep({ slug, hasCustomers }: CheckoutDealerStepPro
         </div>
       )}
 
-      {/* Sticky footer */}
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background p-4">
         <div className="mx-auto flex max-w-lg gap-3">
           <Button variant="outline" className="shrink-0" asChild>
             <Link href={`${basePath}/basket`}>
               <ArrowLeft className="h-4 w-4" />
-              Zurück
+              {tCheckout("back")}
             </Link>
           </Button>
           <Button
@@ -130,12 +115,12 @@ export function CheckoutDealerStep({ slug, hasCustomers }: CheckoutDealerStepPro
           >
             {isDealerIdentified ? (
               <Link href={`${basePath}/checkout/delivery`}>
-                Weiter
+                {tCheckout("next")}
                 <ArrowRight className="h-4 w-4" />
               </Link>
             ) : (
               <span>
-                Weiter
+                {tCheckout("next")}
                 <ArrowRight className="h-4 w-4" />
               </span>
             )}
@@ -146,16 +131,13 @@ export function CheckoutDealerStep({ slug, hasCustomers }: CheckoutDealerStepPro
   );
 }
 
-// ---------------------------------------------------------------------------
-// Dealer Search (unified customer number + name search)
-// ---------------------------------------------------------------------------
-
 interface DealerSearchProps {
   onSelect: (customer: CustomerCatalogItem) => void;
   onNotFound: () => void;
 }
 
 function DealerSearch({ onSelect, onNotFound }: DealerSearchProps) {
+  const t = useTranslations("salesforce.checkout.dealer");
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [results, setResults] = useState<CustomerCatalogItem[]>([]);
@@ -171,12 +153,10 @@ function DealerSearch({ onSelect, onNotFound }: DealerSearchProps) {
   const abortRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-focus on mount
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
-  // Debounce search query
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
@@ -198,7 +178,6 @@ function DealerSearch({ onSelect, onNotFound }: DealerSearchProps) {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [query]);
 
-  // Fetch results when debouncedQuery or page changes
   const fetchResults = useCallback(async (searchTerm: string, pageNum: number, append: boolean) => {
     if (abortRef.current) abortRef.current.abort();
     const controller = new AbortController();
@@ -222,7 +201,7 @@ function DealerSearch({ onSelect, onNotFound }: DealerSearchProps) {
       const json: ApiResponse<CustomerCatalogPageResponse> = await res.json();
 
       if (!json.success) {
-        setError(json.error ?? "Fehler bei der Suche.");
+        setError(json.error ?? t("searchError"));
         return;
       }
 
@@ -232,14 +211,13 @@ function DealerSearch({ onSelect, onNotFound }: DealerSearchProps) {
       setHasSearched(true);
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
-      setError("Netzwerkfehler bei der Suche.");
+      setError(t("networkError"));
     } finally {
       setIsLoading(false);
       setIsLoadingMore(false);
     }
-  }, []);
+  }, [t]);
 
-  // Trigger search on debounced query change
   useEffect(() => {
     if (debouncedQuery.length >= MIN_SEARCH_LENGTH) {
       fetchResults(debouncedQuery, 1, false);
@@ -259,7 +237,6 @@ function DealerSearch({ onSelect, onNotFound }: DealerSearchProps) {
 
   const hasMore = results.length < total;
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -269,20 +246,19 @@ function DealerSearch({ onSelect, onNotFound }: DealerSearchProps) {
 
   return (
     <div>
-      {/* Search input */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           ref={inputRef}
           type="text"
-          placeholder="Kundennummer oder Kundenname..."
+          placeholder={t("searchPlaceholder")}
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
             setSelectedId(null);
           }}
           className="pl-9 h-12 text-base"
-          aria-label="Kunde suchen"
+          aria-label={t("searchAriaLabel")}
           autoComplete="off"
           autoCorrect="off"
           spellCheck={false}
@@ -292,14 +268,12 @@ function DealerSearch({ onSelect, onNotFound }: DealerSearchProps) {
         )}
       </div>
 
-      {/* Minimum length hint */}
       {query.length > 0 && query.length < MIN_SEARCH_LENGTH && (
         <p className="mt-2 text-xs text-muted-foreground">
-          Bitte mindestens {MIN_SEARCH_LENGTH} Zeichen eingeben.
+          {t("minLengthHint", { min: MIN_SEARCH_LENGTH })}
         </p>
       )}
 
-      {/* Error */}
       {error && (
         <Alert variant="destructive" className="mt-3">
           <AlertCircle className="h-4 w-4" />
@@ -307,7 +281,6 @@ function DealerSearch({ onSelect, onNotFound }: DealerSearchProps) {
         </Alert>
       )}
 
-      {/* Loading skeleton */}
       {isLoading && (
         <div className="mt-3 space-y-2">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -321,9 +294,8 @@ function DealerSearch({ onSelect, onNotFound }: DealerSearchProps) {
         </div>
       )}
 
-      {/* Results */}
       {!isLoading && hasSearched && results.length > 0 && (
-        <div className="mt-3 space-y-2" role="list" aria-label="Suchergebnisse">
+        <div className="mt-3 space-y-2" role="list" aria-label={t("resultsAriaLabel")}>
           {results.map((customer) => (
             <button
               key={customer.id}
@@ -355,7 +327,6 @@ function DealerSearch({ onSelect, onNotFound }: DealerSearchProps) {
             </button>
           ))}
 
-          {/* Load more */}
           {hasMore && (
             <Button
               variant="ghost"
@@ -367,22 +338,20 @@ function DealerSearch({ onSelect, onNotFound }: DealerSearchProps) {
               {isLoadingMore ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <>Weitere laden ({results.length} von {total})</>
+                t("loadMoreCount", { loaded: results.length, total })
               )}
             </Button>
           )}
         </div>
       )}
 
-      {/* No results */}
       {!isLoading && hasSearched && results.length === 0 && (
         <div className="mt-3 flex items-center gap-2 rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
           <AlertCircle className="h-4 w-4 shrink-0" />
-          <span>Kein Kunde gefunden.</span>
+          <span>{t("noResults")}</span>
         </div>
       )}
 
-      {/* "Not found" button — always visible after first search */}
       {hasSearched && (
         <Button
           variant="outline"
@@ -390,16 +359,12 @@ function DealerSearch({ onSelect, onNotFound }: DealerSearchProps) {
           onClick={onNotFound}
         >
           <UserPlus className="h-4 w-4" />
-          Kunde manuell eingeben
+          {t("manualEntry")}
         </Button>
       )}
     </div>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Manual Dealer Entry
-// ---------------------------------------------------------------------------
 
 interface ManualDealerEntryProps {
   onSubmit: (info: { companyName: string; contactPerson: string; email: string; phone: string; address: string }) => void;
@@ -407,6 +372,7 @@ interface ManualDealerEntryProps {
 }
 
 function ManualDealerEntry({ onSubmit, initialValues }: ManualDealerEntryProps) {
+  const t = useTranslations("salesforce.checkout.dealer");
   const [companyName, setCompanyName] = useState(initialValues?.companyName ?? "");
   const [contactPerson, setContactPerson] = useState(initialValues?.contactPerson ?? "");
   const [email, setEmail] = useState(initialValues?.email ?? "");
@@ -430,18 +396,18 @@ function ManualDealerEntry({ onSubmit, initialValues }: ManualDealerEntryProps) 
     <div>
       <div className="flex items-center gap-2 mb-3">
         <Building2 className="h-4 w-4 text-muted-foreground" />
-        <h2 className="text-sm font-semibold">Kunde manuell eingeben</h2>
+        <h2 className="text-sm font-semibold">{t("manualHeading")}</h2>
       </div>
 
       <div className="space-y-4">
         <div className="space-y-1.5">
           <Label htmlFor="manual-company" className="text-sm">
-            Firmenname <span className="text-destructive">*</span>
+            {t("companyNameLabel")} <span className="text-destructive">*</span>
           </Label>
           <Input
             id="manual-company"
             type="text"
-            placeholder="z.B. Henry Schein Dental"
+            placeholder={t("companyNamePlaceholder")}
             value={companyName}
             onChange={(e) => setCompanyName(e.target.value)}
             aria-required="true"
@@ -449,44 +415,44 @@ function ManualDealerEntry({ onSubmit, initialValues }: ManualDealerEntryProps) 
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="manual-contact" className="text-sm">Ansprechpartner</Label>
+          <Label htmlFor="manual-contact" className="text-sm">{t("contactPersonLabel")}</Label>
           <Input
             id="manual-contact"
             type="text"
-            placeholder="Vor- und Nachname"
+            placeholder={t("contactPersonPlaceholder")}
             value={contactPerson}
             onChange={(e) => setContactPerson(e.target.value)}
           />
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="manual-email" className="text-sm">E-Mail</Label>
+          <Label htmlFor="manual-email" className="text-sm">{t("emailLabel")}</Label>
           <Input
             id="manual-email"
             type="email"
-            placeholder="email@example.com"
+            placeholder={t("emailPlaceholder")}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="manual-phone" className="text-sm">Telefon</Label>
+          <Label htmlFor="manual-phone" className="text-sm">{t("phoneLabel")}</Label>
           <Input
             id="manual-phone"
             type="tel"
-            placeholder="+49 ..."
+            placeholder={t("phonePlaceholder")}
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
           />
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="manual-address" className="text-sm">Adresse</Label>
+          <Label htmlFor="manual-address" className="text-sm">{t("addressLabel")}</Label>
           <Input
             id="manual-address"
             type="text"
-            placeholder="Straße, PLZ, Ort"
+            placeholder={t("addressPlaceholder")}
             value={address}
             onChange={(e) => setAddress(e.target.value)}
           />
@@ -498,16 +464,12 @@ function ManualDealerEntry({ onSubmit, initialValues }: ManualDealerEntryProps) 
           className="w-full font-semibold"
         >
           <Building2 className="h-4 w-4" />
-          Kunde übernehmen
+          {t("submit")}
         </Button>
       </div>
     </div>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Dealer Summary Card
-// ---------------------------------------------------------------------------
 
 interface DealerSummaryCardProps {
   customer: CustomerCatalogItem | null;
@@ -517,11 +479,8 @@ interface DealerSummaryCardProps {
 }
 
 function DealerSummaryCard({ customer, manualDealer, method, onReset }: DealerSummaryCardProps) {
-  const methodLabels: Record<string, string> = {
-    customer_number: "Aus Kundenstamm",
-    dropdown: "Aus Kundenstamm",
-    manual: "Manuell",
-  };
+  const t = useTranslations("salesforce.checkout.dealer");
+  const methodLabel = method === "manual" ? t("methodManual") : t("methodFromCatalog");
 
   return (
     <Card className="border-primary/30 bg-primary/5">
@@ -531,10 +490,10 @@ function DealerSummaryCard({ customer, manualDealer, method, onReset }: DealerSu
             <div className="flex items-center gap-2 mb-2">
               <Check className="h-4 w-4 text-primary shrink-0" />
               <span className="text-xs font-semibold text-primary">
-                Kunde ausgewählt
+                {t("summarySelected")}
               </span>
               <Badge variant="secondary" className="text-[10px]">
-                {methodLabels[method]}
+                {methodLabel}
               </Badge>
             </div>
 
@@ -542,7 +501,7 @@ function DealerSummaryCard({ customer, manualDealer, method, onReset }: DealerSu
               <>
                 <p className="text-sm font-semibold">{customer.company_name}</p>
                 <p className="text-xs text-muted-foreground tabular-nums">
-                  Nr. {customer.customer_number}
+                  {t("customerNumberPrefix", { number: customer.customer_number })}
                 </p>
                 {customer.city && (
                   <p className="text-xs text-muted-foreground">
@@ -582,7 +541,7 @@ function DealerSummaryCard({ customer, manualDealer, method, onReset }: DealerSu
             onClick={onReset}
             className="shrink-0 text-xs text-muted-foreground"
           >
-            Ändern
+            {t("change")}
           </Button>
         </div>
       </CardContent>

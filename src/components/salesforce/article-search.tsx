@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Search, Plus, Loader2, PackageSearch, AlertCircle, ChevronDown } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,22 +20,11 @@ const DEBOUNCE_MS = 300;
 const MIN_SEARCH_LENGTH = 2;
 
 interface ArticleSearchProps {
-  /** Whether the tenant has any articles at all (checked server-side). */
   hasArticles: boolean;
 }
 
-/**
- * OPH-76: Mobile-first article search for the Salesforce App.
- *
- * Features:
- * - Prominent search bar, auto-focused on mount
- * - Debounced search (300ms, min 2 chars)
- * - Results show article number, name, packaging, size
- * - "Hinzufügen" button adds article to basket
- * - Pagination via "Weitere laden" button
- * - Loading, empty, and error states
- */
 export function ArticleSearch({ hasArticles }: ArticleSearchProps) {
+  const t = useTranslations("salesforce.search");
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [articles, setArticles] = useState<ArticleCatalogItem[]>([]);
@@ -51,20 +41,17 @@ export function ArticleSearch({ hasArticles }: ArticleSearchProps) {
 
   const { addToBasket, items, itemCount } = useBasket();
 
-  // Set of article IDs already in the basket (for persistent "Hinzugefügt" state)
   const inBasketIds = useMemo(
     () => new Set(items.map((item) => item.article.id)),
     [items]
   );
 
-  // Auto-focus the search input on mount
   useEffect(() => {
     if (hasArticles && inputRef.current) {
       inputRef.current.focus();
     }
   }, [hasArticles]);
 
-  // Debounce the search query
   useEffect(() => {
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
@@ -91,12 +78,10 @@ export function ArticleSearch({ hasArticles }: ArticleSearchProps) {
     };
   }, [query]);
 
-  // Fetch articles when debounced query or page changes
   const fetchArticles = useCallback(
     async (searchQuery: string, pageNum: number, append: boolean) => {
       if (searchQuery.length < MIN_SEARCH_LENGTH) return;
 
-      // Cancel any in-flight request
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
@@ -123,7 +108,7 @@ export function ArticleSearch({ hasArticles }: ArticleSearchProps) {
         const json: ApiResponse<ArticleCatalogPageResponse> = await res.json();
 
         if (!json.success) {
-          setError(json.error ?? "Fehler beim Laden der Artikel.");
+          setError(json.error ?? t("loadError"));
           return;
         }
 
@@ -138,32 +123,29 @@ export function ArticleSearch({ hasArticles }: ArticleSearchProps) {
         setHasSearched(true);
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") {
-          return; // Request was cancelled, ignore
+          return;
         }
-        setError("Netzwerkfehler beim Laden der Artikel.");
+        setError(t("networkError"));
       } finally {
         setIsLoading(false);
         setIsLoadingMore(false);
       }
     },
-    []
+    [t]
   );
 
-  // Trigger fetch when debounced query changes (new search)
   useEffect(() => {
     if (debouncedQuery.length >= MIN_SEARCH_LENGTH) {
       fetchArticles(debouncedQuery, 1, false);
     }
   }, [debouncedQuery, fetchArticles]);
 
-  // Handle "load more" pagination
   const handleLoadMore = () => {
     const nextPage = page + 1;
     setPage(nextPage);
     fetchArticles(debouncedQuery, nextPage, true);
   };
 
-  // Handle adding to basket
   const handleAdd = (article: ArticleCatalogItem) => {
     addToBasket(article);
   };
@@ -171,17 +153,15 @@ export function ArticleSearch({ hasArticles }: ArticleSearchProps) {
   const hasMore = articles.length < total;
   const showHint = query.length > 0 && query.length < MIN_SEARCH_LENGTH;
 
-  // Empty catalog state
   if (!hasArticles) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <PackageSearch className="h-12 w-12 text-muted-foreground/40 mb-4" />
         <h2 className="text-lg font-semibold mb-2">
-          Noch keine Artikel vorhanden
+          {t("emptyCatalogTitle")}
         </h2>
         <p className="text-sm text-muted-foreground max-w-xs">
-          Ihr Artikelstamm ist noch leer. Bitte wenden Sie sich an Ihren
-          Administrator.
+          {t("emptyCatalogDescription")}
         </p>
       </div>
     );
@@ -189,34 +169,31 @@ export function ArticleSearch({ hasArticles }: ArticleSearchProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Page heading */}
       <div>
-        <h1 className="text-lg font-semibold">Bestellung aufgeben</h1>
+        <h1 className="text-lg font-semibold">{t("title")}</h1>
         <p className="text-sm text-muted-foreground">
-          Artikelnummer, Referenznummer oder Suchbegriff eingeben
+          {t("subtitle")}
         </p>
       </div>
 
-      {/* Basket indicator (visible when items are in basket) */}
       {itemCount > 0 && (
         <div className="flex items-center justify-end">
           <Badge variant="secondary" className="text-sm font-semibold">
-            {itemCount} {itemCount === 1 ? "Artikel" : "Artikel"} im Warenkorb
+            {t("basketBadge", { count: itemCount })}
           </Badge>
         </div>
       )}
 
-      {/* Search bar */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           ref={inputRef}
           type="search"
-          placeholder="Artikel suchen (Name, Nr., GTIN...)"
+          placeholder={t("searchPlaceholder")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="pl-9 h-12 text-base"
-          aria-label="Artikelsuche"
+          aria-label={t("searchAriaLabel")}
           autoComplete="off"
           autoCorrect="off"
           spellCheck={false}
@@ -226,14 +203,12 @@ export function ArticleSearch({ hasArticles }: ArticleSearchProps) {
         )}
       </div>
 
-      {/* Hint for short queries */}
       {showHint && (
         <p className="text-xs text-muted-foreground text-center">
-          Mindestens 2 Zeichen eingeben
+          {t("minLengthHint")}
         </p>
       )}
 
-      {/* Error state */}
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -241,9 +216,8 @@ export function ArticleSearch({ hasArticles }: ArticleSearchProps) {
         </Alert>
       )}
 
-      {/* Loading skeleton (initial search) */}
       {isLoading && !isLoadingMore && (
-        <div className="flex flex-col gap-3" role="status" aria-label="Lade Artikel...">
+        <div className="flex flex-col gap-3" role="status" aria-label={t("loadingAriaLabel")}>
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="flex items-center gap-3 rounded-lg border p-4">
               <div className="flex-1 space-y-2">
@@ -257,13 +231,12 @@ export function ArticleSearch({ hasArticles }: ArticleSearchProps) {
         </div>
       )}
 
-      {/* Search results */}
       {!isLoading && hasSearched && articles.length > 0 && (
         <>
           <p className="text-xs text-muted-foreground">
-            {total} {total === 1 ? "Ergebnis" : "Ergebnisse"}
+            {t("resultCount", { count: total })}
           </p>
-          <div className="flex flex-col gap-3" role="list" aria-label="Suchergebnisse">
+          <div className="flex flex-col gap-3" role="list" aria-label={t("resultsAriaLabel")}>
             {articles.map((article) => (
               <ArticleResultCard
                 key={article.id}
@@ -274,7 +247,6 @@ export function ArticleSearch({ hasArticles }: ArticleSearchProps) {
             ))}
           </div>
 
-          {/* Load more */}
           {hasMore && (
             <Button
               variant="outline"
@@ -285,12 +257,12 @@ export function ArticleSearch({ hasArticles }: ArticleSearchProps) {
               {isLoadingMore ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Laden...
+                  {t("loadingMore")}
                 </>
               ) : (
                 <>
                   <ChevronDown className="h-4 w-4" />
-                  Weitere laden
+                  {t("loadMore")}
                 </>
               )}
             </Button>
@@ -298,35 +270,29 @@ export function ArticleSearch({ hasArticles }: ArticleSearchProps) {
         </>
       )}
 
-      {/* Empty search result */}
       {!isLoading && hasSearched && articles.length === 0 && !error && (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <Search className="h-10 w-10 text-muted-foreground/30 mb-3" />
           <p className="text-sm font-medium text-muted-foreground">
-            Keine Artikel gefunden
+            {t("noResultsTitle")}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            Versuchen Sie einen anderen Suchbegriff.
+            {t("noResultsDescription")}
           </p>
         </div>
       )}
 
-      {/* Initial state (no search yet) */}
       {!isLoading && !hasSearched && !showHint && query.length === 0 && (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <Search className="h-10 w-10 text-muted-foreground/20 mb-3" />
           <p className="text-sm text-muted-foreground">
-            Geben Sie einen Suchbegriff ein, um Artikel zu finden.
+            {t("initialPrompt")}
           </p>
         </div>
       )}
     </div>
   );
 }
-
-// ---------------------------------------------------------------------------
-// ArticleResultCard
-// ---------------------------------------------------------------------------
 
 interface ArticleResultCardProps {
   article: ArticleCatalogItem;
@@ -335,7 +301,7 @@ interface ArticleResultCardProps {
 }
 
 function ArticleResultCard({ article, onAdd, inBasket }: ArticleResultCardProps) {
-  // Build packaging / size detail string
+  const t = useTranslations("salesforce.search");
   const details: string[] = [];
   if (article.packaging) details.push(article.packaging);
   if (article.size1) details.push(article.size1);
@@ -346,7 +312,6 @@ function ArticleResultCard({ article, onAdd, inBasket }: ArticleResultCardProps)
       role="listitem"
       className="flex items-start gap-3 rounded-lg border bg-card p-4 transition-colors"
     >
-      {/* Article info */}
       <div className="flex-1 min-w-0">
         <p className="text-xs font-bold text-primary tabular-nums">
           {article.article_number}
@@ -361,20 +326,19 @@ function ArticleResultCard({ article, onAdd, inBasket }: ArticleResultCardProps)
         )}
       </div>
 
-      {/* Add button */}
       <Button
         size="sm"
         variant={inBasket ? "secondary" : "default"}
         onClick={() => onAdd(article)}
         className="shrink-0 font-semibold transition-all"
-        aria-label={inBasket ? `${article.name} erneut hinzufügen` : `${article.name} hinzufügen`}
+        aria-label={inBasket ? t("addAgainAriaLabel", { name: article.name }) : t("addAriaLabel", { name: article.name })}
       >
         {inBasket ? (
-          "Hinzugefügt"
+          t("added")
         ) : (
           <>
             <Plus className="h-4 w-4" />
-            Hinzufügen
+            {t("add")}
           </>
         )}
       </Button>

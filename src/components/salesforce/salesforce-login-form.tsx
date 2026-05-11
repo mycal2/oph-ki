@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,29 +42,26 @@ function readSfUserCookie(): { firstName: string; lastName: string } | null {
     }
     return null;
   } catch {
-    // Cookie is malformed or unreadable — fall back silently
     return null;
   }
 }
 
-const ERROR_MESSAGES: Record<string, string> = {
-  auth_callback_failed:
-    "Der Anmelde-Link ist abgelaufen oder ungültig. Bitte fordern Sie einen neuen Link an.",
-  wrong_tenant:
-    "Zugang nicht möglich. Bitte wenden Sie sich an Ihren Administrator.",
-  account_inactive:
-    "Ihr Konto ist deaktiviert. Bitte kontaktieren Sie Ihren Administrator.",
-  salesforce_not_configured:
-    "Zugang nicht möglich. Bitte wenden Sie sich an Ihren Administrator.",
-};
+type UrlErrorKey =
+  | "auth_callback_failed"
+  | "wrong_tenant"
+  | "account_inactive"
+  | "salesforce_not_configured";
 
-/**
- * OPH-75: Salesforce App magic link login form.
- *
- * Sales reps enter their email address and receive a one-click login link.
- * After sending, the form shows a confirmation message.
- */
+const URL_ERROR_KEYS = new Set<UrlErrorKey>([
+  "auth_callback_failed",
+  "wrong_tenant",
+  "account_inactive",
+  "salesforce_not_configured",
+]);
+
 export function SalesforceLoginForm({ tenantName, slug, logoUrl }: SalesforceLoginFormProps) {
+  const t = useTranslations("salesforce.login");
+  const tErr = useTranslations("salesforce.login.errors");
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSent, setIsSent] = useState(false);
@@ -72,7 +70,6 @@ export function SalesforceLoginForm({ tenantName, slug, logoUrl }: SalesforceLog
   const [returningUser, setReturningUser] = useState<{ firstName: string; lastName: string } | null>(null);
   const searchParams = useSearchParams();
 
-  // OPH-87: Read sf_user cookie on mount for personalized greeting
   useEffect(() => {
     const sfUser = readSfUserCookie();
     if (sfUser) {
@@ -80,13 +77,12 @@ export function SalesforceLoginForm({ tenantName, slug, logoUrl }: SalesforceLog
     }
   }, []);
 
-  // Show error from URL params (e.g., after middleware redirect)
   useEffect(() => {
     const urlError = searchParams.get("error");
-    if (urlError && ERROR_MESSAGES[urlError]) {
-      setError(ERROR_MESSAGES[urlError]);
+    if (urlError && URL_ERROR_KEYS.has(urlError as UrlErrorKey)) {
+      setError(tErr(urlError as UrlErrorKey));
     }
-  }, [searchParams]);
+  }, [searchParams, tErr]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -94,7 +90,6 @@ export function SalesforceLoginForm({ tenantName, slug, logoUrl }: SalesforceLog
     setError(null);
 
     try {
-      // OPH-84: Determine the callback URL based on environment
       const isLocal = window.location.hostname === "localhost";
       const host = window.location.hostname;
       const envSuffix = host.includes("-dev.ids.online") ? "-dev"
@@ -104,7 +99,6 @@ export function SalesforceLoginForm({ tenantName, slug, logoUrl }: SalesforceLog
         ? `${window.location.origin}/sf/${slug}/auth/callback?next=/`
         : `https://${slug}${envSuffix}.ids.online/auth/callback?next=/`;
 
-      // OPH-84: Send magic link via server-side API route (domain validation)
       const res = await fetch(`/api/sf/${slug}/magic-link`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -115,22 +109,18 @@ export function SalesforceLoginForm({ tenantName, slug, logoUrl }: SalesforceLog
       });
 
       if (!res.ok && res.status === 429) {
-        setError(
-          "Zu viele Anfragen. Bitte warten Sie einen Moment und versuchen Sie es erneut."
-        );
+        setError(tErr("rateLimit"));
         return;
       }
 
-      // Always show success — server returns 200 regardless of domain/user validity
       setIsSent(true);
     } catch {
-      setError("Verbindungsfehler. Bitte versuchen Sie es erneut.");
+      setError(tErr("connection"));
     } finally {
       setIsLoading(false);
     }
   }
 
-  // Success state: email was sent (or appears to be sent)
   if (isSent) {
     return (
       <Card className="w-full max-w-md">
@@ -139,11 +129,10 @@ export function SalesforceLoginForm({ tenantName, slug, logoUrl }: SalesforceLog
             <CheckCircle2 className="h-6 w-6 text-primary" />
           </div>
           <CardTitle className="text-xl font-bold">
-            E-Mail gesendet
+            {t("sentTitle")}
           </CardTitle>
           <CardDescription className="mt-2">
-            Falls ein Konto mit dieser E-Mail-Adresse existiert, haben wir Ihnen
-            einen Anmelde-Link gesendet.
+            {t("sentDescription")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -154,8 +143,7 @@ export function SalesforceLoginForm({ tenantName, slug, logoUrl }: SalesforceLog
             </div>
           </div>
           <p className="text-center text-xs text-muted-foreground">
-            Prüfen Sie Ihren Posteingang und klicken Sie auf den Link, um sich
-            anzumelden. Der Link ist einige Minuten gültig.
+            {t("sentHint")}
           </p>
           <Button
             variant="ghost"
@@ -166,23 +154,23 @@ export function SalesforceLoginForm({ tenantName, slug, logoUrl }: SalesforceLog
               setError(null);
             }}
           >
-            Andere E-Mail-Adresse verwenden
+            {t("useDifferentEmail")}
           </Button>
         </CardContent>
       </Card>
     );
   }
 
-  // OPH-87: Build personalized or generic greeting
   const greeting = returningUser
-    ? `Hallo ${[returningUser.firstName, returningUser.lastName].filter(Boolean).join(" ").trim()}, willkommen bei der ${tenantName} Bestellplattform.`
-    : `Willkommen bei ${tenantName}.`;
+    ? t("greetingReturning", {
+        name: [returningUser.firstName, returningUser.lastName].filter(Boolean).join(" ").trim(),
+        tenant: tenantName,
+      })
+    : t("greetingNew", { tenant: tenantName });
 
-  // Default state: login form
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
-        {/* OPH-87: Tenant logo */}
         {logoUrl && !logoError && (
           <div className="mb-2 flex justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -198,7 +186,7 @@ export function SalesforceLoginForm({ tenantName, slug, logoUrl }: SalesforceLog
           {greeting}
         </CardTitle>
         <CardDescription>
-          Wir senden Ihnen einen Anmelde-Link per E-Mail.
+          {t("description")}
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
@@ -210,18 +198,18 @@ export function SalesforceLoginForm({ tenantName, slug, logoUrl }: SalesforceLog
             </Alert>
           )}
           <div className="space-y-2">
-            <Label htmlFor="sf-email">E-Mail-Adresse</Label>
+            <Label htmlFor="sf-email">{t("emailLabel")}</Label>
             <Input
               id="sf-email"
               type="email"
-              placeholder="name@beispiel.de"
+              placeholder={t("emailPlaceholder")}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               disabled={isLoading}
               autoComplete="email"
               autoFocus
-              aria-label="E-Mail-Adresse"
+              aria-label={t("emailAriaLabel")}
             />
           </div>
           <Button
@@ -232,10 +220,10 @@ export function SalesforceLoginForm({ tenantName, slug, logoUrl }: SalesforceLog
             {isLoading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Wird gesendet...
+                {t("submitting")}
               </>
             ) : (
-              "Magic Link senden"
+              t("submit")
             )}
           </Button>
         </CardContent>

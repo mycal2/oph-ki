@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +19,9 @@ import { forgotPasswordAction } from "@/lib/auth-actions";
 import { Loader2, AlertCircle, Mail, ArrowLeft } from "lucide-react";
 
 export function ForgotPasswordForm() {
+  const t = useTranslations("auth.forgotPassword");
+  const tLogin = useTranslations("auth.login");
+  const tCommon = useTranslations("common");
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,10 +37,10 @@ export function ForgotPasswordForm() {
       if (result.success) {
         setSuccess(true);
       } else {
-        setError(result.error ?? "Ein unbekannter Fehler ist aufgetreten.");
+        setError(result.error ?? tCommon("unknownError"));
       }
     } catch {
-      setError("Verbindungsfehler. Bitte versuchen Sie es erneut.");
+      setError(tCommon("connectionError"));
     } finally {
       setIsLoading(false);
     }
@@ -50,19 +54,20 @@ export function ForgotPasswordForm() {
             <Mail className="h-6 w-6 text-primary" />
           </div>
           <CardTitle className="text-2xl font-bold">
-            E-Mail gesendet
+            {t("successTitle")}
           </CardTitle>
           <CardDescription>
-            Falls ein Konto mit der E-Mail-Adresse <strong>{email}</strong>{" "}
-            existiert, erhalten Sie in Kürze eine E-Mail mit einem Link zum
-            Zurücksetzen Ihres Passworts.
+            {t.rich("successDescription", {
+              email,
+              strong: (chunks) => <strong>{chunks}</strong>,
+            })}
           </CardDescription>
         </CardHeader>
         <CardFooter className="justify-center">
           <Link href="/login">
             <Button variant="ghost">
               <ArrowLeft className="h-4 w-4" />
-              Zurück zur Anmeldung
+              {t("backToLogin")}
             </Button>
           </Link>
         </CardFooter>
@@ -73,13 +78,8 @@ export function ForgotPasswordForm() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl font-bold">
-          Passwort vergessen
-        </CardTitle>
-        <CardDescription>
-          Geben Sie Ihre E-Mail-Adresse ein und wir senden Ihnen einen Link zum
-          Zurücksetzen Ihres Passworts.
-        </CardDescription>
+        <CardTitle className="text-2xl font-bold">{t("title")}</CardTitle>
+        <CardDescription>{t("description")}</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
@@ -90,16 +90,16 @@ export function ForgotPasswordForm() {
             </Alert>
           )}
           <div className="space-y-2">
-            <Label htmlFor="email">E-Mail</Label>
+            <Label htmlFor="email">{tLogin("emailLabel")}</Label>
             <Input
               id="email"
               type="email"
-              placeholder="name@unternehmen.de"
+              placeholder={tLogin("emailPlaceholder")}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               disabled={isLoading}
-              aria-label="E-Mail-Adresse"
+              aria-label={tLogin("emailAriaLabel")}
             />
           </div>
         </CardContent>
@@ -112,10 +112,10 @@ export function ForgotPasswordForm() {
             {isLoading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Senden...
+                {t("submitting")}
               </>
             ) : (
-              "Link senden"
+              t("submit")
             )}
           </Button>
           <Link
@@ -123,7 +123,7 @@ export function ForgotPasswordForm() {
             className="text-sm text-muted-foreground hover:text-primary transition-colors inline-flex items-center gap-1"
           >
             <ArrowLeft className="h-3 w-3" />
-            Zurück zur Anmeldung
+            {t("backToLogin")}
           </Link>
         </CardFooter>
       </form>

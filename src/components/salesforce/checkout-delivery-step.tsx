@@ -9,6 +9,7 @@ import {
   ChevronDown,
   MapPin,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,7 +22,6 @@ import {
 } from "@/components/ui/collapsible";
 import { useCheckout } from "@/hooks/use-checkout";
 import { useSfBasePath } from "@/hooks/use-sf-base-path";
-import type { DeliveryAddress } from "@/hooks/use-checkout";
 
 const NOTES_MAX_LENGTH = 500;
 const ADDRESS_MAX_LENGTH = 255;
@@ -30,14 +30,9 @@ interface CheckoutDeliveryStepProps {
   slug: string;
 }
 
-/**
- * OPH-79: Checkout step 2 — Delivery Address & Notes.
- *
- * - Collapsible alternate delivery address (all fields optional)
- * - Order notes textarea with character counter
- * - Sticky footer: back to step 1, forward to step 3 (always enabled)
- */
 export function CheckoutDeliveryStep({ slug }: CheckoutDeliveryStepProps) {
+  const t = useTranslations("salesforce.checkout.delivery");
+  const tCheckout = useTranslations("salesforce.checkout");
   const router = useRouter();
   const basePath = useSfBasePath(slug);
   const {
@@ -48,14 +43,12 @@ export function CheckoutDeliveryStep({ slug }: CheckoutDeliveryStepProps) {
     setNotes,
   } = useCheckout();
 
-  // Flow guard: redirect to step 1 if no dealer identified
   useEffect(() => {
     if (!isDealerIdentified) {
       router.replace(`${basePath}/checkout`);
     }
-  }, [isDealerIdentified, router, slug]);
+  }, [isDealerIdentified, router, basePath]);
 
-  // Local form state — pre-filled from context (preserves data on back-navigation)
   const [addressOpen, setAddressOpen] = useState(deliveryAddress !== null);
   const [companyName, setCompanyName] = useState(deliveryAddress?.companyName ?? "");
   const [street, setStreet] = useState(deliveryAddress?.street ?? "");
@@ -64,14 +57,12 @@ export function CheckoutDeliveryStep({ slug }: CheckoutDeliveryStepProps) {
   const [country, setCountry] = useState(deliveryAddress?.country ?? "Deutschland");
   const [localNotes, setLocalNotes] = useState(notes);
 
-  // Sync notes to context on change
   const handleNotesChange = (value: string) => {
     const trimmed = value.slice(0, NOTES_MAX_LENGTH);
     setLocalNotes(trimmed);
     setNotes(trimmed);
   };
 
-  // BUG-1 fix: Sync address to context on every field change
   const syncAddressToContext = useCallback(() => {
     if (!addressOpen) {
       setDeliveryAddress(null);
@@ -105,29 +96,24 @@ export function CheckoutDeliveryStep({ slug }: CheckoutDeliveryStepProps) {
     router.push(`${basePath}/checkout/confirm`);
   };
 
-  // Don't render if guard will redirect
   if (!isDealerIdentified) {
     return null;
   }
 
   return (
     <div className="flex flex-col pb-28">
-      {/* Progress indicator */}
       <div className="mb-6">
         <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-          <span className="text-muted-foreground">1. Kunde</span>
+          <span className="text-muted-foreground">{tCheckout("stepCustomer")}</span>
           <Separator className="flex-1" />
-          <span className="font-semibold text-primary">2. Lieferung</span>
+          <span className="font-semibold text-primary">{tCheckout("stepDelivery")}</span>
           <Separator className="flex-1" />
-          <span>3. Bestätigung</span>
+          <span>{tCheckout("stepConfirm")}</span>
         </div>
-        <h1 className="text-lg font-semibold">Lieferung & Bemerkungen</h1>
-        <p className="text-sm text-muted-foreground">
-          Optional: Abweichende Lieferadresse und Bemerkungen zur Bestellung.
-        </p>
+        <h1 className="text-lg font-semibold">{t("title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
 
-      {/* Section A: Alternate delivery address (collapsible) */}
       <Collapsible open={addressOpen} onOpenChange={setAddressOpen}>
         <CollapsibleTrigger asChild>
           <button
@@ -138,10 +124,10 @@ export function CheckoutDeliveryStep({ slug }: CheckoutDeliveryStepProps) {
               <MapPin className="h-5 w-5 text-muted-foreground shrink-0" />
               <div>
                 <p className="text-sm font-semibold">
-                  Abweichende Lieferadresse
+                  {t("alternateAddressTitle")}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Nur angeben, wenn die Lieferung nicht an die Kundenadresse gehen soll.
+                  {t("alternateAddressHint")}
                 </p>
               </div>
             </div>
@@ -155,46 +141,43 @@ export function CheckoutDeliveryStep({ slug }: CheckoutDeliveryStepProps) {
 
         <CollapsibleContent>
           <div className="mt-3 space-y-4 rounded-lg border border-dashed p-4">
-            {/* Company name */}
             <div className="space-y-1.5">
               <Label htmlFor="delivery-company" className="text-sm">
-                Firmenname
+                {t("companyNameLabel")}
               </Label>
               <Input
                 id="delivery-company"
                 type="text"
-                placeholder="Firmenname"
+                placeholder={t("companyNamePlaceholder")}
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
                 maxLength={ADDRESS_MAX_LENGTH}
               />
             </div>
 
-            {/* Street */}
             <div className="space-y-1.5">
               <Label htmlFor="delivery-street" className="text-sm">
-                Straße & Hausnummer
+                {t("streetLabel")}
               </Label>
               <Input
                 id="delivery-street"
                 type="text"
-                placeholder="Musterstraße 123"
+                placeholder={t("streetPlaceholder")}
                 value={street}
                 onChange={(e) => setStreet(e.target.value)}
                 maxLength={ADDRESS_MAX_LENGTH}
               />
             </div>
 
-            {/* Zip + City (side by side) */}
             <div className="grid grid-cols-[120px_1fr] gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="delivery-zip" className="text-sm">
-                  PLZ
+                  {t("zipLabel")}
                 </Label>
                 <Input
                   id="delivery-zip"
                   type="text"
-                  placeholder="12345"
+                  placeholder={t("zipPlaceholder")}
                   value={zipCode}
                   onChange={(e) => setZipCode(e.target.value)}
                   inputMode="numeric"
@@ -203,12 +186,12 @@ export function CheckoutDeliveryStep({ slug }: CheckoutDeliveryStepProps) {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="delivery-city" className="text-sm">
-                  Ort
+                  {t("cityLabel")}
                 </Label>
                 <Input
                   id="delivery-city"
                   type="text"
-                  placeholder="Musterstadt"
+                  placeholder={t("cityPlaceholder")}
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
                   maxLength={ADDRESS_MAX_LENGTH}
@@ -216,15 +199,14 @@ export function CheckoutDeliveryStep({ slug }: CheckoutDeliveryStepProps) {
               </div>
             </div>
 
-            {/* Country */}
             <div className="space-y-1.5">
               <Label htmlFor="delivery-country" className="text-sm">
-                Land
+                {t("countryLabel")}
               </Label>
               <Input
                 id="delivery-country"
                 type="text"
-                placeholder="Deutschland"
+                placeholder={t("countryPlaceholder")}
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
                 maxLength={ADDRESS_MAX_LENGTH}
@@ -234,15 +216,14 @@ export function CheckoutDeliveryStep({ slug }: CheckoutDeliveryStepProps) {
         </CollapsibleContent>
       </Collapsible>
 
-      {/* Section B: Order notes */}
       <div className="mt-6">
         <div className="space-y-1.5">
           <Label htmlFor="order-notes" className="text-sm font-semibold">
-            Bemerkungen
+            {t("notesLabel")}
           </Label>
           <Textarea
             id="order-notes"
-            placeholder="z.B. Dringend, Lieferung bis Freitag"
+            placeholder={t("notesPlaceholder")}
             value={localNotes}
             onChange={(e) => handleNotesChange(e.target.value)}
             rows={3}
@@ -250,25 +231,24 @@ export function CheckoutDeliveryStep({ slug }: CheckoutDeliveryStepProps) {
             className="resize-none text-base"
           />
           <p className="text-xs text-muted-foreground text-right">
-            {localNotes.length} / {NOTES_MAX_LENGTH}
+            {t("notesCounter", { current: localNotes.length, max: NOTES_MAX_LENGTH })}
           </p>
         </div>
       </div>
 
-      {/* Sticky footer */}
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background p-4">
         <div className="mx-auto flex max-w-lg gap-3">
           <Button variant="outline" className="shrink-0" asChild>
             <Link href={`${basePath}/checkout`}>
               <ArrowLeft className="h-4 w-4" />
-              Zurück
+              {tCheckout("back")}
             </Link>
           </Button>
           <Button
             className="flex-1 font-semibold"
             onClick={handleContinue}
           >
-            Weiter zur Zusammenfassung
+            {t("continue")}
             <ArrowRight className="h-4 w-4" />
           </Button>
         </div>

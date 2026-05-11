@@ -108,6 +108,11 @@ Eine mandantenfähige SaaS-Plattform ("Order Intelligence Platform"), die Dental
 | P1 | OPH-95: XML Order File Support (Ingestion, Extraction & Table Preview) | Deployed |
 | P1 | OPH-96: Order Review Locking (Concurrent Edit Prevention) | Planned |
 | P1 | OPH-97: Platform Admin: Generate Copyable Invite Link | Deployed |
+| P1 | OPH-98: i18n Infrastructure (next-intl, translation files, locale resolution) | Planned |
+| P1 | OPH-99: Tenant-Level Language Preference | Planned |
+| P1 | OPH-100: User-Level Language Override | Planned |
+| P1 | OPH-101: Full i18n Coverage (Tenant + Salesforce App) | Planned |
+| P1 | OPH-102: Invite Link Expiration UX | Planned |
 
 ## Success Metrics
 - Bearbeitungszeit pro Bestellung: von ~15 Min. manuell auf < 3 Min. mit System

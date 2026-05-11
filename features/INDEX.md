@@ -109,6 +109,11 @@
 | OPH-95 | XML Order File Support (Ingestion, Extraction & Table Preview) | Deployed | [OPH-95-xml-order-file-support.md](OPH-95-xml-order-file-support.md) | 2026-04-23 |
 | OPH-96 | Order Review Locking (Concurrent Edit Prevention) | In Progress | [OPH-96-order-review-locking.md](OPH-96-order-review-locking.md) | 2026-04-27 |
 | OPH-97 | Platform Admin: Generate Copyable Invite Link | Deployed | [OPH-97-admin-invite-link-copy.md](OPH-97-admin-invite-link-copy.md) | 2026-05-06 |
+| OPH-98 | i18n Infrastructure (next-intl, translation files, locale resolution) | In Progress | [OPH-98-i18n-infrastructure.md](OPH-98-i18n-infrastructure.md) | 2026-05-07 |
+| OPH-99 | Tenant-Level Language Preference | In Progress | [OPH-99-tenant-language-preference.md](OPH-99-tenant-language-preference.md) | 2026-05-07 |
+| OPH-100 | User-Level Language Override | In Review | [OPH-100-user-language-override.md](OPH-100-user-language-override.md) | 2026-05-07 |
+| OPH-101 | Full i18n Coverage (Tenant + Salesforce App) | In Progress | [OPH-101-full-i18n-coverage.md](OPH-101-full-i18n-coverage.md) | 2026-05-08 |
+| OPH-102 | Invite Link Expiration UX | In Review | [OPH-102-invite-link-expiration.md](OPH-102-invite-link-expiration.md) | 2026-05-11 |
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-98
+## Next Available ID: OPH-103
