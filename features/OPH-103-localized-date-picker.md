@@ -70,7 +70,79 @@ Replace native `<input type="date">` with a locale-aware shadcn-based picker AND
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Component Structure
+
+```
+src/components/ui/date-picker.tsx          (NEW — single-date picker)
+  ├── Popover (shadcn — already installed)
+  │     └── PopoverTrigger → Button with CalendarIcon + formatted date label
+  │     └── PopoverContent → Calendar (shadcn — already installed)
+  └── reads useLocale() internally → maps to date-fns locale
+
+src/components/admin/date-range-picker.tsx  (UPDATE — make locale-aware)
+  ├── Same Popover + Calendar structure, already correct
+  ├── Replace: import { de } from "date-fns/locale"  → useLocale() + locale map
+  ├── Replace: aria-label="Zeitraum auswaehlen"       → i18n key
+  └── Replace: hardcoded "Zeitraum auswaehlen" label  → i18n key
+
+Call-site 1: src/components/orders/orders-filter-bar.tsx
+  ├── Replace <Input type="date"> (line 160) with <DatePicker>  (date-from)
+  └── Replace <Input type="date"> (line 168) with <DatePicker>  (date-to)
+  Note: filters.dateFrom / dateTo are YYYY-MM-DD strings — call-site converts
+        Date ↔ ISO string on the way in/out of the picker
+
+Call-site 2: src/components/orders/review/order-edit-form.tsx
+  └── Replace <Input type="date"> (line 202) with <DatePicker>  (order date)
+  Note: order.order_date is a string — same ISO ↔ Date conversion pattern
+```
+
+### Data Flow
+
+```
+useLocale()         →  "de" | "en"
+locale map          →  de (date-fns) | enGB (date-fns)
+DatePicker value    →  Date | undefined  (JS object internally)
+onChange callback   →  Date | undefined  (caller converts to ISO string if needed)
+display label       →  format(date, locale-specific pattern, { locale: dateFnsLocale })
+                       DE: dd.MM.yyyy  →  "11.05.2026"
+                       EN: dd/MM/yyyy  →  "11/05/2026"
+```
+
+### Tech Decisions
+
+| Decision | Choice | Why |
+|----------|--------|-----|
+| Base components | shadcn `Calendar` + `Popover` | Already installed; mirrors existing `date-range-picker.tsx` pattern — no new packages |
+| English locale | `enGB` (not `enUS`) | European context; DD/MM/YYYY order consistent with DE audience expectations |
+| Locale map location | Inline constant in each component | Only 2 locales, not shared state — a shared file would be premature abstraction |
+| Prop type for value | `Date \| undefined` | Matches shadcn Calendar's native type; ISO conversion stays at call-site, keeping the component general-purpose |
+| ISO contract for call-sites | `format(date, "yyyy-MM-dd")` on onChange | URL state and API expect YYYY-MM-DD; conversion is one line at each call-site |
+| i18n for placeholder/aria | New keys under `orders.list.filters.*` and `admin.reports.*` namespaces | Consistent with existing namespace layout |
+
+### Dependencies
+
+No new packages required. Already installed:
+- `date-fns` (used by existing `date-range-picker.tsx`)
+- `react-day-picker` (peer dep of shadcn Calendar)
+- `shadcn/ui Calendar`, `Popover` (already in `src/components/ui/`)
+
+### New i18n Keys Needed
+
+**`orders.list.filters`** namespace (DE + EN):
+- `datePlaceholder` — "Datum wählen" / "Pick date"
+
+**`admin.reports`** namespace (DE + EN):
+- `dateRangePlaceholder` — "Zeitraum wählen" / "Select period"
+- `dateRangeAriaLabel` — "Zeitraum auswählen" / "Select date range"
+
+Existing keys `dateFromAriaLabel` / `dateToAriaLabel` in `orders.list.filters` are already present — reused as aria-labels on the two filter pickers.
+
+### No Backend Changes
+
+- No database migration
+- No API changes
+- `orders-filter-bar` URL state (`dateFrom`, `dateTo`) stays as YYYY-MM-DD strings — only the display layer changes
 
 ## QA Test Results
 _To be added by /qa_
