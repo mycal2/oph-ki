@@ -113,6 +113,7 @@ Eine mandantenfähige SaaS-Plattform ("Order Intelligence Platform"), die Dental
 | P1 | OPH-100: User-Level Language Override | Deployed |
 | P1 | OPH-101: Full i18n Coverage (Tenant + Salesforce App) | Planned |
 | P1 | OPH-102: Invite Link Expiration UX | Deployed |
+| P2 | OPH-103: Localized Date Picker (Replace Native `<input type="date">`) | Planned |
 
 ## Success Metrics
 - Bearbeitungszeit pro Bestellung: von ~15 Min. manuell auf < 3 Min. mit System

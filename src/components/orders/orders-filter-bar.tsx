@@ -3,8 +3,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { Search, X } from "lucide-react";
+import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { OrderStatus, OrdersFilterState } from "@/lib/types";
 
@@ -82,16 +84,29 @@ export function OrdersFilterBar({
     [filters, onFiltersChange]
   );
 
+  // OPH-103: filters.dateFrom / dateTo are ISO strings (YYYY-MM-DD) in URL
+  // state. Convert to/from Date at the picker boundary.
+  const dateFromValue = filters.dateFrom ? new Date(filters.dateFrom) : undefined;
+  const dateToValue = filters.dateTo ? new Date(filters.dateTo) : undefined;
+
   const handleDateFromChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      onFiltersChange({ ...filters, dateFrom: e.target.value, page: 1 });
+    (date: Date | undefined) => {
+      onFiltersChange({
+        ...filters,
+        dateFrom: date ? format(date, "yyyy-MM-dd") : "",
+        page: 1,
+      });
     },
     [filters, onFiltersChange]
   );
 
   const handleDateToChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      onFiltersChange({ ...filters, dateTo: e.target.value, page: 1 });
+    (date: Date | undefined) => {
+      onFiltersChange({
+        ...filters,
+        dateTo: date ? format(date, "yyyy-MM-dd") : "",
+        page: 1,
+      });
     },
     [filters, onFiltersChange]
   );
@@ -156,20 +171,20 @@ export function OrdersFilterBar({
 
         {/* Date range */}
         <div className="flex items-center gap-2">
-          <Input
-            type="date"
-            value={filters.dateFrom}
+          <DatePicker
+            value={dateFromValue}
             onChange={handleDateFromChange}
-            className="w-[140px]"
-            aria-label={t("dateFromAriaLabel")}
+            placeholder={t("datePlaceholder")}
+            ariaLabel={t("dateFromAriaLabel")}
+            className="w-[160px]"
           />
           <span className="text-sm text-muted-foreground">{t("dateSeparator")}</span>
-          <Input
-            type="date"
-            value={filters.dateTo}
+          <DatePicker
+            value={dateToValue}
             onChange={handleDateToChange}
-            className="w-[140px]"
-            aria-label={t("dateToAriaLabel")}
+            placeholder={t("datePlaceholder")}
+            ariaLabel={t("dateToAriaLabel")}
+            className="w-[160px]"
           />
         </div>
 

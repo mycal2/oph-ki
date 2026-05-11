@@ -2,10 +2,12 @@
 
 import { useCallback, useState } from "react";
 import { Plus, Trash2, AlertTriangle, ChevronDown, ChevronUp, Sparkles, ArrowRightLeft } from "lucide-react";
+import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -197,15 +199,16 @@ export function OrderEditForm({ data, onChange, disabled }: OrderEditFormProps) 
           </div>
           <div className="space-y-2">
             <Label htmlFor="review-order-date">Bestelldatum</Label>
-            <Input
-              id="review-order-date"
-              type="date"
-              value={order.order_date ?? ""}
-              onChange={(e) =>
+            <DatePicker
+              value={order.order_date ? new Date(order.order_date) : undefined}
+              onChange={(date) =>
                 updateOrder({
-                  order_date: e.target.value || null,
+                  order_date: date ? format(date, "yyyy-MM-dd") : null,
                 })
               }
+              ariaLabel="Bestelldatum"
+              className="w-full"
+              disabled={disabled}
             />
           </div>
         </div>
