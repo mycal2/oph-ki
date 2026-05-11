@@ -186,6 +186,7 @@
         "dateFromAriaLabel": "Date from",
         "dateToAriaLabel": "Date to",
         "dateSeparator": "to",
+        "datePlaceholder": "Pick date",
         "clearFilters": "Clear filters"
       }
     },
@@ -267,7 +268,11 @@
     "tenants": "Tenants",
     "dealers": "Dealers",
     "users": "Users",
-    "erpConfigs": "ERP Configurations"
+    "erpConfigs": "ERP Configurations",
+    "reports": {
+      "dateRangePlaceholder": "Select period",
+      "dateRangeAriaLabel": "Select date range"
+    }
   },
   "dashboard": {
     "title": "Dashboard",

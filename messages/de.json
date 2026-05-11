@@ -186,6 +186,7 @@
         "dateFromAriaLabel": "Datum von",
         "dateToAriaLabel": "Datum bis",
         "dateSeparator": "bis",
+        "datePlaceholder": "Datum wählen",
         "clearFilters": "Filter zurücksetzen"
       }
     },
@@ -267,7 +268,11 @@
     "tenants": "Mandanten",
     "dealers": "Händler",
     "users": "Benutzer",
-    "erpConfigs": "ERP-Konfigurationen"
+    "erpConfigs": "ERP-Konfigurationen",
+    "reports": {
+      "dateRangePlaceholder": "Zeitraum wählen",
+      "dateRangeAriaLabel": "Zeitraum auswählen"
+    }
   },
   "dashboard": {
     "title": "Dashboard",

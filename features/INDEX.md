@@ -114,7 +114,7 @@
 | OPH-100 | User-Level Language Override | Deployed | [OPH-100-user-language-override.md](OPH-100-user-language-override.md) | 2026-05-07 |
 | OPH-101 | Full i18n Coverage (Tenant + Salesforce App) | In Progress | [OPH-101-full-i18n-coverage.md](OPH-101-full-i18n-coverage.md) | 2026-05-08 |
 | OPH-102 | Invite Link Expiration UX | Deployed | [OPH-102-invite-link-expiration.md](OPH-102-invite-link-expiration.md) | 2026-05-11 |
-| OPH-103 | Localized Date Picker (Replace Native `<input type="date">`) | In Progress | [OPH-103-localized-date-picker.md](OPH-103-localized-date-picker.md) | 2026-05-11 |
+| OPH-103 | Localized Date Picker (Replace Native `<input type="date">`) | In Review | [OPH-103-localized-date-picker.md](OPH-103-localized-date-picker.md) | 2026-05-11 |
 <!-- Add features above this line -->
 
 ## Next Available ID: OPH-104
