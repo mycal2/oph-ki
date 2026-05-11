@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Users, Upload } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -14,12 +15,15 @@ interface TeamOrActionTileProps {
 /**
  * Conditional tile on the dashboard:
  * - For tenant_admin / platform_admin: shows team member count.
- * - For tenant_user: shows a quick-action "Bestellung hochladen" tile.
+ * - For tenant_user: shows a quick-action upload tile.
  */
 export function TeamOrActionTile({
   teamMemberCount,
   isAdmin,
 }: TeamOrActionTileProps) {
+  const tTeam = useTranslations("dashboard.teamTile");
+  const tAction = useTranslations("dashboard.actionTile");
+
   if (isAdmin && teamMemberCount !== null) {
     return (
       <Card>
@@ -32,7 +36,7 @@ export function TeamOrActionTile({
               {teamMemberCount}
             </p>
             <p className="text-xs text-muted-foreground mt-1 truncate">
-              Teammitglieder
+              {tTeam("teamMembersLabel")}
             </p>
           </div>
         </CardContent>
@@ -49,10 +53,10 @@ export function TeamOrActionTile({
           </div>
           <div className="min-w-0">
             <p className="text-sm font-medium leading-tight">
-              Bestellung hochladen
+              {tAction("uploadTitle")}
             </p>
             <p className="text-xs text-muted-foreground mt-1 truncate">
-              Neue Bestellung starten
+              {tAction("uploadSubtitle")}
             </p>
           </div>
         </CardContent>

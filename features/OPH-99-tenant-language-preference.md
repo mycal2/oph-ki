@@ -1,6 +1,6 @@
 # OPH-99: Tenant-Level Language Preference
 
-## Status: In Progress
+## Status: Deployed
 **Created:** 2026-05-07
 **Last Updated:** 2026-05-07
 
@@ -290,4 +290,8 @@ Skipped (sandbox environment cannot drive a browser). The components used (`Card
 6. BUG-6 (Low) — document or fix cross-subdomain cookie scope.
 
 ## Deployment
-_To be added by /deploy_
+
+- **Production:** https://oph-ki.ids.online — Deployed 2026-05-11
+- **Staging:** https://oph-ki-staging.ids.online — Deployed 2026-05-11
+- **Dev:** https://oph-ki-dev.ids.online — Deployed 2026-05-11
+- Migration `050_oph99_tenant_preferred_locale` (column `tenants.preferred_locale`)

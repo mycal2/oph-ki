@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations, useLocale } from "next-intl";
 import {
   X,
   CheckCircle2,
@@ -36,8 +37,9 @@ function formatBytes(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("de-DE", {
+function formatDate(iso: string, locale: string): string {
+  const bcp47 = locale === "en" ? "en-GB" : "de-DE";
+  return new Date(iso).toLocaleDateString(bcp47, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -45,6 +47,8 @@ function formatDate(iso: string): string {
 }
 
 export function UploadFileItem({ entry, onRemove }: UploadFileItemProps) {
+  const t = useTranslations("orders.upload2");
+  const locale = useLocale();
   const { id, file, status, progress, error, isDuplicate, serverDuplicateDate } = entry;
   const canRemove = status === "pending" || status === "error";
 
@@ -79,7 +83,7 @@ export function UploadFileItem({ entry, onRemove }: UploadFileItemProps) {
               size="icon"
               className="h-6 w-6"
               onClick={() => onRemove(id)}
-              aria-label={`${file.name} entfernen`}
+              aria-label={t("removeAriaLabel", { name: file.name })}
             >
               <X className="h-3 w-3" />
             </Button>
@@ -93,13 +97,15 @@ export function UploadFileItem({ entry, onRemove }: UploadFileItemProps) {
 
       {isDuplicate && status === "pending" && (
         <p className="text-xs text-yellow-600 ml-8">
-          Diese Datei wurde bereits in dieser Sitzung hinzugefügt
+          {t("duplicateSessionWarning")}
         </p>
       )}
 
       {status === "success" && serverDuplicateDate && (
         <p className="text-xs text-yellow-600 ml-8">
-          Diese Datei wurde bereits am {formatDate(serverDuplicateDate)} hochgeladen
+          {t("duplicateServerWarning", {
+            date: formatDate(serverDuplicateDate, locale),
+          })}
         </p>
       )}
 

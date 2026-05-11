@@ -115,6 +115,17 @@
       "clarification": "Klärung",
       "error": "Fehler"
     },
+    "statusLabels": {
+      "uploaded": "Hochgeladen",
+      "processing": "Wird verarbeitet",
+      "extracted": "Extrahiert",
+      "review": "In Prüfung",
+      "checked": "Geprüft",
+      "clarification": "Klärung",
+      "approved": "Freigegeben",
+      "exported": "Exportiert",
+      "error": "Fehler"
+    },
     "review": {
       "title": "Bestellung prüfen",
       "save": "Speichern",
@@ -123,6 +134,91 @@
     "empty": {
       "title": "Noch keine Bestellungen",
       "description": "Laden Sie Ihre erste Bestellung hoch oder leiten Sie eine E-Mail weiter."
+    },
+    "list": {
+      "loadError": "Bestellungen konnten nicht geladen werden.",
+      "loadConnectionError": "Verbindungsfehler beim Laden der Bestellungen.",
+      "tryAgain": "Erneut versuchen",
+      "emptyNoOrdersTitle": "Noch keine Bestellungen",
+      "emptyNoOrdersDescription": "Laden Sie Ihre erste Bestellung hoch, um die automatische Extraktion zu starten.",
+      "emptyNoOrdersCta": "Erste Bestellung hochladen",
+      "noResultsFiltered": "Keine Bestellungen für die aktiven Filter gefunden. Versuchen Sie, die Filter anzupassen.",
+      "noResults": "Keine Bestellungen gefunden.",
+      "tenantFilterLabel": "Mandant:",
+      "tenantFilterAriaLabel": "Mandant filtern",
+      "tenantFilterAllPlaceholder": "Alle Mandanten",
+      "tenantFilterAllOption": "Alle Mandanten",
+      "dealerFilterLabel": "Händler:",
+      "dealerFilterAriaLabel": "Händler filtern",
+      "dealerFilterAllPlaceholder": "Alle Händler",
+      "dealerFilterAllOption": "Alle Händler",
+      "ordersCount": "{count, plural, one {# Bestellung} other {# Bestellungen}}",
+      "ordersTotalCount": "{count, plural, one {# Bestellung gesamt} other {# Bestellungen gesamt}}",
+      "columnFile": "Datei",
+      "columnTenant": "Mandant",
+      "columnDealerCustomer": "Händler / Kunde",
+      "columnUploadedBy": "Hochgeladen von",
+      "columnStatus": "Status",
+      "columnDate": "Datum",
+      "unknownFile": "Unbekannte Datei",
+      "salesforceAppBadge": "Salesforce App",
+      "unknownUploader": "Unbekannt",
+      "deleteAriaLabel": "Bestellung löschen",
+      "previousPage": "Vorherige Seite",
+      "nextPage": "Nächste Seite",
+      "previousPageShort": "Zurück",
+      "nextPageShort": "Weiter",
+      "pageIndicator": "Seite {page} von {totalPages}",
+      "filters": {
+        "tabAll": "Alle",
+        "tabUploaded": "Neu",
+        "tabProcessing": "Verarbeitung",
+        "tabExtracted": "Extrahiert",
+        "tabReview": "In Prüfung",
+        "tabClarification": "Klärung",
+        "tabChecked": "Geprüft",
+        "tabApproved": "Freigegeben",
+        "tabExported": "Exportiert",
+        "tabError": "Fehler",
+        "searchPlaceholder": "Händler oder Bestellnummer suchen...",
+        "searchAriaLabel": "Bestellungen durchsuchen",
+        "clearSearchAriaLabel": "Suche löschen",
+        "dateFromAriaLabel": "Datum von",
+        "dateToAriaLabel": "Datum bis",
+        "dateSeparator": "bis",
+        "clearFilters": "Filter zurücksetzen"
+      }
+    },
+    "upload2": {
+      "dropzoneAriaLabel": "Dateien hier ablegen oder klicken um auszuwählen",
+      "dropzoneActive": "Dateien hier ablegen",
+      "dropzoneIdle": "Dateien hierher ziehen oder klicken zum Auswählen",
+      "dropzoneHint": ".eml, .pdf, .xlsx, .xls, .csv, .xml · max. 25 MB · bis zu 10 Dateien",
+      "removeAriaLabel": "{name} entfernen",
+      "duplicateSessionWarning": "Diese Datei wurde bereits in dieser Sitzung hinzugefügt",
+      "duplicateServerWarning": "Diese Datei wurde bereits am {date} hochgeladen"
+    },
+    "delete": {
+      "title": "Bestellung endgültig löschen?",
+      "intro": "Sie sind dabei, die Bestellung <name>{filename}</name> zu löschen.",
+      "consequencesSingle": "Diese Bestellung und alle zugehörigen Dateien (1 Datei) werden unwiderruflich gelöscht.",
+      "consequencesMultiple": "Diese Bestellung und alle zugehörigen Dateien ({count} Dateien) werden unwiderruflich gelöscht.",
+      "warning": "Dieser Vorgang kann nicht rückgängig gemacht werden.",
+      "cancel": "Abbrechen",
+      "confirm": "Endgültig löschen",
+      "errorGeneric": "Fehler beim Löschen der Bestellung.",
+      "errorConnection": "Verbindungsfehler beim Löschen der Bestellung.",
+      "successToast": "Bestellung erfolgreich gelöscht."
+    },
+    "extractionStatus": {
+      "pendingLabel": "Ausstehend",
+      "pendingTooltip": "Extraktion wartet auf Verarbeitung.",
+      "processingLabel": "In Verarbeitung",
+      "processingTooltip": "KI-Extraktion läuft. Bitte warten...",
+      "extractedLabel": "Extrahiert",
+      "extractedTooltip": "Bestelldaten wurden erfolgreich extrahiert.",
+      "failedLabel": "Fehler",
+      "failedTooltip": "Extraktion fehlgeschlagen."
     }
   },
   "settings": {
@@ -177,7 +273,31 @@
     "title": "Dashboard",
     "welcomeBack": "Willkommen zurück, {name}. Hier ist eine Übersicht Ihres Arbeitsbereichs.",
     "welcomeBackNoName": "Willkommen zurück. Hier ist eine Übersicht Ihres Arbeitsbereichs.",
-    "metaDescription": "Ihr IDS.online Dashboard."
+    "metaDescription": "Ihr IDS.online Dashboard.",
+    "recentOrders": {
+      "title": "Letzte Bestellungen",
+      "description": "Ihre neuesten Bestellungen und deren Status.",
+      "viewAll": "Alle anzeigen",
+      "loadError": "Bestellungen konnten nicht geladen werden.",
+      "loadErrorRefresh": "Bestellungen konnten nicht geladen werden. Bitte Seite neu laden.",
+      "tryAgain": "Erneut versuchen",
+      "emptyDescription": "Noch keine Bestellungen. Laden Sie Ihre erste Bestellung hoch.",
+      "uploadCta": "Bestellung hochladen"
+    },
+    "teamTile": {
+      "teamMembersLabel": "Teammitglieder"
+    },
+    "actionTile": {
+      "uploadTitle": "Bestellung hochladen",
+      "uploadSubtitle": "Neue Bestellung starten"
+    },
+    "stats": {
+      "today": "Heute",
+      "thisWeek": "Diese Woche",
+      "thisMonth": "Dieser Monat",
+      "openOrders": "Offene Bestellungen",
+      "errorRate7Days": "Fehlerrate (7 Tage)"
+    }
   },
   "layout": {
     "sidebar": {

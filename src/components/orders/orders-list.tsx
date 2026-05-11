@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations, useLocale } from "next-intl";
 import {
   FileText,
   Upload,
@@ -56,18 +57,6 @@ import type {
 
 const PAGE_SIZE = 25;
 
-const STATUS_LABELS: Record<OrderStatus, string> = {
-  uploaded: "Hochgeladen",
-  processing: "Wird verarbeitet",
-  extracted: "Extrahiert",
-  review: "In Prüfung",
-  checked: "Geprüft",
-  clarification: "Klärung",
-  approved: "Freigegeben",
-  exported: "Exportiert",
-  error: "Fehler",
-};
-
 const STATUS_VARIANTS: Record<
   OrderStatus,
   "default" | "secondary" | "destructive" | "outline"
@@ -109,8 +98,9 @@ const DEFAULT_FILTERS: OrdersFilterState = {
   page: 1,
 };
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("de-DE", {
+function formatDate(iso: string, locale: string): string {
+  const bcp47 = locale === "en" ? "en-GB" : "de-DE";
+  return new Date(iso).toLocaleDateString(bcp47, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -125,6 +115,10 @@ function formatDate(iso: string): string {
  * OPH-18: Platform admins see a "Mandant" column and a tenant filter dropdown.
  */
 export function OrdersList() {
+  const t = useTranslations("orders.list");
+  const tStatus = useTranslations("orders.statusLabels");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
   const router = useRouter();
   const [orders, setOrders] = useState<OrderListItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -202,10 +196,7 @@ export function OrdersList() {
         const json = (await res.json()) as ApiResponse<OrdersPageResponse>;
 
         if (!res.ok || !json.success) {
-          if (!silent)
-            setError(
-              json.error ?? "Bestellungen konnten nicht geladen werden."
-            );
+          if (!silent) setError(json.error ?? t("loadError"));
           return;
         }
 
@@ -214,13 +205,12 @@ export function OrdersList() {
           setTotal(json.data.total);
         }
       } catch {
-        if (!silent)
-          setError("Verbindungsfehler beim Laden der Bestellungen.");
+        if (!silent) setError(t("loadConnectionError"));
       } finally {
         if (!silent) setIsLoading(false);
       }
     },
-    []
+    [t]
   );
 
   // Fetch when filters change
@@ -332,12 +322,12 @@ export function OrdersList() {
         <OrdersFilterBar filters={filters} onFiltersChange={setFilters} />
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Fehler</AlertTitle>
+          <AlertTitle>{tCommon("error")}</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
         <Button variant="outline" onClick={() => fetchOrders(filters)}>
           <Loader2 className="h-4 w-4 mr-2" />
-          Erneut versuchen
+          {t("tryAgain")}
         </Button>
       </div>
     );
@@ -356,15 +346,14 @@ export function OrdersList() {
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-16 text-center">
           <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
-          <h3 className="font-semibold mb-1">Noch keine Bestellungen</h3>
+          <h3 className="font-semibold mb-1">{t("emptyNoOrdersTitle")}</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Laden Sie Ihre erste Bestellung hoch, um die automatische
-            Extraktion zu starten.
+            {t("emptyNoOrdersDescription")}
           </p>
           <Button asChild>
             <Link href="/orders/upload">
               <Upload className="h-4 w-4" />
-              Erste Bestellung hochladen
+              {t("emptyNoOrdersCta")}
             </Link>
           </Button>
         </CardContent>
@@ -385,7 +374,7 @@ export function OrdersList() {
             <>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Building2 className="h-4 w-4" aria-hidden="true" />
-                <span className="hidden sm:inline">Mandant:</span>
+                <span className="hidden sm:inline">{t("tenantFilterLabel")}</span>
               </div>
               <Select
                 value={filters.tenantId ?? ALL_TENANTS}
@@ -393,15 +382,17 @@ export function OrdersList() {
               >
                 <SelectTrigger
                   className="w-[220px]"
-                  aria-label="Mandant filtern"
+                  aria-label={t("tenantFilterAriaLabel")}
                 >
-                  <SelectValue placeholder="Alle Mandanten" />
+                  <SelectValue placeholder={t("tenantFilterAllPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={ALL_TENANTS}>Alle Mandanten</SelectItem>
-                  {tenantOptions.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name}
+                  <SelectItem value={ALL_TENANTS}>
+                    {t("tenantFilterAllOption")}
+                  </SelectItem>
+                  {tenantOptions.map((tenant) => (
+                    <SelectItem key={tenant.id} value={tenant.id}>
+                      {tenant.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -414,7 +405,7 @@ export function OrdersList() {
             <>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Store className="h-4 w-4" aria-hidden="true" />
-                <span className="hidden sm:inline">Händler:</span>
+                <span className="hidden sm:inline">{t("dealerFilterLabel")}</span>
               </div>
               <Select
                 value={filters.dealerId ?? ALL_DEALERS}
@@ -423,12 +414,14 @@ export function OrdersList() {
               >
                 <SelectTrigger
                   className="w-[220px]"
-                  aria-label="Händler filtern"
+                  aria-label={t("dealerFilterAriaLabel")}
                 >
-                  <SelectValue placeholder="Alle Händler" />
+                  <SelectValue placeholder={t("dealerFilterAllPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={ALL_DEALERS}>Alle Händler</SelectItem>
+                  <SelectItem value={ALL_DEALERS}>
+                    {t("dealerFilterAllOption")}
+                  </SelectItem>
                   {dealerOptions.map((d) => (
                     <SelectItem key={d.id} value={d.id}>
                       {d.name}
@@ -443,8 +436,7 @@ export function OrdersList() {
           {((filters.tenantId && filters.tenantId !== ALL_TENANTS) ||
             (filters.dealerId && filters.dealerId !== ALL_DEALERS)) && (
             <span className="text-xs text-muted-foreground">
-              {total}{" "}
-              {total === 1 ? "Bestellung" : "Bestellungen"}
+              {t("ordersCount", { count: total })}
             </span>
           )}
         </div>
@@ -469,20 +461,20 @@ export function OrdersList() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Datei</TableHead>
+                  <TableHead>{t("columnFile")}</TableHead>
                   {isPlatformAdmin && (
                     <TableHead className="hidden lg:table-cell">
-                      Mandant
+                      {t("columnTenant")}
                     </TableHead>
                   )}
                   <TableHead className="hidden sm:table-cell">
-                    Händler / Kunde
+                    {t("columnDealerCustomer")}
                   </TableHead>
                   <TableHead className="hidden md:table-cell">
-                    Hochgeladen von
+                    {t("columnUploadedBy")}
                   </TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Datum</TableHead>
+                  <TableHead>{t("columnStatus")}</TableHead>
+                  <TableHead className="text-right">{t("columnDate")}</TableHead>
                   {canDelete && <TableHead className="w-10" />}
                 </TableRow>
               </TableHeader>
@@ -494,8 +486,8 @@ export function OrdersList() {
                       className="h-24 text-center text-muted-foreground"
                     >
                       {hasActiveFilters
-                        ? "Keine Bestellungen für die aktiven Filter gefunden. Versuchen Sie, die Filter anzupassen."
-                        : "Keine Bestellungen gefunden."}
+                        ? t("noResultsFiltered")
+                        : t("noResults")}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -508,8 +500,7 @@ export function OrdersList() {
                         >
                           <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
                           <span className="truncate max-w-[200px]">
-                            {order.primary_filename ??
-                              "Unbekannte Datei"}
+                            {order.primary_filename ?? t("unknownFile")}
                           </span>
                           {order.file_count > 1 && (
                             <span className="text-xs text-muted-foreground shrink-0">
@@ -520,7 +511,7 @@ export function OrdersList() {
                         {order.source === "salesforce_app" && (
                           <Badge variant="secondary" className="mt-1 text-[10px] gap-1 w-fit">
                             <Smartphone className="h-3 w-3" />
-                            Salesforce App
+                            {t("salesforceAppBadge")}
                           </Badge>
                         )}
                       </TableCell>
@@ -538,7 +529,7 @@ export function OrdersList() {
                         />
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
-                        {order.uploaded_by_name ?? (order.source === "salesforce_app" ? "Unbekannt" : "-")}
+                        {order.uploaded_by_name ?? (order.source === "salesforce_app" ? t("unknownUploader") : "-")}
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1">
@@ -550,7 +541,7 @@ export function OrdersList() {
                                     variant={STATUS_VARIANTS[order.status]}
                                     className={`text-xs w-fit gap-1 cursor-default ${STATUS_CLASSNAMES[order.status] ?? ""}`}
                                   >
-                                    {STATUS_LABELS[order.status]}
+                                    {tStatus(order.status)}
                                   </Badge>
                                 </TooltipTrigger>
                                 <TooltipContent className="max-w-xs text-xs">
@@ -567,7 +558,7 @@ export function OrdersList() {
                                 order.status === "processing") && (
                                 <Loader2 className="h-3 w-3 animate-spin" />
                               )}
-                              {STATUS_LABELS[order.status]}
+                              {tStatus(order.status)}
                             </Badge>
                           )}
                           {order.extraction_status &&
@@ -580,7 +571,7 @@ export function OrdersList() {
                         </div>
                       </TableCell>
                       <TableCell className="text-right text-sm text-muted-foreground whitespace-nowrap">
-                        {formatDate(order.created_at)}
+                        {formatDate(order.created_at, locale)}
                       </TableCell>
                       {canDelete && (
                         <TableCell className="text-right p-1">
@@ -589,12 +580,12 @@ export function OrdersList() {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive transition-opacity"
-                              aria-label="Bestellung löschen"
+                              aria-label={t("deleteAriaLabel")}
                               onClick={(e) => {
                                 e.preventDefault();
                                 setDeleteTarget({
                                   id: order.id,
-                                  filename: order.primary_filename ?? "Unbekannte Datei",
+                                  filename: order.primary_filename ?? t("unknownFile"),
                                   fileCount: order.file_count,
                                 });
                               }}
@@ -615,7 +606,7 @@ export function OrdersList() {
           {total > 0 && (
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
-                {total} {total === 1 ? "Bestellung" : "Bestellungen"} gesamt
+                {t("ordersTotalCount", { count: total })}
               </p>
               <div className="flex items-center gap-2">
                 <Button
@@ -623,22 +614,25 @@ export function OrdersList() {
                   size="sm"
                   onClick={() => handlePageChange(filters.page - 1)}
                   disabled={filters.page <= 1}
-                  aria-label="Vorherige Seite"
+                  aria-label={t("previousPage")}
                 >
                   <ChevronLeft className="h-4 w-4" />
-                  Zurück
+                  {t("previousPageShort")}
                 </Button>
                 <span className="text-sm text-muted-foreground px-2">
-                  Seite {filters.page} von {totalPages}
+                  {t("pageIndicator", {
+                    page: filters.page,
+                    totalPages,
+                  })}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handlePageChange(filters.page + 1)}
                   disabled={filters.page >= totalPages}
-                  aria-label="Nächste Seite"
+                  aria-label={t("nextPage")}
                 >
-                  Weiter
+                  {t("nextPageShort")}
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>

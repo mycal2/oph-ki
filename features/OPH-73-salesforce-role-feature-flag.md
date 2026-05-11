@@ -1,6 +1,6 @@
 # OPH-73: Salesforce App — Sales Rep Role & Tenant Feature Flag (SF-2)
 
-## Status: Planned
+## Status: Deployed
 **Created:** 2026-04-17
 **Last Updated:** 2026-04-17
 **PRD:** [Salesforce App PRD](../docs/SALESFORCE-PRD.md)
@@ -129,4 +129,8 @@ No new npm packages required. All changes use existing tools (Supabase, Zod, sha
 _To be added by /qa_
 
 ## Deployment
-_To be added by /deploy_
+
+- **Production:** https://oph-ki.ids.online — Deployed 2026-05-11
+- **Staging:** https://oph-ki-staging.ids.online — Deployed 2026-05-11
+- **Dev:** https://oph-ki-dev.ids.online — Deployed 2026-05-11
+- Migration `046_oph73_salesforce_role_and_tenant_config` (columns `tenants.salesforce_enabled`, `tenants.salesforce_slug`)

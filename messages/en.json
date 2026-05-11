@@ -115,6 +115,17 @@
       "clarification": "Clarification",
       "error": "Error"
     },
+    "statusLabels": {
+      "uploaded": "Uploaded",
+      "processing": "Processing",
+      "extracted": "Extracted",
+      "review": "In Review",
+      "checked": "Reviewed",
+      "clarification": "Clarification",
+      "approved": "Approved",
+      "exported": "Exported",
+      "error": "Error"
+    },
     "review": {
       "title": "Review order",
       "save": "Save",
@@ -123,6 +134,91 @@
     "empty": {
       "title": "No orders yet",
       "description": "Upload your first order or forward an email."
+    },
+    "list": {
+      "loadError": "Orders could not be loaded.",
+      "loadConnectionError": "Connection error while loading orders.",
+      "tryAgain": "Try again",
+      "emptyNoOrdersTitle": "No orders yet",
+      "emptyNoOrdersDescription": "Upload your first order to start automatic extraction.",
+      "emptyNoOrdersCta": "Upload first order",
+      "noResultsFiltered": "No orders found for the active filters. Try adjusting the filters.",
+      "noResults": "No orders found.",
+      "tenantFilterLabel": "Tenant:",
+      "tenantFilterAriaLabel": "Filter by tenant",
+      "tenantFilterAllPlaceholder": "All tenants",
+      "tenantFilterAllOption": "All tenants",
+      "dealerFilterLabel": "Dealer:",
+      "dealerFilterAriaLabel": "Filter by dealer",
+      "dealerFilterAllPlaceholder": "All dealers",
+      "dealerFilterAllOption": "All dealers",
+      "ordersCount": "{count, plural, one {# order} other {# orders}}",
+      "ordersTotalCount": "{count, plural, one {# order total} other {# orders total}}",
+      "columnFile": "File",
+      "columnTenant": "Tenant",
+      "columnDealerCustomer": "Dealer / Customer",
+      "columnUploadedBy": "Uploaded by",
+      "columnStatus": "Status",
+      "columnDate": "Date",
+      "unknownFile": "Unknown file",
+      "salesforceAppBadge": "Salesforce App",
+      "unknownUploader": "Unknown",
+      "deleteAriaLabel": "Delete order",
+      "previousPage": "Previous page",
+      "nextPage": "Next page",
+      "previousPageShort": "Back",
+      "nextPageShort": "Next",
+      "pageIndicator": "Page {page} of {totalPages}",
+      "filters": {
+        "tabAll": "All",
+        "tabUploaded": "New",
+        "tabProcessing": "Processing",
+        "tabExtracted": "Extracted",
+        "tabReview": "In Review",
+        "tabClarification": "Clarification",
+        "tabChecked": "Reviewed",
+        "tabApproved": "Approved",
+        "tabExported": "Exported",
+        "tabError": "Error",
+        "searchPlaceholder": "Search dealer or order number...",
+        "searchAriaLabel": "Search orders",
+        "clearSearchAriaLabel": "Clear search",
+        "dateFromAriaLabel": "Date from",
+        "dateToAriaLabel": "Date to",
+        "dateSeparator": "to",
+        "clearFilters": "Clear filters"
+      }
+    },
+    "upload2": {
+      "dropzoneAriaLabel": "Drop files here or click to select",
+      "dropzoneActive": "Drop files here",
+      "dropzoneIdle": "Drag files here or click to select",
+      "dropzoneHint": ".eml, .pdf, .xlsx, .xls, .csv, .xml · max. 25 MB · up to 10 files",
+      "removeAriaLabel": "Remove {name}",
+      "duplicateSessionWarning": "This file has already been added in this session",
+      "duplicateServerWarning": "This file was already uploaded on {date}"
+    },
+    "delete": {
+      "title": "Permanently delete order?",
+      "intro": "You are about to delete the order <name>{filename}</name>.",
+      "consequencesSingle": "This order and all associated files (1 file) will be permanently deleted.",
+      "consequencesMultiple": "This order and all associated files ({count} files) will be permanently deleted.",
+      "warning": "This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete permanently",
+      "errorGeneric": "Error deleting the order.",
+      "errorConnection": "Connection error while deleting the order.",
+      "successToast": "Order deleted successfully."
+    },
+    "extractionStatus": {
+      "pendingLabel": "Pending",
+      "pendingTooltip": "Extraction is waiting to be processed.",
+      "processingLabel": "Processing",
+      "processingTooltip": "AI extraction in progress. Please wait...",
+      "extractedLabel": "Extracted",
+      "extractedTooltip": "Order data has been successfully extracted.",
+      "failedLabel": "Error",
+      "failedTooltip": "Extraction failed."
     }
   },
   "settings": {
@@ -177,7 +273,31 @@
     "title": "Dashboard",
     "welcomeBack": "Welcome back, {name}. Here is an overview of your workspace.",
     "welcomeBackNoName": "Welcome back. Here is an overview of your workspace.",
-    "metaDescription": "Your IDS.online dashboard."
+    "metaDescription": "Your IDS.online dashboard.",
+    "recentOrders": {
+      "title": "Recent Orders",
+      "description": "Your latest orders and their status.",
+      "viewAll": "View all",
+      "loadError": "Orders could not be loaded.",
+      "loadErrorRefresh": "Orders could not be loaded. Please refresh the page.",
+      "tryAgain": "Try again",
+      "emptyDescription": "No orders yet. Upload your first order.",
+      "uploadCta": "Upload order"
+    },
+    "teamTile": {
+      "teamMembersLabel": "Team members"
+    },
+    "actionTile": {
+      "uploadTitle": "Upload order",
+      "uploadSubtitle": "Start a new order"
+    },
+    "stats": {
+      "today": "Today",
+      "thisWeek": "This week",
+      "thisMonth": "This month",
+      "openOrders": "Open orders",
+      "errorRate7Days": "Error rate (7 days)"
+    }
   },
   "layout": {
     "sidebar": {

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Loader2, CheckCircle2, AlertCircle, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -19,45 +20,47 @@ interface ExtractionStatusBadgeProps {
   compact?: boolean;
 }
 
+type StatusKey = "pending" | "processing" | "extracted" | "failed";
+
 const STATUS_CONFIG: Record<
   ExtractionStatus,
   {
-    label: string;
+    labelKey: `${StatusKey}Label`;
+    tooltipKey: `${StatusKey}Tooltip`;
     icon: typeof Loader2;
     variant: "default" | "secondary" | "destructive" | "outline";
     className: string;
-    tooltip: string;
   }
 > = {
   pending: {
-    label: "Ausstehend",
+    labelKey: "pendingLabel",
+    tooltipKey: "pendingTooltip",
     icon: Clock,
     variant: "secondary",
     className: "text-muted-foreground",
-    tooltip: "Extraktion wartet auf Verarbeitung.",
   },
   processing: {
-    label: "In Verarbeitung",
+    labelKey: "processingLabel",
+    tooltipKey: "processingTooltip",
     icon: Loader2,
     variant: "default",
     className:
       "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-500/30",
-    tooltip: "KI-Extraktion läuft. Bitte warten...",
   },
   extracted: {
-    label: "Extrahiert",
+    labelKey: "extractedLabel",
+    tooltipKey: "extractedTooltip",
     icon: CheckCircle2,
     variant: "outline",
     className:
       "border-green-500/40 bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400 dark:border-green-500/30",
-    tooltip: "Bestelldaten wurden erfolgreich extrahiert.",
   },
   failed: {
-    label: "Fehler",
+    labelKey: "failedLabel",
+    tooltipKey: "failedTooltip",
     icon: AlertCircle,
     variant: "destructive",
     className: "",
-    tooltip: "Extraktion fehlgeschlagen.",
   },
 };
 
@@ -70,6 +73,8 @@ export function ExtractionStatusBadge({
   errorMessage,
   compact = false,
 }: ExtractionStatusBadgeProps) {
+  const t = useTranslations("orders.extractionStatus");
+
   if (!status) {
     return null;
   }
@@ -77,10 +82,11 @@ export function ExtractionStatusBadge({
   const config = STATUS_CONFIG[status];
   const Icon = config.icon;
   const isAnimated = status === "processing";
+  const baseTooltip = t(config.tooltipKey);
   const tooltipText =
     status === "failed" && errorMessage
-      ? `${config.tooltip} ${errorMessage}`
-      : config.tooltip;
+      ? `${baseTooltip} ${errorMessage}`
+      : baseTooltip;
 
   return (
     <TooltipProvider>
@@ -100,7 +106,7 @@ export function ExtractionStatusBadge({
                 isAnimated && "animate-spin"
               )}
             />
-            {config.label}
+            {t(config.labelKey)}
           </Badge>
         </TooltipTrigger>
         <TooltipContent>
