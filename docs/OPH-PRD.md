@@ -84,8 +84,8 @@ Eine mandantenfähige SaaS-Plattform ("Order Intelligence Platform"), die Dental
 | P1 | OPH-62: Article Catalog Bulk Delete | In Review |
 | P1 | OPH-63: Per-Tenant Email Forwarding | Deployed |
 | P1 | OPH-64: Admin: Reset Artikelstamm / Kundenstamm for Tenant | In Progress |
-| P1 | OPH-65: Tolerant Article Number Matching (Whitespace, Hyphens, Optional Leading Zeros) | Planned |
-| P1 | OPH-66: Reset Dealer Recognition on an Order | Planned |
+| P1 | OPH-65: Tolerant Article Number Matching (Whitespace, Hyphens, Optional Leading Zeros) | Deployed |
+| P1 | OPH-66: Reset Dealer Recognition on an Order | Deployed |
 | P1 | OPH-67: Tenant User Dashboard | Planned |
 | P1 | OPH-68: Dealer Filter Dropdown on Orders Page | Planned |
 | P1 | OPH-69: Image Extraction from Inbound Emails | Planned |
@@ -108,11 +108,11 @@ Eine mandantenfähige SaaS-Plattform ("Order Intelligence Platform"), die Dental
 | P1 | OPH-95: XML Order File Support (Ingestion, Extraction & Table Preview) | Deployed |
 | P1 | OPH-96: Order Review Locking (Concurrent Edit Prevention) | Planned |
 | P1 | OPH-97: Platform Admin: Generate Copyable Invite Link | Deployed |
-| P1 | OPH-98: i18n Infrastructure (next-intl, translation files, locale resolution) | Planned |
-| P1 | OPH-99: Tenant-Level Language Preference | Planned |
-| P1 | OPH-100: User-Level Language Override | Planned |
+| P1 | OPH-98: i18n Infrastructure (next-intl, translation files, locale resolution) | Deployed |
+| P1 | OPH-99: Tenant-Level Language Preference | Deployed |
+| P1 | OPH-100: User-Level Language Override | Deployed |
 | P1 | OPH-101: Full i18n Coverage (Tenant + Salesforce App) | Planned |
-| P1 | OPH-102: Invite Link Expiration UX | Planned |
+| P1 | OPH-102: Invite Link Expiration UX | Deployed |
 
 ## Success Metrics
 - Bearbeitungszeit pro Bestellung: von ~15 Min. manuell auf < 3 Min. mit System

@@ -1,6 +1,6 @@
 # OPH-100: User-Level Language Override
 
-## Status: In Review
+## Status: Deployed
 **Created:** 2026-05-07
 **Last Updated:** 2026-05-08
 
@@ -283,4 +283,8 @@ The remaining items are all Low severity or informational and pre-exist in OPH-9
 - [ ] Test responsive: 375px / 768px / 1440px. The card is `max-w-lg` so it should stack cleanly on mobile.
 
 ## Deployment
-_To be added by /deploy_
+
+- **Production:** https://oph-ki.ids.online — Deployed 2026-05-11
+- **Staging:** https://oph-ki-staging.ids.online — Deployed 2026-05-11
+- **Dev:** https://oph-ki-dev.ids.online — Deployed 2026-05-11
+- Migration `051_oph100_user_preferred_locale` (column `user_profiles.preferred_locale`)
