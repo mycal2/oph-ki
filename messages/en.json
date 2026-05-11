@@ -43,7 +43,9 @@
         "auth_callback_failed": "Authentication failed. Please try again.",
         "account_inactive": "Your account is deactivated. Please contact your administrator.",
         "tenant_inactive": "Your tenant is deactivated. Please contact platform support.",
-        "session_expired": "Your session has expired. Please sign in again."
+        "session_expired": "Your session has expired. Please sign in again.",
+        "invite_link_expired": "Your invitation link has expired. Please contact your administrator to request a new invitation.",
+        "invalid_invite_link": "The invitation link is invalid. Please contact your administrator to request a new invitation."
       }
     },
     "forgotPassword": {
@@ -96,7 +98,8 @@
         "sessionFailed": "Session could not be established. Please request a new invitation.",
         "invalidLink": "Invalid invitation link. Please request a new invitation.",
         "noSession": "No valid session. Please use the link from your invitation email.",
-        "accountSetupFailed": "Account could not be set up. Please try again."
+        "accountSetupFailed": "Account could not be set up. Please try again.",
+        "linkExpired": "Your invitation link has expired. Please contact your administrator to request a new invitation."
       }
     }
   },

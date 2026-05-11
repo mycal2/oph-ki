@@ -1,6 +1,6 @@
 # OPH-102: Invite Link Expiration UX
 
-## Status: Planned
+## Status: In Review
 **Created:** 2026-05-11
 **Last Updated:** 2026-05-11
 
@@ -57,7 +57,69 @@ There is a second invite path (hash-fragment flow, `/invite/accept#access_token=
 _To be added by /architecture_
 
 ## QA Test Results
-_To be added by /qa_
+
+**Tested:** 2026-05-11
+**Build:** Static code review + dev server smoke test (localhost:3003)
+**Tester:** QA pass run inline (manual after `/qa` skill timeout)
+
+### Acceptance Criteria
+
+| # | Criterion | Result | Evidence |
+|---|---|---|---|
+| 1 | `/login?error=invite_link_expired` shows visible alert with admin-contact CTA | ✅ Pass | `ERROR_KEYS` in `login-form.tsx:28` includes `invite_link_expired`. `i18n key auth.login.errors.invite_link_expired` resolves to "Ihr Einladungslink ist abgelaufen. Bitte kontaktieren Sie Ihren Administrator…" (DE) / "Your invitation link has expired. Please contact your administrator…" (EN). The existing destructive `Alert` renders it. |
+| 2 | `/login?error=invalid_invite_link` shows visible alert with admin-contact CTA | ✅ Pass | Same code path as #1. `i18n key auth.login.errors.invalid_invite_link` defined in both locales with admin-contact CTA. |
+| 3 | Neither error code is silently dropped | ✅ Pass | Both codes are in the `ERROR_KEYS` whitelist (`login-form.tsx:23–30`). `isLoginErrorKey` returns true; `setError(t(...))` runs. |
+| 4 | Hash-fragment `/invite/accept` shows clear expired message when `setSession()` errors | ✅ Pass | `accept-invite-form.tsx:57–63` checks `errCode === "otp_expired"` OR `errMessage.includes("expired")`, sets `errors.linkExpired`. Falls back to `errors.sessionFailed` otherwise. |
+| 5 | i18n keys defined under `auth.login.errors.*` (and `auth.acceptInvite.errors.linkExpired`) | ✅ Pass | All three keys present in `messages/de.json` and `messages/en.json`. |
+| 6 | DE/EN message files in full parity | ✅ Pass | Programmatic comparison: 399 keys each, zero diff. |
+| 7 | Error messages do not expose internal Supabase details | ✅ Pass | `sessionError?.message` is only logged to `console.error` (developer signal). User sees the translated static i18n string. No template interpolation of error details. |
+
+**AC summary: 7/7 passed.**
+
+### End-to-End Smoke Tests
+
+Performed against `localhost:3003`:
+
+| Test | URL | Expected | Actual |
+|---|---|---|---|
+| Bad token → expired redirect | `GET /auth/confirm?token_hash=fake-expired-token&type=invite` | 307 → `/login?error=invite_link_expired` | ✅ Header: `location: …/login?error=invite_link_expired` |
+| No params → invalid redirect | `GET /auth/confirm` | 307 → `/login?error=invalid_invite_link` | ✅ Header: `location: …/login?error=invalid_invite_link` |
+| Login page reachable | `GET /login` | 200 OK | ✅ 200 |
+
+### Static Checks
+
+| Check | Result |
+|---|---|
+| `npx tsc --noEmit` | ✅ Clean (no errors) |
+| DE/EN key parity (Node script) | ✅ 399 = 399, no diff |
+| `next-intl` typed message access | ✅ All three new keys resolvable |
+
+### Edge Cases
+
+| Case | Verified | Notes |
+|---|---|---|
+| Page refresh on `?error=invite_link_expired` URL | ✅ | `useSearchParams` re-reads on mount, alert re-renders |
+| Back navigation removes the query param | ✅ | No `?error=` → `isLoginErrorKey(null)` is false → no error state set |
+| `/invite/accept` with no hash | ✅ | Unchanged — `errors.noSession` still applies |
+| `/invite/accept` with hash but non-expired `setSession()` error | ✅ | Falls through to `errors.sessionFailed` (default branch) |
+| Salesforce login form unaffected | ✅ | `URL_ERROR_KEYS` in `salesforce-login-form.tsx:55` is a separate `Set`; invite links never target SF subdomain |
+
+### Security Audit (Red Team)
+
+| Attack vector | Status | Notes |
+|---|---|---|
+| Error-param injection (e.g. `?error=<script>alert(1)</script>`) | ✅ Safe | `isLoginErrorKey()` whitelist rejects anything not in the enum; arbitrary strings never reach `t()` |
+| Missing-key crash | ✅ Safe | All six codes in `ERROR_KEYS` have matching `auth.login.errors.*` strings |
+| Information disclosure via error messages | ✅ Safe | Static i18n strings; raw `sessionError.message` only console-logged |
+| Open redirect via `next` param | n/a | Not introduced by this feature; `/auth/confirm` already validates redirect targets |
+
+No new bugs found. No regression observed on other login error codes (`auth_callback_failed`, `account_inactive`, `tenant_inactive`, `session_expired`) — they share the same code path and remain functional.
+
+### Production-Ready Decision: **READY**
+
+No Critical or High bugs. Implementation is minimal, well-scoped, and consistent with existing patterns in the codebase.
+
+**Note for future improvement (out of scope):** Consider hoisting both `URL_ERROR_KEYS` sets (login-form and salesforce-login-form) into a shared module if the list grows further — currently acceptable as two small enums.
 
 ## Deployment
 _To be added by /deploy_

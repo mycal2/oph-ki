@@ -51,7 +51,16 @@ export function AcceptInviteForm() {
               window.history.replaceState(null, "", window.location.pathname);
             } else {
               console.error("Failed to set session from hash:", sessionError?.message);
-              setError(t("errors.sessionFailed"));
+              // Detect expired-token errors and show a clearer message that
+              // points the user to their administrator. Supabase reports these
+              // as either a 'otp_expired' code or a message containing 'expired'.
+              const errMessage = sessionError?.message?.toLowerCase() ?? "";
+              const errCode = (sessionError as { code?: string } | null)?.code;
+              if (errCode === "otp_expired" || errMessage.includes("expired")) {
+                setError(t("errors.linkExpired"));
+              } else {
+                setError(t("errors.sessionFailed"));
+              }
             }
           });
       } else {

@@ -43,7 +43,9 @@
         "auth_callback_failed": "Authentifizierung fehlgeschlagen. Bitte versuchen Sie es erneut.",
         "account_inactive": "Ihr Konto ist deaktiviert. Bitte kontaktieren Sie Ihren Administrator.",
         "tenant_inactive": "Ihr Mandant ist deaktiviert. Bitte kontaktieren Sie den Plattform-Support.",
-        "session_expired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an."
+        "session_expired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
+        "invite_link_expired": "Ihr Einladungslink ist abgelaufen. Bitte kontaktieren Sie Ihren Administrator, um eine neue Einladung anzufordern.",
+        "invalid_invite_link": "Der Einladungslink ist ungültig. Bitte kontaktieren Sie Ihren Administrator, um eine neue Einladung anzufordern."
       }
     },
     "forgotPassword": {
@@ -96,7 +98,8 @@
         "sessionFailed": "Sitzung konnte nicht hergestellt werden. Bitte fordern Sie eine neue Einladung an.",
         "invalidLink": "Ungültiger Einladungslink. Bitte fordern Sie eine neue Einladung an.",
         "noSession": "Keine gültige Sitzung. Bitte verwenden Sie den Link aus Ihrer Einladungs-E-Mail.",
-        "accountSetupFailed": "Konto konnte nicht eingerichtet werden. Bitte versuchen Sie es erneut."
+        "accountSetupFailed": "Konto konnte nicht eingerichtet werden. Bitte versuchen Sie es erneut.",
+        "linkExpired": "Ihr Einladungslink ist abgelaufen. Bitte kontaktieren Sie Ihren Administrator, um eine neue Einladung anzufordern."
       }
     }
   },
