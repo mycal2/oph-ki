@@ -291,6 +291,7 @@
     "tenantProfile": {
       "addons": {
         "sectionTitle": "Add-ons",
+        "tabDescription": "Kostenpflichtige Zusatzmodule für diesen Mandanten verwalten.",
         "priceLookupLabel": "Price Lookup",
         "priceLookupDescription": "Aktiviert kundenspezifische Rabattsätze und automatische Preisermittlung während der Extraktion.",
         "priceLookupAriaLabel": "Price Lookup Add-on aktivieren"
