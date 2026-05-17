@@ -114,6 +114,12 @@ Eine mandantenfähige SaaS-Plattform ("Order Intelligence Platform"), die Dental
 | P1 | OPH-101: Full i18n Coverage (Tenant + Salesforce App) | Planned |
 | P1 | OPH-102: Invite Link Expiration UX | Deployed |
 | P2 | OPH-103: Localized Date Picker (Replace Native `<input type="date">`) | Planned |
+| P1 | OPH-104: Tenant Price Lookup Feature Flag | Planned |
+| P1 | OPH-105: Article RRP (Recommended Retail Price) Field | Planned |
+| P1 | OPH-106: Customer Discount Rates Management | Planned |
+| P1 | OPH-107: Discount Rate Excel Export & Import | Planned |
+| P1 | OPH-108: Price Lookup in AI Extraction | Planned |
+| P1 | OPH-109: Discounted Price ERP Export Variable | Planned |
 
 ## Success Metrics
 - Bearbeitungszeit pro Bestellung: von ~15 Min. manuell auf < 3 Min. mit System
