@@ -32,16 +32,20 @@ export async function GET(
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Look up the order by preview_token
+    // Look up the order by preview_token.
+    // OPH-109: also fetch tenant_id + tenant.price_lookup_enabled so the
+    // preview UI can show/hide the "Rabattierter Preis" column.
     const { data: order, error } = await supabaseAdmin
       .from("orders")
       .select(`
         id,
+        tenant_id,
         preview_token_expires_at,
         extracted_data,
         reviewed_data,
         dealer_id,
-        dealers:dealer_id (name)
+        dealers:dealer_id (name),
+        tenants:tenant_id (price_lookup_enabled)
       `)
       .eq("preview_token", token)
       .limit(1)
@@ -109,6 +113,9 @@ export async function GET(
           unit_price: number | null;
           total_price: number | null;
           currency: string | null;
+          // OPH-109: populated by price-lookup step (OPH-108); may be null
+          // when lookup was skipped or failed.
+          discounted_price?: number | null;
         }>;
         total_amount: number | null;
         currency: string | null;
@@ -127,6 +134,13 @@ export async function GET(
       canonical.order.dealer?.name ??
       null;
 
+    // OPH-109: Resolve tenant's price_lookup_enabled flag from the join.
+    // Defaults to false when the tenant row is missing or the column is null.
+    const tenantJoin = order.tenants as unknown as
+      | { price_lookup_enabled: boolean | null }
+      | null;
+    const priceLookupEnabled = tenantJoin?.price_lookup_enabled === true;
+
     return NextResponse.json(
       {
         status: "ok",
@@ -142,6 +156,7 @@ export async function GET(
           currency: canonical.order.currency,
           notes: canonical.order.notes,
           extractedAt: canonical.extraction_metadata?.extracted_at ?? null,
+          priceLookupEnabled,
         },
       },
       { status: 200 }

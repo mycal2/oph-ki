@@ -105,6 +105,9 @@ const VARIABLE_GROUPS: VariableGroup[] = [
       { path: "this.unit", description: "Einheit" },
       { path: "this.unit_price", description: "Stückpreis" },
       { path: "this.total_price", description: "Gesamtpreis" },
+      // OPH-109: discounted_price variable (always shown; emits empty when
+      // tenant.price_lookup_enabled = false or per-line lookup failed).
+      { path: "this.discounted_price", description: "Rabattierter Preis" },
     ],
   },
 ];

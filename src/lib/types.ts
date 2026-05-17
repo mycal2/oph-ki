@@ -839,6 +839,12 @@ export interface OrderPreviewData {
   currency: string | null;
   notes: string | null;
   extractedAt: string | null;
+  /**
+   * OPH-109: Tenant feature-flag indicating whether price-lookup (and therefore
+   * `discounted_price` per line item) is meaningful for this order. The preview
+   * UI uses this to conditionally show the "Rabattierter Preis" column.
+   */
+  priceLookupEnabled: boolean;
 }
 
 /** API response shape for preview endpoint. */

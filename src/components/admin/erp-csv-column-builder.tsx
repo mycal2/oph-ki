@@ -53,6 +53,9 @@ const SOURCE_FIELD_SUGGESTIONS = [
   "items[].unit_price",
   "items[].total_price",
   "items[].currency",
+  // OPH-109: discounted_price (always offered; emits empty when
+  // tenant.price_lookup_enabled = false or per-line lookup failed).
+  "items[].discounted_price",
 ];
 
 interface CsvColumnBuilderProps {

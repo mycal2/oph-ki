@@ -24,6 +24,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
+import { usePriceLookupEnabled } from "@/hooks/use-price-lookup-enabled";
 import type {
   CanonicalOrderData,
   CanonicalOrder,
@@ -31,6 +32,26 @@ import type {
   CanonicalAddress,
   CanonicalSender,
 } from "@/lib/types";
+
+/**
+ * OPH-109: Formats a discounted price for display in the review UI.
+ * Returns "—" when null/undefined (matches the existing nullable-field convention).
+ */
+function formatDiscountedPrice(
+  amount: number | null | undefined,
+  currency: string | null
+): string {
+  if (amount === null || amount === undefined) return "—";
+  const curr = currency ?? "EUR";
+  try {
+    return new Intl.NumberFormat("de-DE", {
+      style: "currency",
+      currency: curr,
+    }).format(amount);
+  } catch {
+    return `${amount.toFixed(2)} ${curr}`;
+  }
+}
 
 interface OrderEditFormProps {
   data: CanonicalOrderData;
@@ -73,6 +94,11 @@ function newLineItem(position: number): CanonicalLineItem {
 export function OrderEditForm({ data, onChange, disabled }: OrderEditFormProps) {
   const [deliveryOpen, setDeliveryOpen] = useState(false);
   const [billingOpen, setBillingOpen] = useState(false);
+
+  // OPH-109: Show the "Rabattierter Preis" column only when the tenant has
+  // the Price Lookup add-on enabled. Hook returns `null` while loading; we
+  // gate conservatively and treat null as "do not show yet".
+  const { enabled: priceLookupEnabled } = usePriceLookupEnabled();
 
   const order = data.order;
   const confidence = data.extraction_metadata.confidence_score;
@@ -328,6 +354,7 @@ export function OrderEditForm({ data, onChange, disabled }: OrderEditFormProps) 
                   onChange={(patch) => updateLineItem(index, patch)}
                   onRemove={() => removeLineItem(index)}
                   parseNum={parseNum}
+                  showDiscountedPrice={priceLookupEnabled === true}
                 />
               ))}
             </div>
@@ -414,9 +441,25 @@ interface LineItemRowProps {
   onChange: (patch: Partial<CanonicalLineItem>) => void;
   onRemove: () => void;
   parseNum: (val: string) => number | null;
+  /** OPH-109: show the read-only discounted_price line when the tenant has the price-lookup add-on. */
+  showDiscountedPrice?: boolean;
 }
 
-function LineItemRow({ item, index, onChange, onRemove, parseNum }: LineItemRowProps) {
+const discountedPriceFormatter = new Intl.NumberFormat("de-DE", {
+  style: "currency",
+  currency: "EUR",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+function LineItemRow({
+  item,
+  index,
+  onChange,
+  onRemove,
+  parseNum,
+  showDiscountedPrice = false,
+}: LineItemRowProps) {
   return (
     <div className="border rounded-md p-3 space-y-3">
       <div className="flex items-center justify-between">
@@ -600,6 +643,17 @@ function LineItemRow({ item, index, onChange, onRemove, parseNum }: LineItemRowP
           />
         </div>
       </div>
+
+      {showDiscountedPrice && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1 border-t">
+          <span className="font-medium">Rabattierter Preis:</span>
+          <span className="tabular-nums">
+            {typeof item.discounted_price === "number"
+              ? discountedPriceFormatter.format(item.discounted_price)
+              : "—"}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

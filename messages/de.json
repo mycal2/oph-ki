@@ -220,6 +220,16 @@
       "extractedTooltip": "Bestelldaten wurden erfolgreich extrahiert.",
       "failedLabel": "Fehler",
       "failedTooltip": "Extraktion fehlgeschlagen."
+    },
+    "lineItems": {
+      "columnPosition": "#",
+      "columnManufacturerArticleNumber": "Herst.-Art.-Nr.",
+      "columnDealerArticleNumber": "Händler-Art.-Nr.",
+      "columnDescription": "Beschreibung",
+      "columnQuantity": "Menge",
+      "columnUnitPrice": "Einzelpreis",
+      "columnDiscountedPrice": "Rabattierter Preis",
+      "columnTotal": "Gesamt"
     }
   },
   "settings": {
