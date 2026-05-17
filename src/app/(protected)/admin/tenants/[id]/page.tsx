@@ -23,6 +23,7 @@ import { useCurrentUserRole } from "@/hooks/use-current-user-role";
 import { useAdminTenants } from "@/hooks/use-admin-tenants";
 import { TenantProfileForm, TenantProfileFormSkeleton } from "@/components/admin/tenant-profile-form";
 import { TenantUsersTab } from "@/components/admin/tenant-users-tab";
+import { TenantAddonsTab } from "@/components/admin/tenant-addons-tab";
 import { ArticleCatalogPage } from "@/components/article-catalog/article-catalog-page";
 import { CustomerCatalogPage } from "@/components/customer-catalog/customer-catalog-page";
 import { Input } from "@/components/ui/input";
@@ -38,7 +39,7 @@ const STATUS_BADGES: Record<TenantStatus, { label: string; className: string }> 
   trial: { label: "Testphase", className: "bg-yellow-100 text-yellow-800" },
 };
 
-const VALID_TABS = ["profile", "users", "articles", "customers", "salesforce"] as const;
+const VALID_TABS = ["profile", "users", "articles", "customers", "salesforce", "addons"] as const;
 type TabValue = (typeof VALID_TABS)[number];
 
 interface PageProps {
@@ -391,6 +392,7 @@ export default function AdminTenantDetailPage({ params }: PageProps) {
           <TabsTrigger value="articles">Artikelstamm</TabsTrigger>
           <TabsTrigger value="customers">Kundenstamm</TabsTrigger>
           <TabsTrigger value="salesforce">Salesforce</TabsTrigger>
+          <TabsTrigger value="addons">Add-ons</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile" className="mt-6">
@@ -486,6 +488,14 @@ export default function AdminTenantDetailPage({ params }: PageProps) {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="addons" className="mt-6">
+          <TenantAddonsTab
+            tenant={tenant}
+            onSave={handleSaveProfile}
+            isMutating={isMutating}
+          />
         </TabsContent>
       </Tabs>
 

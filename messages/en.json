@@ -291,6 +291,7 @@
     "tenantProfile": {
       "addons": {
         "sectionTitle": "Add-ons",
+        "tabDescription": "Manage paid add-on modules for this tenant.",
         "priceLookupLabel": "Price Lookup",
         "priceLookupDescription": "Enables customer-specific discount rates and automatic price lookup during extraction.",
         "priceLookupAriaLabel": "Enable Price Lookup add-on"
