@@ -1287,4 +1287,29 @@ export const sfOrderSubmitSchema = z.object({
   notes: z.string().max(500, "Bemerkungen duerfen maximal 500 Zeichen lang sein.").optional().default(""),
 });
 
+// ---------------------------------------------------------------------------
+// OPH-106: Customer Discount Rates
+// ---------------------------------------------------------------------------
+
+/**
+ * Discount rate validation: percent with up to two decimals between 0 and 100.
+ * Accepts numeric input from the form (already coerced) and round-trips it
+ * to NUMERIC(5,2) on the DB side.
+ */
+export const discountRateSchema = z
+  .number({ message: "Rabattsatz muss eine Zahl sein." })
+  .min(0, "Rabattsatz muss zwischen 0 und 100 liegen.")
+  .max(100, "Rabattsatz muss zwischen 0 und 100 liegen.")
+  // Keep two decimals; reject anything finer to match DB NUMERIC(5,2).
+  .refine((v) => Math.round(v * 100) === v * 100, {
+    message: "Rabattsatz darf maximal zwei Nachkommastellen haben.",
+  });
+
+/** Body schema for PUT /api/customers/[id]/discount-default and per-article overrides. */
+export const setDiscountRateSchema = z.object({
+  rate: discountRateSchema,
+});
+
+export type SetDiscountRateInput = z.infer<typeof setDiscountRateSchema>;
+
 export type SfOrderSubmitInput = z.infer<typeof sfOrderSubmitSchema>;

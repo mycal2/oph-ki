@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   Plus,
   Upload,
@@ -54,6 +55,8 @@ export function CustomerCatalogPage({
   compact = false,
   readOnly = false,
 }: CustomerCatalogPageProps) {
+  const router = useRouter();
+
   const {
     customers,
     total,
@@ -87,10 +90,16 @@ export function CustomerCatalogPage({
     setFormOpen(true);
   }, []);
 
-  const handleEdit = useCallback((customer: CustomerCatalogItem) => {
-    setEditingCustomer(customer);
-    setFormOpen(true);
-  }, []);
+  const handleEdit = useCallback(
+    (customer: CustomerCatalogItem) => {
+      // OPH-106: Navigate to the customer detail page (Profil + Rabatte tabs).
+      // Works for both tenant view and admin-tenant view — platform admins
+      // can manage another tenant's discounts via the detail page now that
+      // the backend supports cross-tenant access.
+      router.push(`/settings/customer-catalog/${customer.id}`);
+    },
+    [router]
+  );
 
   const handleDeleteClick = useCallback((customer: CustomerCatalogItem) => {
     setDeletingCustomer(customer);
@@ -346,7 +355,11 @@ export function CustomerCatalogPage({
               </TableHeader>
               <TableBody>
                 {customers.map((customer) => (
-                  <TableRow key={customer.id}>
+                  <TableRow
+                    key={customer.id}
+                    onClick={() => handleEdit(customer)}
+                    className="cursor-pointer"
+                  >
                     <TableCell className="font-medium">
                       {customer.customer_number}
                     </TableCell>
@@ -395,7 +408,7 @@ export function CustomerCatalogPage({
                       {customer.phone ?? <span className="text-muted-foreground">-</span>}
                     </TableCell>
                     {!readOnly && (
-                      <TableCell className="text-right">
+                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1">
                           <Button
                             type="button"
