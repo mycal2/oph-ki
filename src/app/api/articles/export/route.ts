@@ -77,7 +77,7 @@ export async function generateArticleExportCsv(
   while (true) {
     const { data, error } = await adminClient
       .from("article_catalog")
-      .select("article_number, name, category, color, packaging, size1, size2, ref_no, gtin, keywords")
+      .select("article_number, name, category, color, packaging, size1, size2, ref_no, gtin, keywords, rrp")
       .eq("tenant_id", tenantId)
       .order("article_number", { ascending: true })
       .range(offset, offset + PAGE_SIZE - 1);
@@ -105,7 +105,21 @@ export async function generateArticleExportCsv(
     return val;
   };
 
-  const header = "Herst.-Art.-Nr.;Artikelbezeichnung;Kategorie;Farbe;Verpackungseinheit;Groesse 1;Groesse 2;Ref.-Nr.;GTIN;Suchbegriffe";
+  /**
+   * OPH-105: Format the RRP/UVP value for CSV output.
+   * Uses dot as decimal separator with up to 4 decimal places, trailing zeros trimmed.
+   * NULL renders as an empty cell.
+   */
+  const formatRrp = (val: unknown): string => {
+    if (val === null || val === undefined || val === "") return "";
+    const num = typeof val === "number" ? val : Number(val);
+    if (!Number.isFinite(num)) return "";
+    // Up to 4 decimals, trim trailing zeros, always keep ".00" minimum readability via toFixed
+    // We use toFixed(4) then strip trailing zeros to stay schema-precise without ugly output.
+    return num.toFixed(4).replace(/\.?0+$/, "") || "0";
+  };
+
+  const header = "Herst.-Art.-Nr.;Artikelbezeichnung;Kategorie;Farbe;Verpackungseinheit;Groesse 1;Groesse 2;Ref.-Nr.;GTIN;Suchbegriffe;UVP";
   const rows = articles.map((a) =>
     [
       esc(a.article_number as string),
@@ -118,6 +132,7 @@ export async function generateArticleExportCsv(
       esc(a.ref_no as string | null),
       esc(a.gtin as string | null),
       esc(a.keywords as string | null),
+      formatRrp(a.rrp),
     ].join(";")
   );
 

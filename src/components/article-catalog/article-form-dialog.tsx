@@ -29,8 +29,9 @@ interface ArticleFormDialogProps {
   ) => Promise<{ ok: boolean; error?: string }>;
 }
 
-const FIELDS: {
-  key: keyof CreateArticleInput;
+/** Text input fields rendered uniformly. RRP is handled separately as a numeric input. */
+const TEXT_FIELDS: {
+  key: Exclude<keyof CreateArticleInput, "rrp">;
   label: string;
   required: boolean;
   placeholder: string;
@@ -77,11 +78,36 @@ export function ArticleFormDialog({
         ref_no: article.ref_no ?? "",
         gtin: article.gtin ?? "",
         keywords: article.keywords ?? "",
+        // OPH-105: render existing rrp as a localised numeric string for editing.
+        // We keep it in formData as a string so the user can type freely.
+        rrp:
+          article.rrp === null || article.rrp === undefined
+            ? ""
+            : String(article.rrp).replace(".", ","),
       });
     } else {
       setFormData({});
     }
   }, [open, article]);
+
+  /**
+   * OPH-105: parse a user-entered UVP string into a number or null.
+   * Accepts German ("12,50") and English ("12.50") decimals; blank → null.
+   * Returns { value: number | null, error: string | null } for inline validation.
+   */
+  const parseRrpInput = (raw: string): { value: number | null; error: string | null } => {
+    const trimmed = (raw ?? "").trim();
+    if (trimmed === "") return { value: null, error: null };
+    const normalized = trimmed.replace(/[€\s]/g, "").replace(",", ".");
+    const num = Number(normalized);
+    if (!Number.isFinite(num)) {
+      return { value: null, error: "UVP muss eine Zahl sein." };
+    }
+    if (num < 0) {
+      return { value: null, error: "UVP muss >= 0 sein." };
+    }
+    return { value: num, error: null };
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,6 +115,13 @@ export function ArticleFormDialog({
     setIsSaving(true);
 
     try {
+      const rrpParsed = parseRrpInput(formData.rrp ?? "");
+      if (rrpParsed.error) {
+        setError(rrpParsed.error);
+        setIsSaving(false);
+        return;
+      }
+
       const data: CreateArticleInput = {
         article_number: formData.article_number?.replace(/\s+/g, "") ?? "",
         name: formData.name?.trim() ?? "",
@@ -100,6 +133,7 @@ export function ArticleFormDialog({
         ref_no: formData.ref_no?.trim() || null,
         gtin: formData.gtin?.trim() || null,
         keywords: formData.keywords?.trim() || null,
+        rrp: rrpParsed.value,
       };
 
       const result = await onSave(data, isNew, article?.id);
@@ -141,7 +175,7 @@ export function ArticleFormDialog({
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {FIELDS.map((field) => (
+          {TEXT_FIELDS.map((field) => (
             <div key={field.key} className="space-y-1.5">
               <Label htmlFor={`article-${field.key}`}>
                 {field.label}
@@ -159,6 +193,26 @@ export function ArticleFormDialog({
               />
             </div>
           ))}
+
+          {/* OPH-105: UVP (Unverbindliche Preisempfehlung) — optional numeric input. */}
+          <div className="space-y-1.5">
+            <Label htmlFor="article-rrp">UVP (€)</Label>
+            <Input
+              id="article-rrp"
+              type="text"
+              inputMode="decimal"
+              value={formData.rrp ?? ""}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, rrp: e.target.value }))
+              }
+              placeholder="z.B. 12,50"
+              disabled={isSaving}
+              aria-describedby="article-rrp-help"
+            />
+            <p id="article-rrp-help" className="text-xs text-muted-foreground">
+              Optional. Unverbindliche Preisempfehlung in Euro (z.B. 12,50). Leer lassen, wenn nicht bekannt.
+            </p>
+          </div>
 
           <DialogFooter>
             <Button

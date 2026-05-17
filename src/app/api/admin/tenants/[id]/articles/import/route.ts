@@ -120,6 +120,8 @@ export async function POST(
         ref_no: row.ref_no,
         gtin: row.gtin,
         keywords: row.keywords,
+        // OPH-105: optional UVP (recommended retail price); null when column absent
+        rrp: row.rrp,
       }));
 
       const { data: upsertResult, error: upsertError } = await adminClient

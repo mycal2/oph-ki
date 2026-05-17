@@ -236,12 +236,13 @@ export function ArticleCatalogPage({
 
   const handleDownloadSample = useCallback(() => {
     const BOM = "\uFEFF";
+    // OPH-105: include UVP column in sample so admins know where to put recommended retail prices.
     const header =
-      "Herst.-Art.-Nr.;Artikelbezeichnung;Kategorie;Farbe / Shade;Verpackungseinheit;Groesse 1;Groesse 2;Ref.-Nr.;GTIN / EAN;Suchbegriffe / Aliase";
+      "Herst.-Art.-Nr.;Artikelbezeichnung;Kategorie;Farbe / Shade;Verpackungseinheit;Groesse 1;Groesse 2;Ref.-Nr.;GTIN / EAN;Suchbegriffe / Aliase;UVP";
     const row1 =
-      "12345;Komposit Venus Pearl A2;Komposit;A2;10 Stk.;4g;;VP-A2;4012239123456;Venus, Venus Pearl, Heraeus";
+      "12345;Komposit Venus Pearl A2;Komposit;A2;10 Stk.;4g;;VP-A2;4012239123456;Venus, Venus Pearl, Heraeus;39,90";
     const row2 =
-      "67890;Adhaesiv iBOND Universal;Adhaesiv;;;5ml;;IB-UNI;;iBOND, i-Bond, Adhaesiv Universal";
+      "67890;Adhaesiv iBOND Universal;Adhaesiv;;;5ml;;IB-UNI;;iBOND, i-Bond, Adhaesiv Universal;";
     const content = BOM + [header, row1, row2].join("\n");
 
     const blob = new Blob([content], { type: "text/csv;charset=utf-8" });
@@ -259,6 +260,19 @@ export function ArticleCatalogPage({
   const truncate = (text: string | null, maxLen: number) => {
     if (!text) return null;
     return text.length > maxLen ? text.substring(0, maxLen) + "..." : text;
+  };
+
+  // OPH-105: Format a nullable EUR amount for table display.
+  // Null → empty cell (distinct from 0, which renders as "€0,00").
+  const currencyFormatter = new Intl.NumberFormat("de-DE", {
+    style: "currency",
+    currency: "EUR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  const formatRrp = (val: number | null): string => {
+    if (val === null || val === undefined) return "";
+    return currencyFormatter.format(val);
   };
 
   return (
@@ -438,6 +452,8 @@ export function ArticleCatalogPage({
                   <TableHead className="hidden xl:table-cell">Ref.-Nr.</TableHead>
                   <TableHead className="hidden xl:table-cell">GTIN</TableHead>
                   <TableHead className="hidden xl:table-cell">Suchbegriffe</TableHead>
+                  {/* OPH-105: UVP (Unverbindliche Preisempfehlung) — right-aligned currency. */}
+                  <TableHead className="hidden md:table-cell text-right">UVP</TableHead>
                   {!readOnly && <TableHead className="w-[80px] text-right">Aktionen</TableHead>}
                 </TableRow>
               </TableHeader>
@@ -501,6 +517,14 @@ export function ArticleCatalogPage({
                         </span>
                       ) : (
                         <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    {/* OPH-105: UVP cell — right-aligned currency, blank if null. */}
+                    <TableCell className="hidden md:table-cell text-right tabular-nums">
+                      {article.rrp === null || article.rrp === undefined ? (
+                        <span className="text-muted-foreground">-</span>
+                      ) : (
+                        formatRrp(article.rrp)
                       )}
                     </TableCell>
                     {!readOnly && (

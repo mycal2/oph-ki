@@ -995,6 +995,13 @@ export const createArticleSchema = z.object({
     .trim()
     .nullable()
     .optional(),
+  // OPH-105: Recommended retail price (UVP). Optional, must be ≥ 0 when present.
+  rrp: z
+    .number()
+    .min(0, "UVP muss ≥ 0 sein.")
+    .max(99999999, "UVP ist zu gross.")
+    .nullable()
+    .optional(),
 });
 
 export const updateArticleSchema = z.object({
@@ -1055,6 +1062,13 @@ export const updateArticleSchema = z.object({
     .string()
     .max(1000, "Suchbegriffe dürfen maximal 1000 Zeichen lang sein.")
     .trim()
+    .nullable()
+    .optional(),
+  // OPH-105: Recommended retail price (UVP). Optional, must be ≥ 0 when present.
+  rrp: z
+    .number()
+    .min(0, "UVP muss ≥ 0 sein.")
+    .max(99999999, "UVP ist zu gross.")
     .nullable()
     .optional(),
 });

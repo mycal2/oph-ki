@@ -84,6 +84,13 @@ const COLUMN_MAP: Record<string, string> = {
   "suchbegriffe": "keywords",
   "aliase": "keywords",
   "suchbegriffe / aliase": "keywords",
+  // OPH-105: rrp / UVP — recognized in preview so column appears in detection logic.
+  "rrp": "rrp",
+  "uvp": "rrp",
+  "uvp (€)": "rrp",
+  "uvp €": "rrp",
+  "preis": "rrp",
+  "preisempfehlung": "rrp",
 };
 
 interface PreviewRow {
