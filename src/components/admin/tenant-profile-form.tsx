@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { Loader2, Clock, Info, AlertTriangle, Mail, Receipt, Forward, FileSpreadsheet, Languages } from "lucide-react";
+import { Loader2, Clock, Info, AlertTriangle, Mail, Receipt, Forward, FileSpreadsheet, Languages, Tag } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -88,6 +89,7 @@ export function TenantProfileForm({
   onSave,
   isMutating,
 }: TenantProfileFormProps) {
+  const tAddons = useTranslations("admin.tenantProfile.addons");
   // Form state
   const [name, setName] = useState(tenant.name);
   const [contactEmail, setContactEmail] = useState(tenant.contact_email);
@@ -157,6 +159,10 @@ export function TenantProfileForm({
   const [preferredLocale, setPreferredLocale] = useState<"de" | "en" | null>(
     tenant.preferred_locale ?? null
   );
+  // OPH-104: Price Lookup add-on flag
+  const [priceLookupEnabled, setPriceLookupEnabled] = useState(
+    tenant.price_lookup_enabled
+  );
   // Track whether the user manually edited price fields (to trigger confirmation on model switch)
   const billingPricesManuallyEdited = useRef(false);
   // Pending billing model change (for confirmation dialog)
@@ -192,6 +198,8 @@ export function TenantProfileForm({
     );
     // OPH-99: Reset language preference
     setPreferredLocale(tenant.preferred_locale ?? null);
+    // OPH-104: Reset price lookup flag
+    setPriceLookupEnabled(tenant.price_lookup_enabled);
     billingPricesManuallyEdited.current = false;
   }, [tenant]);
 
@@ -234,6 +242,8 @@ export function TenantProfileForm({
       cost_per_order: parseFee(costPerOrder),
       // OPH-99: Tenant-level language preference (null clears it).
       preferred_locale: preferredLocale,
+      // OPH-104: Price Lookup add-on flag.
+      price_lookup_enabled: priceLookupEnabled,
     };
     await onSave(data);
   };
@@ -267,6 +277,19 @@ export function TenantProfileForm({
     async (logoUrl: string | null): Promise<boolean> => {
       const result = await onSave({ logo_url: logoUrl });
       return !!result;
+    },
+    [onSave]
+  );
+
+  // OPH-104: Toggle the price-lookup flag with immediate persistence (no Save click)
+  const handlePriceLookupToggle = useCallback(
+    async (next: boolean) => {
+      setPriceLookupEnabled(next);
+      const result = await onSave({ price_lookup_enabled: next });
+      if (!result) {
+        // Revert on save failure
+        setPriceLookupEnabled(!next);
+      }
     },
     [onSave]
   );
@@ -752,6 +775,34 @@ export function TenantProfileForm({
                 dieses Mandanten. Einzelne Benutzer können diese
                 Voreinstellung überschreiben.
               </p>
+            </div>
+          </div>
+
+          {/* OPH-104: Add-ons section (Price Lookup feature flag) */}
+          <div className="rounded-lg border p-4 space-y-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Tag className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">
+                {tAddons("sectionTitle")}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5 pr-4">
+                <Label htmlFor="price-lookup-enabled" className="text-sm">
+                  {tAddons("priceLookupLabel")}
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {tAddons("priceLookupDescription")}
+                </p>
+              </div>
+              <Switch
+                id="price-lookup-enabled"
+                checked={priceLookupEnabled}
+                onCheckedChange={handlePriceLookupToggle}
+                aria-label={tAddons("priceLookupAriaLabel")}
+                disabled={isMutating}
+              />
             </div>
           </div>
 
