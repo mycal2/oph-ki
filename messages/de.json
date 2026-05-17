@@ -265,6 +265,17 @@
       "savedDialogDescription": "Damit die neue Sprache überall angewendet wird, laden Sie die Seite bitte neu.",
       "savedDialogReload": "Seite neu laden",
       "savedDialogLater": "Später"
+    },
+    "priceLookup": {
+      "title": "Price Lookup Add-on",
+      "description": "Kundenspezifische Rabattsätze und automatische Preisermittlung während der Extraktion.",
+      "statusLabel": "Status:",
+      "statusActive": "Aktiv",
+      "statusInactive": "Inaktiv",
+      "helperActive": "Das Price Lookup Add-on ist für Ihren Mandanten aktiv. Rabattsätze und Preisermittlung sind verfügbar.",
+      "helperInactive": "Das Price Lookup Add-on ist nicht aktiv. Wenden Sie sich an Ihren Plattform-Administrator, um es zu aktivieren.",
+      "loadError": "Status konnte nicht geladen werden.",
+      "loadConnectionError": "Verbindungsfehler beim Laden des Status."
     }
   },
   "admin": {
@@ -276,6 +287,14 @@
     "reports": {
       "dateRangePlaceholder": "Zeitraum wählen",
       "dateRangeAriaLabel": "Zeitraum auswählen"
+    },
+    "tenantProfile": {
+      "addons": {
+        "sectionTitle": "Add-ons",
+        "priceLookupLabel": "Price Lookup",
+        "priceLookupDescription": "Aktiviert kundenspezifische Rabattsätze und automatische Preisermittlung während der Extraktion.",
+        "priceLookupAriaLabel": "Price Lookup Add-on aktivieren"
+      }
     }
   },
   "dashboard": {

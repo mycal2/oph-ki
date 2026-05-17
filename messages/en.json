@@ -265,6 +265,17 @@
       "savedDialogDescription": "Reload the page so the new language is applied everywhere.",
       "savedDialogReload": "Reload page",
       "savedDialogLater": "Later"
+    },
+    "priceLookup": {
+      "title": "Price Lookup Add-on",
+      "description": "Customer-specific discount rates and automatic price lookup during extraction.",
+      "statusLabel": "Status:",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "helperActive": "The Price Lookup add-on is active for your tenant. Discount rates and price lookup are available.",
+      "helperInactive": "The Price Lookup add-on is not active. Contact your platform administrator to enable it.",
+      "loadError": "Status could not be loaded.",
+      "loadConnectionError": "Connection error while loading the status."
     }
   },
   "admin": {
@@ -276,6 +287,14 @@
     "reports": {
       "dateRangePlaceholder": "Select period",
       "dateRangeAriaLabel": "Select date range"
+    },
+    "tenantProfile": {
+      "addons": {
+        "sectionTitle": "Add-ons",
+        "priceLookupLabel": "Price Lookup",
+        "priceLookupDescription": "Enables customer-specific discount rates and automatic price lookup during extraction.",
+        "priceLookupAriaLabel": "Enable Price Lookup add-on"
+      }
     }
   },
   "dashboard": {

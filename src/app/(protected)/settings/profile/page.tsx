@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { TenantLogoUpload } from "@/components/tenant-logo-upload";
 import { TenantLanguageSettings } from "@/components/tenant-language-settings";
 import { UserLanguageSettings } from "@/components/user-language-settings";
+import { TenantPriceLookupStatus } from "@/components/tenant-price-lookup-status";
 import { useCurrentUserRole } from "@/hooks/use-current-user-role";
 import { createClient } from "@/lib/supabase/client";
 import type { ApiResponse } from "@/lib/types";
@@ -27,6 +28,12 @@ export default function TenantProfileSettingsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const isTenantAdmin = role === "tenant_admin" || role === "platform_admin";
+  // OPH-104: Price Lookup status card is only meaningful for tenant users with a
+  // real tenant context. Platform admins viewing their own settings page don't
+  // have a meaningful tenant_id (BUG-3); sales reps shouldn't see tenant-level
+  // add-on info (BUG-4).
+  const showPriceLookupStatus =
+    role === "tenant_admin" || role === "tenant_user";
 
   // Fetch tenant ID and current logo
   useEffect(() => {
@@ -174,6 +181,9 @@ export default function TenantProfileSettingsPage() {
 
         {/* OPH-100: Personal language override — every authenticated user can edit. */}
         <UserLanguageSettings />
+
+        {/* OPH-104: Price Lookup add-on status (read-only — tenant users only) */}
+        {showPriceLookupStatus && <TenantPriceLookupStatus />}
       </div>
     );
   }
@@ -211,6 +221,9 @@ export default function TenantProfileSettingsPage() {
 
       {/* OPH-100: Personal language override — every authenticated user can edit. */}
       <UserLanguageSettings />
+
+      {/* OPH-104: Price Lookup add-on status (read-only — only platform admins can toggle) */}
+      {showPriceLookupStatus && <TenantPriceLookupStatus />}
     </div>
   );
 }

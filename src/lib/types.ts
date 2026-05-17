@@ -54,6 +54,8 @@ export interface Tenant {
   excel_sheet_name: string | null;
   /** OPH-99: Tenant-level UI language preference. NULL = not set, falls back to system default. */
   preferred_locale: "de" | "en" | null;
+  /** OPH-104: Price Lookup add-on flag. When true, discount-rate UI + extraction lookup are active. */
+  price_lookup_enabled: boolean;
 }
 
 export interface UserProfile {

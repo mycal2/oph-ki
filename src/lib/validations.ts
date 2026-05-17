@@ -622,6 +622,8 @@ export const updateTenantSchema = z.object({
     })
     .nullable()
     .optional(),
+  /** OPH-104: Price Lookup add-on flag. Platform-admin only. */
+  price_lookup_enabled: z.boolean().optional(),
 });
 
 /**

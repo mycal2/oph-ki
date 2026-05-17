@@ -115,6 +115,12 @@
 | OPH-101 | Full i18n Coverage (Tenant + Salesforce App) | In Progress | [OPH-101-full-i18n-coverage.md](OPH-101-full-i18n-coverage.md) | 2026-05-08 |
 | OPH-102 | Invite Link Expiration UX | Deployed | [OPH-102-invite-link-expiration.md](OPH-102-invite-link-expiration.md) | 2026-05-11 |
 | OPH-103 | Localized Date Picker (Replace Native `<input type="date">`) | In Review | [OPH-103-localized-date-picker.md](OPH-103-localized-date-picker.md) | 2026-05-11 |
+| OPH-104 | Tenant Price Lookup Feature Flag | In Review | [OPH-104-price-lookup-feature-flag.md](OPH-104-price-lookup-feature-flag.md) | 2026-05-17 |
+| OPH-105 | Article RRP (Recommended Retail Price) Field | Planned | [OPH-105-article-rrp-field.md](OPH-105-article-rrp-field.md) | 2026-05-17 |
+| OPH-106 | Customer Discount Rates Management | Planned | [OPH-106-customer-discount-rates.md](OPH-106-customer-discount-rates.md) | 2026-05-17 |
+| OPH-107 | Discount Rate Excel Export & Import | Planned | [OPH-107-discount-rate-excel-export-import.md](OPH-107-discount-rate-excel-export-import.md) | 2026-05-17 |
+| OPH-108 | Price Lookup in AI Extraction | Planned | [OPH-108-price-lookup-in-extraction.md](OPH-108-price-lookup-in-extraction.md) | 2026-05-17 |
+| OPH-109 | Discounted Price ERP Export Variable | Planned | [OPH-109-discounted-price-erp-variable.md](OPH-109-discounted-price-erp-variable.md) | 2026-05-17 |
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-104
+## Next Available ID: OPH-110
