@@ -1018,6 +1018,7 @@ export interface ArticleCatalogItem {
 export interface ArticleImportResult {
   created: number;
   updated: number;
+  unchanged: number;
   skipped: number;
   errors: string[];
 }
