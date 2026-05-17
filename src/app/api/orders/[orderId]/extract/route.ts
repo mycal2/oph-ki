@@ -10,6 +10,7 @@ import { extractOrderData } from "@/lib/claude-extraction";
 import { normalizeUnits } from "@/lib/unit-normalization";
 import { matchArticleNumbers } from "@/lib/article-matching";
 import { matchCustomerNumber } from "@/lib/customer-matching";
+import { priceLookupForOrder } from "@/lib/price-lookup";
 import { getMappingsForDealer, applyMappings, formatMappingsForPrompt } from "@/lib/dealer-mappings";
 import { mimeTypeToFormatType, getColumnMappingProfile, formatColumnMappingForPrompt } from "@/lib/column-mappings";
 import { sendTrialResultEmail, sendTrialFailureEmail, sendOrderResultEmail, sendOrderFailureEmail, sendPlatformErrorNotification } from "@/lib/postmark";
@@ -334,14 +335,17 @@ export async function POST(
     const orderSubject = (order.subject as string | null) ?? null;
 
     // --- OPH-94: Fetch tenant's Excel sheet filter ---
+    // --- OPH-108: Capture price_lookup_enabled at job start (mid-flight toggles must not affect this job) ---
     let excelSheetName: string | null = null;
+    let priceLookupEnabled = false;
     if (tenantId) {
       const { data: tenantRow } = await adminClient
         .from("tenants")
-        .select("excel_sheet_name")
+        .select("excel_sheet_name, price_lookup_enabled")
         .eq("id", tenantId)
         .single();
       excelSheetName = (tenantRow?.excel_sheet_name as string) ?? null;
+      priceLookupEnabled = (tenantRow?.price_lookup_enabled as boolean) ?? false;
     }
 
     // --- Call Claude extraction ---
@@ -752,15 +756,55 @@ export async function POST(
         };
       }
 
+      // --- OPH-108: Price lookup (between customer matching and persistence) ---
+      // Only runs when the tenant has price_lookup_enabled = true.
+      // Enriches line items with discounted_price + price_lookup_reason.
+      // If any line item fails to resolve, the order is moved to "clarification"
+      // with a structured Klärung note. Successfully resolved items keep their prices.
+      let priceLookupClarification: { status: "clarification"; clarification_note: string } | null = null;
+      if (priceLookupEnabled && tenantId) {
+        try {
+          const lookupResult = await priceLookupForOrder({
+            tenantId,
+            extractedData: finalExtractedData,
+            adminClient,
+          });
+          finalExtractedData = lookupResult.extractedData;
+          if (!lookupResult.allResolved && lookupResult.clarificationNote) {
+            priceLookupClarification = {
+              status: "clarification",
+              clarification_note: lookupResult.clarificationNote,
+            };
+          }
+        } catch (priceLookupError) {
+          // Don't fail extraction outright, but DO surface the problem:
+          // route the order to Klärung with a generic note so an operator
+          // can investigate, rather than silently shipping an order without
+          // discounted prices. Without this, a transient DB error would
+          // produce a misleading "extracted" status with no warning.
+          console.error("Error during price lookup:", priceLookupError);
+          priceLookupClarification = {
+            status: "clarification",
+            clarification_note:
+              "Preisermittlung fehlgeschlagen: technischer Fehler bei der Rabattabfrage. Bitte erneut extrahieren oder den Support kontaktieren.",
+          };
+        }
+      }
+
       // --- Save extracted data ---
+      const finalStatus = priceLookupClarification?.status ?? "extracted";
       await adminClient
         .from("orders")
         .update({
           extraction_status: "extracted",
           extracted_data: finalExtractedData,
           extraction_error: null,
-          status: "extracted",
+          status: finalStatus,
           has_unmapped_articles: hasUnmappedArticles,
+          // OPH-108: persist clarification note when price lookup couldn't resolve all line items
+          ...(priceLookupClarification
+            ? { clarification_note: priceLookupClarification.clarification_note }
+            : {}),
           ...aiDealerUpdate,
           ...emlSubjectUpdate,
         })
@@ -994,6 +1038,10 @@ export async function POST(
                   lineItems,
                   csvContent,
                   attachmentFilename,
+                  // OPH-108: If price lookup couldn't resolve all line items,
+                  // surface the Klärung note in the email so the recipient
+                  // knows action is needed.
+                  clarificationNote: priceLookupClarification?.clarification_note ?? null,
                 });
               } catch (err) {
                 console.error("Failed to send order result email:", err);

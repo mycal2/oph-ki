@@ -119,7 +119,7 @@
 | OPH-105 | Article RRP (Recommended Retail Price) Field | In Progress | [OPH-105-article-rrp-field.md](OPH-105-article-rrp-field.md) | 2026-05-17 |
 | OPH-106 | Customer Discount Rates Management | In Review | [OPH-106-customer-discount-rates.md](OPH-106-customer-discount-rates.md) | 2026-05-17 |
 | OPH-107 | Discount Rate Excel Export & Import | In Review | [OPH-107-discount-rate-excel-export-import.md](OPH-107-discount-rate-excel-export-import.md) | 2026-05-17 |
-| OPH-108 | Price Lookup in AI Extraction | Planned | [OPH-108-price-lookup-in-extraction.md](OPH-108-price-lookup-in-extraction.md) | 2026-05-17 |
+| OPH-108 | Price Lookup in AI Extraction | In Progress | [OPH-108-price-lookup-in-extraction.md](OPH-108-price-lookup-in-extraction.md) | 2026-05-17 |
 | OPH-109 | Discounted Price ERP Export Variable | Planned | [OPH-109-discounted-price-erp-variable.md](OPH-109-discounted-price-erp-variable.md) | 2026-05-17 |
 <!-- Add features above this line -->
 

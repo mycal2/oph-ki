@@ -292,6 +292,20 @@ export interface CanonicalAddress {
   country: string | null;
 }
 
+/**
+ * OPH-108: Per-line-item outcome of the price-lookup step.
+ *
+ * - "ok": discounted_price is populated
+ * - any other value: discounted_price is null, the order goes to clarification
+ */
+export type PriceLookupReason =
+  | "ok"
+  | "customer_not_identified"
+  | "article_not_matched"
+  | "article_not_in_catalog"
+  | "article_missing_rrp"
+  | "no_discount_rate";
+
 export interface CanonicalLineItem {
   position: number;
   article_number: string | null;
@@ -307,6 +321,16 @@ export interface CanonicalLineItem {
   article_number_source?: "extracted" | "catalog_match" | "normalized_match" | "manual" | null;
   /** OPH-40: Human-readable reason for catalog match (German). */
   article_number_match_reason?: string | null;
+  /**
+   * OPH-108: Discounted price after RRP × (1 − discount_rate / 100).
+   * Null when price lookup is skipped (flag disabled) or this line item failed to resolve.
+   */
+  discounted_price?: number | null;
+  /**
+   * OPH-108: Resolution outcome of the price-lookup step for this line item.
+   * Absent when price lookup was skipped (flag disabled or feature off for tenant).
+   */
+  price_lookup_reason?: PriceLookupReason;
 }
 
 export interface CanonicalSender {

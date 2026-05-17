@@ -1,6 +1,6 @@
 # OPH-108: Price Lookup in AI Extraction
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-05-17
 **Last Updated:** 2026-05-17
 
@@ -62,7 +62,121 @@ After AI extraction produces line items with matched article numbers and a match
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Overview
+OPH-108 inserts a new **price-lookup step** into the existing extraction pipeline, between customer matching (OPH-47) and the final `extracted_data` write. The step enriches each line item with a `discounted_price` and aggregates any per-line lookup failures into a structured Klärung note. No new tables, no new routes — everything plugs into the existing extract route.
+
+### Integration Point in Pipeline
+
+```
+extract/route.ts current flow:
+  1. Fetch order + files
+  2. Run Claude extraction → canonical JSON
+  3. matchArticleNumbers()     ← line 611
+  4. matchCustomerNumber()      ← line 710
+  5. (NEW) priceLookup()        ← inserted here
+  6. Compute confidence
+  7. UPDATE orders.extracted_data + status   ← line 759
+```
+
+The step runs only when `tenant.price_lookup_enabled = true`; otherwise it's a no-op and the line items are written unchanged.
+
+### New Helper Module
+
+```
+src/lib/price-lookup.ts
+  ├─ priceLookupForOrder(input):
+  │   ├─ input: { tenantId, extractedData, supabaseAdmin }
+  │   └─ output: { extractedData, allResolved, unresolvedItems[] }
+  └─ One internal helper resolveLineItem() per line.
+```
+
+A single function — pure (no I/O after the lookup queries). The extract route calls it, gets back the enriched JSON + a verdict, and decides whether to move to Klärung.
+
+### Lookup Algorithm (per line item)
+
+```
+Given a line_item with article_number and a matched customer_id:
+
+1. If !customer_id:                    → unresolved, reason="customer_not_identified"
+2. If !article_number:                 → unresolved, reason="article_not_matched"
+3. Find article in article_catalog WHERE
+     tenant_id = T AND article_number = N
+   If not found:                       → unresolved, reason="article_not_in_catalog"
+4. If article.rrp IS NULL:             → unresolved, reason="article_missing_rrp"
+5. Look up override:
+     customer_article_discounts WHERE
+       tenant_id=T AND customer_id=C AND article_id=A
+   If found:                            → effective_rate = override.discount_rate
+6. Else look up default:
+     customer_default_discounts WHERE
+       tenant_id=T AND customer_id=C
+   If found:                            → effective_rate = default.discount_rate
+7. Else:                                → unresolved, reason="no_discount_rate"
+8. discounted_price = round(article.rrp × (1 − rate/100), 4)
+```
+
+### Query Batching
+
+To stay under the 500 ms budget for orders with many line items:
+
+| Query | Scope | Notes |
+|-------|-------|-------|
+| `article_catalog` WHERE `tenant_id=T AND article_number IN (...)` | One batch SELECT for all line items | Already needed by OPH-40 — can reuse the matched articles cache if available, else one extra query. |
+| `customer_article_discounts` WHERE `tenant_id=T AND customer_id=C AND article_id IN (...)` | One batch SELECT for all overrides for this customer + this batch of articles | Single query, indexed by `(tenant_id, customer_id)`. |
+| `customer_default_discounts` WHERE `tenant_id=T AND customer_id=C` | Single row, single query | |
+
+Total: 3 SELECTs regardless of line-item count. For 50-line orders this stays well under 500 ms.
+
+### Data Shape Changes
+
+**CanonicalLineItem** gains:
+```
+discounted_price: number | null
+price_lookup_reason?: "ok" | "customer_not_identified" | "article_not_matched"
+                     | "article_not_in_catalog" | "article_missing_rrp"
+                     | "no_discount_rate"
+```
+
+`discounted_price` is `null` whenever resolution failed. The reason is stored on the line so the UI can display it later (and to help build the Klärung note).
+
+### Klärung Note Format
+
+When any line item is unresolved, the extract route sets:
+- `order.status = "clarification"`
+- `order.clarification_note = formatted multi-line string`
+
+```
+Beispiel-Klärungsnotiz:
+
+Preisermittlung unvollständig:
+- Position 1, Art.Nr. 142.1EM: Kein Rabattsatz für diesen Kunden hinterlegt.
+- Position 3, Art.Nr. 108/060HD: Artikel hat keinen UVP.
+- Position 7: Artikel nicht im Katalog gefunden.
+```
+
+The note is built from the structured `unresolvedItems[]` list. Capped at 500 chars (existing constraint); if exceeded, truncate with "…und N weitere".
+
+### Notification
+
+A Klärung notification email is fired via the existing `sendOrderNotification()` path (OPH-13/OPH-93) only when the status transitions to `clarification` due to price lookup. No new email template — reuses the existing clarification email.
+
+### Tech Decisions
+
+| Decision | Choice | Reason |
+|----------|--------|--------|
+| Where to hook in | Inline in `extract/route.ts` after customer matching | Minimal indirection; price lookup is conceptually part of extraction. |
+| Single helper module | `src/lib/price-lookup.ts` | Keeps the route file from growing further; pure function is easy to unit-test. |
+| Failure mode | One Klärung per order (not per line) | Matches existing flow (OPH-93). Per-line failures are listed inside the note. |
+| Re-extraction support | None special needed | The new step runs every time extraction runs; current discount data is always used. |
+| Performance budget | 3 batched SELECTs total | Beats the 500 ms acceptance criterion comfortably. |
+| Flag check timing | Read `tenant.price_lookup_enabled` at job start | Acceptance criterion: mid-flight toggles don't affect running jobs. |
+
+### New Packages
+None.
+
+### No DB Changes
+Reuses tables from OPH-105/106. No new columns; `discounted_price` lives inside the existing `orders.extracted_data` JSON blob.
 
 ## QA Test Results
 _To be added by /qa_
