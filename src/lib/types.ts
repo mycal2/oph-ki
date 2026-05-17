@@ -1008,6 +1008,8 @@ export interface ArticleCatalogItem {
   ref_no: string | null;
   gtin: string | null;
   keywords: string | null;
+  /** OPH-105: Unverbindliche Preisempfehlung (UVP) in EUR. NULL = not set; 0 = explicit €0.00. */
+  rrp: number | null;
   created_at: string;
   updated_at: string;
 }

@@ -117,6 +117,8 @@ export async function PUT(
     if (fields.ref_no !== undefined) updateData.ref_no = fields.ref_no;
     if (fields.gtin !== undefined) updateData.gtin = fields.gtin;
     if (fields.keywords !== undefined) updateData.keywords = fields.keywords;
+    // OPH-105: optional UVP (recommended retail price)
+    if (fields.rrp !== undefined) updateData.rrp = fields.rrp;
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json(
