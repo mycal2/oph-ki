@@ -68,6 +68,9 @@ const AVAILABLE_VARIABLES = [
   { path: "this.unit", description: "Einheit (in #each)" },
   { path: "this.unit_price", description: "Stückpreis (in #each)" },
   { path: "this.total_price", description: "Gesamtpreis (in #each)" },
+  // OPH-109: discounted_price variable (always shown; emits empty when
+  // tenant.price_lookup_enabled = false or per-line lookup failed).
+  { path: "this.discounted_price", description: "Rabattierter Preis (in #each)" },
 ];
 
 export function XmlTemplateEditor({ template, onChange }: XmlTemplateEditorProps) {

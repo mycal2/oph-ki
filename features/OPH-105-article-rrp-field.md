@@ -1,6 +1,6 @@
 # OPH-105: Article RRP (Recommended Retail Price) Field
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-05-17
 **Last Updated:** 2026-05-17
 

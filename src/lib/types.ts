@@ -292,6 +292,20 @@ export interface CanonicalAddress {
   country: string | null;
 }
 
+/**
+ * OPH-108: Per-line-item outcome of the price-lookup step.
+ *
+ * - "ok": discounted_price is populated
+ * - any other value: discounted_price is null, the order goes to clarification
+ */
+export type PriceLookupReason =
+  | "ok"
+  | "customer_not_identified"
+  | "article_not_matched"
+  | "article_not_in_catalog"
+  | "article_missing_rrp"
+  | "no_discount_rate";
+
 export interface CanonicalLineItem {
   position: number;
   article_number: string | null;
@@ -307,6 +321,16 @@ export interface CanonicalLineItem {
   article_number_source?: "extracted" | "catalog_match" | "normalized_match" | "manual" | null;
   /** OPH-40: Human-readable reason for catalog match (German). */
   article_number_match_reason?: string | null;
+  /**
+   * OPH-108: Discounted price after RRP × (1 − discount_rate / 100).
+   * Null when price lookup is skipped (flag disabled) or this line item failed to resolve.
+   */
+  discounted_price?: number | null;
+  /**
+   * OPH-108: Resolution outcome of the price-lookup step for this line item.
+   * Absent when price lookup was skipped (flag disabled or feature off for tenant).
+   */
+  price_lookup_reason?: PriceLookupReason;
 }
 
 export interface CanonicalSender {
@@ -815,6 +839,12 @@ export interface OrderPreviewData {
   currency: string | null;
   notes: string | null;
   extractedAt: string | null;
+  /**
+   * OPH-109: Tenant feature-flag indicating whether price-lookup (and therefore
+   * `discounted_price` per line item) is meaningful for this order. The preview
+   * UI uses this to conditionally show the "Rabattierter Preis" column.
+   */
+  priceLookupEnabled: boolean;
 }
 
 /** API response shape for preview endpoint. */
@@ -1018,6 +1048,7 @@ export interface ArticleCatalogItem {
 export interface ArticleImportResult {
   created: number;
   updated: number;
+  unchanged: number;
   skipped: number;
   errors: string[];
 }
@@ -1053,6 +1084,8 @@ export interface CustomerCatalogItem {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  /** OPH-106: Tenant's price_lookup_enabled flag. Populated by GET /api/customers/[id] only. */
+  tenant_price_lookup_enabled?: boolean;
 }
 
 /** Result summary from a bulk customer import (CSV/Excel). */
@@ -1205,4 +1238,63 @@ export interface SalesforceOrderDetailResponse {
   deliveryAddress: CanonicalAddress | null;
   notes: string | null;
   senderCompanyName: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// OPH-106: Customer Discount Rates
+// ---------------------------------------------------------------------------
+
+/** Raw discount data for a single customer: default rate + explicit overrides. */
+export interface CustomerDiscounts {
+  /** Customer-level default discount rate in percent (0–100), or null if unset. */
+  default: number | null;
+  /** Map of article_id → explicit override rate in percent (0–100). */
+  overrides: Record<string, number>;
+}
+
+/** Source of a row's effective discount rate. */
+export type DiscountSource = "default" | "override" | "none";
+
+/** A single row in the customer discount table — one per article. */
+export interface CustomerDiscountTableRow {
+  article_id: string;
+  article_number: string;
+  article_name: string;
+  /** Recommended retail price (OPH-105) — null if not set on the article. */
+  rrp: number | null;
+  /** Resolved effective rate: override → default → null. */
+  effective_rate: number | null;
+  /** Which source produced the effective rate. */
+  source: DiscountSource;
+  /** Computed discounted price = rrp * (1 - effective_rate / 100). Null if rrp or rate missing. */
+  discounted_price: number | null;
+}
+
+/** Paginated server response for the discount table. */
+export interface CustomerDiscountTableResponse {
+  rows: CustomerDiscountTableRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  /** Echoed back so the client can show the current customer-default in the header. */
+  default_rate: number | null;
+}
+
+/**
+ * OPH-107: Result summary from a discount-rate Excel import.
+ *
+ * The import is update-only: only rows that have a valid record ID and a
+ * valid discount rate (0–100 with up to two decimals) are applied. Everything
+ * else is either skipped silently (blank ID / blank rate) or counted as an
+ * error (invalid ID, invalid rate, non-existent record).
+ */
+export interface DiscountImportResult {
+  /** Rows successfully UPDATEd. */
+  updated: number;
+  /** Rows ignored silently (blank ID or blank rate). */
+  skipped: number;
+  /** Row-level error messages, e.g. "Zeile 5: Ungueltiger Rabattsatz". */
+  errors: string[];
+  /** Total number of errored rows (may exceed errors.length when the list is capped). */
+  total_errors: number;
 }

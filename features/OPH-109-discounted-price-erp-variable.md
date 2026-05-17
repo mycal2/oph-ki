@@ -42,7 +42,63 @@ Once OPH-108 populates `discounted_price` on extracted line items, tenant admins
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Overview
+OPH-109 is a UI surfacing task on top of OPH-108. The `discounted_price` field already exists on `CanonicalLineItem` (added by OPH-108) and is populated by the price-lookup step. This feature exposes it in three places: (1) the export-value resolver so it can flow to CSV/XML/JSON exports, (2) the three variable-list UIs so tenant admins can map it, and (3) the order review line-items table so users can verify the price before export.
+
+No new tables, no new APIs, no new packages. Pure additive UI/library glue.
+
+### Touch Points
+
+```
+Export resolver:
+  src/lib/export-utils.ts → getLineItemValue()   ← add "discounted_price" case
+
+Variable lists (the 3 mapping UIs):
+  src/components/admin/field-mapper-panel.tsx       ← add to VARIABLE_GROUPS (line items)
+  src/components/admin/erp-xml-template-editor.tsx  ← add to AVAILABLE_VARIABLES
+  src/components/admin/erp-csv-column-builder.tsx   ← add to SOURCE_FIELD_SUGGESTIONS
+
+Review UI:
+  src/components/orders/preview/line-items-table.tsx ← add "Rabattierter Preis" column
+                                                       (conditional on price_lookup_enabled)
+
+i18n:
+  messages/de.json + messages/en.json  ← discountedPrice label
+```
+
+### Feature-Flag Gating
+
+The variable must only appear in the mapping UIs when the **tenant** has `price_lookup_enabled = true`. Two design choices here:
+
+- **Variable list (admin pages):** The variable list arrays are currently static module constants. To gate them, the components must read the flag and filter at render time. Since these editors are platform-admin tools that may serve multiple tenants (shared ERP configs from OPH-29), the cleanest gate is on the **tenant the config belongs to** (or, for shared configs, "any tenant using this config has the flag").
+
+  Pragmatic decision: **always show the variable** in the admin UIs, with a tooltip explaining "only populates when the tenant's price_lookup add-on is active." This avoids the cross-tenant flag-resolution problem on the admin side, and the variable simply emits empty when the flag is off (matches AC: "exports emit an empty value").
+
+- **Review UI (tenant pages):** Easy — the tenant is unambiguous. Hide the column when the tenant's flag is false.
+
+### Display Format
+
+In the review table: `Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" })` — same helper used for RRP in the article catalog (OPH-105). Null shows as "—" (matching the existing column convention).
+
+In exports: numeric value with the tenant's `decimal_separator` from `erp_configs` (already handled generically by the export-utils for unit_price/total_price). No special-case formatting needed.
+
+### Tech Decisions
+
+| Decision | Choice | Reason |
+|----------|--------|--------|
+| Variable visibility in admin UIs | Always visible with explanatory tooltip | Avoids resolving tenant flag from inside shared configs; null-on-export degrades gracefully. |
+| Variable visibility in review UI | Strictly flag-gated | Tenant context is unambiguous; cleaner UX. |
+| Variable path in field mapper | `this.discounted_price` (line items) | Matches existing per-item variable naming. |
+| Variable path in CSV builder | `items[].discounted_price` | Matches existing items[] convention. |
+| Display format | Intl.NumberFormat de-DE EUR | Consistent with RRP display in OPH-105. |
+| Null handling | "—" in UI, empty in CSV, null/omitted in JSON/XML | Matches existing nullable-field conventions. |
+
+### New Packages
+None.
+
+### No DB Changes
+Reuses the `discounted_price` field already on `CanonicalLineItem` from OPH-108.
 
 ## QA Test Results
 _To be added by /qa_

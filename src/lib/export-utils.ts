@@ -32,6 +32,13 @@ export function getLineItemValue(item: CanonicalLineItem, field: string): string
       return item.total_price !== null ? String(item.total_price) : "";
     case "currency":
       return item.currency ?? "";
+    case "discounted_price":
+      // OPH-109: Discounted price from price-lookup step (OPH-108).
+      // Null when lookup was skipped (price_lookup_enabled = false) or failed.
+      // Emits empty string in CSV, matching unit_price/total_price convention.
+      return item.discounted_price !== null && item.discounted_price !== undefined
+        ? String(item.discounted_price)
+        : "";
     default:
       return "";
   }

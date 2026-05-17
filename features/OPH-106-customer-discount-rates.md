@@ -1,6 +1,6 @@
 # OPH-106: Customer Discount Rates Management
 
-## Status: Planned
+## Status: In Review
 **Created:** 2026-05-17
 **Last Updated:** 2026-05-17
 
@@ -65,7 +65,119 @@ Both tables have DB migrations added by the backend skill.
 <!-- Sections below are added by subsequent skills -->
 
 ## Tech Design (Solution Architect)
-_To be added by /architecture_
+
+### Overview
+OPH-106 introduces a new tabbed customer detail page so the existing flat customer form has room for the discount-rates management UI. Two new DB tables hold the customer-default and per-article overrides. The "effective rate" per article is computed in memory at view time — not persisted — so adding a new article to the catalog automatically inherits the default without backfill.
+
+### Component Structure
+
+```
+Customer Catalog Page  (existing — unchanged)
+  └─ "Bearbeiten" row action → now navigates to Customer Detail Page (instead of opening dialog)
+
+Customer Detail Page  ← NEW (mirrors admin tenant detail page pattern)
+  ├─ Header (customer number + company name + Back)
+  └─ Tabs
+      ├─ Tab: "Profil"        — existing customer-form fields, moved out of dialog
+      └─ Tab: "Rabatte"       ← NEW (only visible if tenant.price_lookup_enabled = true)
+          ├─ Default Discount Rate input  (single % field + Save/Delete buttons)
+          └─ Article Discount Table
+              ├─ Columns: Art.Nr | Bezeichnung | UVP | Eff. Rabatt % | Disk. Preis | Quelle
+              ├─ Pagination (server-side, 50/page — matches article catalog)
+              ├─ Row click → opens "Override" mini-dialog (set / clear)
+              └─ Quelle column: "Standard" (default) | "Override" (explicit) | "—" (none)
+```
+
+The dialog-based customer edit is retired; the existing `CustomerFormDialog` content is reused inside the Profil tab.
+
+### Data Model
+
+**Table: `customer_default_discounts`** (one row per customer who has a default set)
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `tenant_id` | UUID NOT NULL | FK → tenants.id, CASCADE |
+| `customer_id` | UUID NOT NULL | FK → customers.id, CASCADE |
+| `discount_rate` | NUMERIC(5,2) NOT NULL | 0.00 – 100.00, CHECK constraint |
+| `created_at` | TIMESTAMPTZ | default now() |
+| `updated_at` | TIMESTAMPTZ | trigger-updated |
+| **PK** | (tenant_id, customer_id) | |
+
+**Table: `customer_article_discounts`** (one row per explicit override)
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | UUID | PK, default gen_random_uuid() |
+| `tenant_id` | UUID NOT NULL | FK → tenants.id, CASCADE |
+| `customer_id` | UUID NOT NULL | FK → customers.id, CASCADE |
+| `article_id` | UUID NOT NULL | FK → article_catalog.id, CASCADE |
+| `discount_rate` | NUMERIC(5,2) NOT NULL | 0.00 – 100.00, CHECK constraint |
+| `created_at` | TIMESTAMPTZ | default now() |
+| `updated_at` | TIMESTAMPTZ | trigger-updated |
+| **Unique** | (tenant_id, customer_id, article_id) | |
+
+Both tables get RLS policies tenant-scoped on `tenant_id`. Indexes on `(tenant_id, customer_id)` for lookup.
+
+### API Routes (new)
+
+| Route | Purpose |
+|-------|---------|
+| `GET /api/customers/[id]/discounts` | Returns `{ default: number \| null, overrides: Record<articleId, number> }` |
+| `PUT /api/customers/[id]/discount-default` | Body `{ rate: number }` — upserts default |
+| `DELETE /api/customers/[id]/discount-default` | Removes default |
+| `PUT /api/customers/[id]/article-discounts/[articleId]` | Body `{ rate: number }` — upserts override |
+| `DELETE /api/customers/[id]/article-discounts/[articleId]` | Removes override |
+| `GET /api/customers/[id]/discount-table?page=N` | Joined table: articles + effective rate (server-paginated, 50/page) |
+
+The combined `discount-table` endpoint does the JOIN + COALESCE in SQL so the frontend doesn't have to merge three lists in JS.
+
+### Routing
+
+| Path | What it shows |
+|------|---------------|
+| `/settings/customer-catalog` | (existing) list page |
+| `/settings/customer-catalog/[id]` | NEW detail page with Profil + Rabatte tabs |
+| `/settings/customer-catalog/[id]?tab=rabatte` | Deep link to Rabatte tab |
+
+### Computed "Effective Rate" Logic
+
+```
+effective_rate = override_rate IF explicit override exists for (customer, article)
+              ELSE default_rate IF customer default exists
+              ELSE NULL (display "—")
+
+computed_price = rrp × (1 − effective_rate / 100)  IF rrp AND effective_rate exist
+              ELSE NULL (display "—")
+```
+
+This is computed in the SQL query of `discount-table` to keep the frontend simple.
+
+### Tech Decisions
+
+| Decision | Choice | Reason |
+|----------|--------|--------|
+| Detail UI shape | Dedicated page with tabs (not dialog) | Discount table needs more room than a dialog; matches admin tenant detail pattern |
+| Default discount storage | Separate `customer_default_discounts` table (not a column on `customers`) | Keeps `customers` table stable; easy DELETE → "no default" semantics |
+| Effective rate persistence | Computed at view/extraction time, never stored | New articles auto-inherit default — no backfill, no orphans |
+| Pagination | Server-side, 50/page | Matches existing article catalog UX; keeps response sizes bounded for large tenants |
+| Discount rate type | NUMERIC(5,2), CHECK 0–100 | Two decimals is sufficient; DB-level validation prevents bad data |
+| Override delete UX | "Reset to default" button per row | Less destructive language than "Delete"; matches user mental model |
+
+### New Packages
+None required.
+
+### Migration
+```
+supabase/migrations/054_oph106_customer_discount_rates.sql
+- CREATE TABLE customer_default_discounts (PK + RLS)
+- CREATE TABLE customer_article_discounts (Unique constraint + RLS)
+- CHECK constraint: discount_rate BETWEEN 0 AND 100
+- Indexes on (tenant_id, customer_id)
+```
+
+### Dependencies on Other Features
+- **OPH-104 (Price Lookup Flag):** Rabatte tab is hidden unless `tenant.price_lookup_enabled = true`. Wired by reading the flag from app metadata on the page server component.
+- **OPH-105 (RRP):** Computed price column shows "—" if the article has no RRP. Functional even without RRP — just shows the rate.
 
 ## QA Test Results
 _To be added by /qa_

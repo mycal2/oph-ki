@@ -220,6 +220,16 @@
       "extractedTooltip": "Order data has been successfully extracted.",
       "failedLabel": "Error",
       "failedTooltip": "Extraction failed."
+    },
+    "lineItems": {
+      "columnPosition": "#",
+      "columnManufacturerArticleNumber": "Mfr. Art. No.",
+      "columnDealerArticleNumber": "Dealer Art. No.",
+      "columnDescription": "Description",
+      "columnQuantity": "Quantity",
+      "columnUnitPrice": "Unit Price",
+      "columnDiscountedPrice": "Discounted Price",
+      "columnTotal": "Total"
     }
   },
   "settings": {

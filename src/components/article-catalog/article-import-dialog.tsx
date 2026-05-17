@@ -574,6 +574,11 @@ export function ArticleImportDialog({
               <Badge variant="secondary" className="text-blue-700 bg-blue-50">
                 {result.updated} aktualisiert
               </Badge>
+              {result.unchanged > 0 && (
+                <Badge variant="secondary" className="text-gray-700 bg-gray-100">
+                  {result.unchanged} unveraendert
+                </Badge>
+              )}
               {result.skipped > 0 && (
                 <Badge variant="secondary" className="text-yellow-700 bg-yellow-50">
                   {result.skipped} uebersprungen
