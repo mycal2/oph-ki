@@ -569,7 +569,7 @@ export function CustomerDiscountsTab({
 function SourceBadge({ source }: { source: CustomerDiscountTableRow["source"] }) {
   if (source === "override") {
     return (
-      <Badge variant="default" className="bg-indigo-600 hover:bg-indigo-600">
+      <Badge className="bg-indigo-600 text-white hover:bg-indigo-600">
         Override
       </Badge>
     );
