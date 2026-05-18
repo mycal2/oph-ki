@@ -189,23 +189,6 @@ export function ReviewPageHeader({
               Klärung abgeschlossen
             </Button>
           )}
-          {/* OPH-110: Explicit Speichern button — saves immediately, bypassing the 2s debounce. */}
-          {!isReadOnly && orderStatus !== "exported" && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onSave}
-              disabled={anyActionInProgress || autoSaveStatus === "saving"}
-              className="gap-1.5"
-            >
-              {autoSaveStatus === "saving" ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Save className="h-3.5 w-3.5" />
-              )}
-              Speichern
-            </Button>
-          )}
           {/* OPH-90: "Als Geprüft markieren" button */}
           {showCheckButton && (
             <Button
@@ -221,6 +204,23 @@ export function ReviewPageHeader({
                 <ClipboardCheck className="h-3.5 w-3.5" />
               )}
               Als Geprüft markieren
+            </Button>
+          )}
+          {/* OPH-110: Explicit Speichern button — saves immediately, bypassing the 2s debounce. */}
+          {!isReadOnly && orderStatus !== "exported" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onSave}
+              disabled={anyActionInProgress || autoSaveStatus === "saving"}
+              className="gap-1.5"
+            >
+              {autoSaveStatus === "saving" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Save className="h-3.5 w-3.5" />
+              )}
+              Speichern
             </Button>
           )}
           {/* OPH-93: Freigeben is hidden for clarification orders (AC-16) */}
