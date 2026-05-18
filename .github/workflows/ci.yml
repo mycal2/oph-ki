@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, develop, staging]
+  push:
+    branches: [main]
+
+# Cancel in-progress runs when a new commit lands on the same PR/branch.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Lint + Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      # `next build` performs the TypeScript typecheck as part of the build,
+      # so we don't need a separate `tsc --noEmit` step.
+      - name: Build
+        run: npm run build
+        env:
+          # Build-time public env vars. Real values aren't needed for a static
+          # build of a Next.js app that reads them at request time — empty
+          # strings keep the build green without exposing real credentials.
+          NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co"
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: "ci-placeholder"
