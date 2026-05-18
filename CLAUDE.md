@@ -41,6 +41,52 @@ docs/
 
 - `/dealerrule` - Generate structured extraction hints for dealer profiles. Analyzes example order documents (PDF, Excel, CSV) to create precise hints that guide the AI extraction engine. Also creates dealer documentation in `dealerrules/`.
 
+## Multi-Developer Workflow (PR-based, CI-gated)
+
+`main` is protected: direct pushes are blocked, every change ships through a pull request.
+
+### Branch naming
+
+- `feat/OPH-X-short-name` — new features
+- `fix/OPH-X-short-name` — bug fixes
+- `chore/short-name` — non-feature work (CI, deps, docs only)
+- `refactor/OPH-X-short-name` — refactors
+
+### Per-change flow
+
+```bash
+git checkout main && git pull
+git checkout -b feat/OPH-111-something
+# make changes, commit (commit messages still follow `type(OPH-X): description`)
+git push -u origin feat/OPH-111-something
+gh pr create   # PR template auto-loads from .github/pull_request_template.md
+```
+
+### Merge gates (set on `main` branch protection)
+
+- 1 approving review required
+- `Build` CI check must be green (runs `npm run build` — includes TypeScript typecheck)
+- Branch must be up to date with `main` before merge
+- Force pushes and deletions disabled
+- Admins are NOT exempt — applies to everyone
+
+### Conflict avoidance for `features/INDEX.md` and the OPH-X counter
+
+Every feature spec touches `features/INDEX.md` and bumps "Next Available ID". With multiple PRs in flight you will get merge conflicts. Mitigation:
+
+- Reserve the next OPH-X ID in the PR *title* the moment you open the PR. Don't wait — even an empty PR with just the title reserves the slot for reviewers.
+- If two PRs both grab the same ID, the second to merge updates `INDEX.md` to take the next one.
+- `INDEX.md` conflicts are always trivial to resolve: keep both rows, take the higher "Next Available ID".
+
+### CI
+
+`.github/workflows/ci.yml` runs on every PR + push to `main`:
+
+- `npm ci`
+- `npm run build` (TypeScript typecheck included)
+
+`npm run lint` is currently broken (Next 16 + ESLint 9 legacy-config incompatibility) — skipped in CI until the lint setup is migrated to flat config.
+
 ## Feature Tracking
 
 All features tracked in `features/INDEX.md`. Every skill reads it at start and updates it when done. Feature specs live in `features/OPH-X-name.md`.
@@ -56,10 +102,10 @@ All features tracked in `features/INDEX.md`. Every skill reads it at start and u
 ## Build & Test Commands
 
 ```bash
-npm run dev        # Development server (localhost:3000)
-npm run build      # Production build
-npm run lint       # ESLint
+npm run dev        # Development server (http://localhost:3003)
+npm run build      # Production build (TypeScript typecheck included)
 npm run start      # Production server
+# npm run lint     # Currently broken — Next 16 + ESLint 9 flat-config migration pending
 ```
 
 ## Product Context
