@@ -36,6 +36,14 @@ const ARTICLE_NUMBER_HEADERS = new Set([
   "art-nr.",
   "art-nr",
 ]);
+const RRP_HEADERS = new Set([
+  "rrp",
+  "rrp (€)",
+  "rrp (eur)",
+  "uvp",
+  "uvp (€)",
+  "uvp (eur)",
+]);
 
 interface TenantFlagRow {
   id: string;
@@ -263,17 +271,19 @@ export async function POST(
       );
     }
 
-    // Locate the ID, Discount Rate, and Article Number columns by header.
+    // Locate the ID, Discount Rate, Article Number, and RRP columns by header.
     const rawHeaders = rawData[0].map((h) => String(h ?? "").trim());
     let idCol = -1;
     let rateCol = -1;
     let articleNumberCol = -1;
+    let rrpCol = -1;
     for (let i = 0; i < rawHeaders.length; i++) {
       const norm = rawHeaders[i].toLowerCase();
       if (idCol === -1 && ID_HEADERS.has(norm)) idCol = i;
       if (rateCol === -1 && RATE_HEADERS.has(norm)) rateCol = i;
       if (articleNumberCol === -1 && ARTICLE_NUMBER_HEADERS.has(norm))
         articleNumberCol = i;
+      if (rrpCol === -1 && RRP_HEADERS.has(norm)) rrpCol = i;
     }
 
     const missingCols: string[] = [];
@@ -326,7 +336,14 @@ export async function POST(
     let inserted = 0;
     let skipped = 0;
     let totalErrors = 0;
+    let rrpChangesIgnored = 0;
     const errors: string[] = [];
+
+    // OPH-110: Collect (article_number → file_rrp) pairs for RRP-change
+    // detection. RRP edits in the discount sheet are intentionally ignored
+    // (master-data lives in the article catalog), but we count them so the
+    // import dialog can surface a clear notice.
+    const fileRrpByArticleNumber = new Map<string, number>();
 
     interface UpdatePlan {
       rowIndex: number; // 1-based Excel row (header is row 1)
@@ -350,6 +367,21 @@ export async function POST(
         articleNumberCol >= 0
           ? String(cols[articleNumberCol] ?? "").trim()
           : "";
+
+      // OPH-110: Capture file RRP (if present + numeric) so we can compare
+      // against the catalog after the loop and report ignored RRP edits.
+      if (rrpCol >= 0 && rawArticleNumber.length > 0) {
+        const rrpRaw = cols[rrpCol];
+        const rrpNum =
+          typeof rrpRaw === "number"
+            ? rrpRaw
+            : typeof rrpRaw === "string" && rrpRaw.trim().length > 0
+            ? Number(rrpRaw.replace(",", ".").replace(/\s+/g, ""))
+            : null;
+        if (rrpNum !== null && Number.isFinite(rrpNum)) {
+          fileRrpByArticleNumber.set(rawArticleNumber, rrpNum);
+        }
+      }
 
       // BUG-3: Excel cells formatted as "15%" store the underlying value
       // as 0.15. Detect percentage formatting via the cell's `.z` style and
@@ -420,19 +452,9 @@ export async function POST(
       });
     }
 
-    // If nothing to update or insert, return early.
-    if (updatePlans.length === 0 && insertPlans.length === 0) {
-      return NextResponse.json({
-        success: true,
-        data: {
-          updated,
-          inserted,
-          skipped,
-          errors,
-          total_errors: totalErrors,
-        },
-      });
-    }
+    // If nothing to update or insert, still fall through to the RRP-change
+    // detection block below so the user sees the "RRP edits ignored" notice
+    // even when the only edits in the file were RRP changes.
 
     const nowIso = new Date().toISOString();
 
@@ -578,6 +600,43 @@ export async function POST(
       }
     }
 
+    // --- RRP CHANGE DETECTION (read-only — RRP must be edited in article catalog) ---
+    if (fileRrpByArticleNumber.size > 0) {
+      const numbers = Array.from(fileRrpByArticleNumber.keys());
+      const { data: catalogRows, error: catalogErr } = await adminClient
+        .from("article_catalog")
+        .select("article_number, rrp")
+        .eq("tenant_id", tenantId)
+        .in("article_number", numbers);
+
+      if (catalogErr) {
+        console.error(
+          "Error comparing RRP against catalog (non-fatal):",
+          catalogErr.message
+        );
+      } else {
+        for (const row of (catalogRows ?? []) as {
+          article_number: string;
+          rrp: number | string | null;
+        }[]) {
+          const fileRrp = fileRrpByArticleNumber.get(row.article_number);
+          if (fileRrp === undefined) continue;
+          const currentRrp =
+            row.rrp === null
+              ? null
+              : typeof row.rrp === "number"
+              ? row.rrp
+              : Number(row.rrp);
+          if (currentRrp === null || !Number.isFinite(currentRrp)) {
+            // Article currently has no RRP, file provided one — treat as ignored edit.
+            rrpChangesIgnored++;
+          } else if (Math.abs(fileRrp - currentRrp) > 1e-4) {
+            rrpChangesIgnored++;
+          }
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data: {
@@ -586,6 +645,7 @@ export async function POST(
         skipped,
         errors,
         total_errors: totalErrors,
+        rrp_changes_ignored: rrpChangesIgnored,
       },
     });
   } catch (error) {

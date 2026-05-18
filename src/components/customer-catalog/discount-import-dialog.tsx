@@ -318,6 +318,18 @@ export function DiscountImportDialog({
               </div>
             )}
 
+            {(result.rrp_changes_ignored ?? 0) > 0 && (
+              <Alert variant="default" className="border-amber-300 bg-amber-50">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-900">
+                  <strong>
+                    {formatNumber(result.rrp_changes_ignored ?? 0)} UVP-Aenderung(en) ignoriert.
+                  </strong>{" "}
+                  UVP-Werte koennen nur im Artikelkatalog geaendert werden.
+                </AlertDescription>
+              </Alert>
+            )}
+
             {result.updated === 0 &&
               (result.inserted ?? 0) === 0 &&
               result.total_errors === 0 &&

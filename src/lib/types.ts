@@ -1309,4 +1309,6 @@ export interface DiscountImportResult {
   errors: string[];
   /** Total number of errored rows (may exceed errors.length when the list is capped). */
   total_errors: number;
+  /** Count of RRP edits in the file that were ignored — RRP must be edited in the article catalog. */
+  rrp_changes_ignored?: number;
 }

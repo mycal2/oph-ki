@@ -12,7 +12,9 @@ import {
   Tag,
   Download,
   Upload,
+  ExternalLink,
 } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -463,7 +465,19 @@ export function CustomerDiscountsTab({
                             <span className="line-clamp-1">{row.article_name}</span>
                           </TableCell>
                           <TableCell className="hidden md:table-cell text-right tabular-nums">
-                            {formatCurrency(row.rrp)}
+                            {row.rrp === null || row.rrp === undefined ? (
+                              <Link
+                                href={`/settings/article-catalog?search=${encodeURIComponent(row.article_number)}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="inline-flex items-center gap-1 text-xs text-amber-700 hover:underline"
+                                aria-label={`UVP fuer Artikel ${row.article_number} im Artikelkatalog ergaenzen`}
+                              >
+                                UVP fehlt
+                                <ExternalLink className="h-3 w-3" />
+                              </Link>
+                            ) : (
+                              formatCurrency(row.rrp)
+                            )}
                           </TableCell>
                           <TableCell
                             className={`text-right tabular-nums ${
