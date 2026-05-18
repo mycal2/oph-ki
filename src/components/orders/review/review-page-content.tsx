@@ -535,7 +535,13 @@ export function ReviewPageContent({ orderId }: ReviewPageContentProps) {
         <DocumentPreviewPanel orderId={orderId} />
 
         {/* Right: Edit Form */}
-        <OrderEditForm data={reviewData} onChange={handleDataChange} disabled={isReadOnly} />
+        <OrderEditForm
+          data={reviewData}
+          onChange={handleDataChange}
+          disabled={isReadOnly}
+          onSave={handleManualSave}
+          isSaving={autoSaveStatus === "saving"}
+        />
       </div>
 
       {/* Re-extract confirmation dialog */}

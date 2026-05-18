@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Plus, Trash2, AlertTriangle, ChevronDown, ChevronUp, Sparkles, ArrowRightLeft } from "lucide-react";
+import { Plus, Trash2, AlertTriangle, ChevronDown, ChevronUp, Sparkles, ArrowRightLeft, Save, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -58,6 +58,10 @@ interface OrderEditFormProps {
   onChange: (data: CanonicalOrderData) => void;
   /** OPH-96: Disable all inputs when order is locked by another user. */
   disabled?: boolean;
+  /** OPH-110: Explicit save handler — saves immediately. */
+  onSave?: () => void;
+  /** OPH-110: Whether a save is currently in flight. */
+  isSaving?: boolean;
 }
 
 /** Creates an empty address object. */
@@ -91,7 +95,7 @@ function newLineItem(position: number): CanonicalLineItem {
  * Contains header fields, line items table, address sections, totals, and notes.
  * All changes are passed to the parent via onChange for auto-save.
  */
-export function OrderEditForm({ data, onChange, disabled }: OrderEditFormProps) {
+export function OrderEditForm({ data, onChange, disabled, onSave, isSaving }: OrderEditFormProps) {
   const [deliveryOpen, setDeliveryOpen] = useState(false);
   const [billingOpen, setBillingOpen] = useState(false);
 
@@ -427,6 +431,27 @@ export function OrderEditForm({ data, onChange, disabled }: OrderEditFormProps) 
             rows={3}
           />
         </div>
+
+        {/* OPH-110: Explicit Speichern button at the bottom of the form. */}
+        {onSave && (
+          <div className="flex justify-end pt-2 border-t">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onSave}
+              disabled={disabled || isSaving}
+              className="gap-1.5"
+            >
+              {isSaving ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Save className="h-3.5 w-3.5" />
+              )}
+              Speichern
+            </Button>
+          </div>
+        )}
         </fieldset>
       </CardContent>
     </Card>

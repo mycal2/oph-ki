@@ -141,23 +141,6 @@ export function ReviewPageHeader({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {/* OPH-110: Explicit Speichern button — saves immediately, bypassing the 2s debounce. */}
-          {!isReadOnly && orderStatus !== "exported" && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onSave}
-              disabled={anyActionInProgress || autoSaveStatus === "saving"}
-              className="gap-1.5"
-            >
-              {autoSaveStatus === "saving" ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Save className="h-3.5 w-3.5" />
-              )}
-              Speichern
-            </Button>
-          )}
           <Button
             variant="outline"
             size="sm"
@@ -204,6 +187,23 @@ export function ReviewPageHeader({
                 <CircleCheck className="h-3.5 w-3.5" />
               )}
               Klärung abgeschlossen
+            </Button>
+          )}
+          {/* OPH-110: Explicit Speichern button — saves immediately, bypassing the 2s debounce. */}
+          {!isReadOnly && orderStatus !== "exported" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onSave}
+              disabled={anyActionInProgress || autoSaveStatus === "saving"}
+              className="gap-1.5"
+            >
+              {autoSaveStatus === "saving" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Save className="h-3.5 w-3.5" />
+              )}
+              Speichern
             </Button>
           )}
           {/* OPH-90: "Als Geprüft markieren" button */}
