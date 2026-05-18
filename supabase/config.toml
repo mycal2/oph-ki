@@ -1,0 +1,83 @@
+# Supabase project configuration
+#
+# Required by Supabase Branching (https://supabase.com/docs/guides/platform/branching).
+# When branching is enabled in the dashboard and the project is connected to GitHub,
+# each PR opened against `main` gets an ephemeral database branch that applies the
+# migrations under `supabase/migrations/` to a fresh copy of the parent (dev) database.
+#
+# The same file also drives the local `supabase` CLI workflow (`supabase start`,
+# `supabase db push`) when a developer chooses to run Supabase locally.
+#
+# To activate Branching on the hosted projects (when ready to onboard a 2nd dev):
+#   1. Upgrade the Supabase org plan to Pro (https://supabase.com/dashboard/org/_/billing)
+#   2. Enable Branching on the dev project (ocrqzesxmalebpikutwv)
+#   3. Connect the GitHub repo (IDS-online/oph-ki) via the Supabase dashboard
+#   4. Authorise the Supabase Vercel integration so PR previews get branch env vars
+
+project_id = "oph-ki"
+
+[api]
+# PostgREST exposes these schemas as REST endpoints. The app uses the
+# `public` schema only; storage and auth schemas are managed separately.
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+# Postgres major version on the hosted dev/staging/prod projects.
+# Bump when the cloud projects are upgraded.
+major_version = 17
+
+[db.pooler]
+enabled = false
+port = 54329
+pool_mode = "transaction"
+default_pool_size = 20
+max_client_conn = 100
+
+[realtime]
+enabled = true
+
+[studio]
+enabled = true
+port = 54323
+api_url = "http://127.0.0.1"
+
+[inbucket]
+# Local SMTP catcher — only used for `supabase start`, not branching.
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
+[auth]
+enabled = true
+site_url = "http://localhost:3003"
+additional_redirect_urls = ["http://localhost:3003"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+enable_signup = false
+enable_anonymous_sign_ins = false
+
+[auth.email]
+enable_signup = false
+double_confirm_changes = true
+enable_confirmations = true
+secure_password_change = false
+
+[edge_runtime]
+enabled = true
+policy = "oneshot"
+inspector_port = 8083
+
+[analytics]
+enabled = false
+port = 54327
+backend = "postgres"
