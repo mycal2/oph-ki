@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, ArrowLeft, CheckCircle, CircleCheck, ClipboardCheck, RefreshCw, Loader2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle, CircleCheck, ClipboardCheck, RefreshCw, Loader2, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,8 @@ interface ReviewPageHeaderProps {
   /** OPH-93: The current clarification note (shown as a banner). */
   clarificationNote?: string | null;
   onApprove: () => void;
+  /** OPH-110: Called when user clicks "Speichern" — saves immediately. */
+  onSave: () => void;
   /** OPH-90: Called when user clicks "Als Geprüft markieren". */
   onCheck: () => void;
   onReExtract: () => void;
@@ -96,6 +98,7 @@ export function ReviewPageHeader({
   isResolvingClarification,
   clarificationNote,
   onApprove,
+  onSave,
   onCheck,
   onReExtract,
   onClarify,
@@ -138,6 +141,23 @@ export function ReviewPageHeader({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          {/* OPH-110: Explicit Speichern button — saves immediately, bypassing the 2s debounce. */}
+          {!isReadOnly && orderStatus !== "exported" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onSave}
+              disabled={anyActionInProgress || autoSaveStatus === "saving"}
+              className="gap-1.5"
+            >
+              {autoSaveStatus === "saving" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Save className="h-3.5 w-3.5" />
+              )}
+              Speichern
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"

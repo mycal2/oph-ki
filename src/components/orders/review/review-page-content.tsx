@@ -68,7 +68,7 @@ export function ReviewPageContent({ orderId }: ReviewPageContentProps) {
   }, [reviewData]);
 
   // Auto-save hook
-  const { status: autoSaveStatus, error: autoSaveError, scheduleSave, flush } = useAutoSave({
+  const { status: autoSaveStatus, error: autoSaveError, scheduleSave, flush, saveImmediately } = useAutoSave({
     orderId,
     updatedAt,
     onUpdatedAt: setUpdatedAt,
@@ -170,6 +170,12 @@ export function ReviewPageContent({ orderId }: ReviewPageContentProps) {
     },
     [scheduleSave]
   );
+
+  // OPH-110: Explicit "Speichern" button — saves immediately, cancelling debounce.
+  const handleManualSave = useCallback(async () => {
+    if (!reviewDataRef.current) return;
+    await saveImmediately(reviewDataRef.current);
+  }, [saveImmediately]);
 
   // Validate: at least 1 line item with description and quantity
   const canApprove = reviewData
@@ -492,6 +498,7 @@ export function ReviewPageContent({ orderId }: ReviewPageContentProps) {
         isClarifying={isClarifying}
         isResolvingClarification={isResolvingClarification}
         clarificationNote={order.clarification_note}
+        onSave={handleManualSave}
         onApprove={handleApprove}
         onCheck={handleCheck}
         onReExtract={() => setShowReExtractConfirm(true)}
