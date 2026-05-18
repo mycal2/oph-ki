@@ -26,6 +26,16 @@ const RATE_HEADERS = new Set([
   "rabatt (%)",
   "rabatt",
 ]);
+const ARTICLE_NUMBER_HEADERS = new Set([
+  "article number",
+  "article no",
+  "article no.",
+  "art.nr",
+  "art.nr.",
+  "artikelnummer",
+  "art-nr.",
+  "art-nr",
+]);
 
 interface TenantFlagRow {
   id: string;
@@ -253,14 +263,17 @@ export async function POST(
       );
     }
 
-    // Locate the ID and Discount Rate columns by header.
+    // Locate the ID, Discount Rate, and Article Number columns by header.
     const rawHeaders = rawData[0].map((h) => String(h ?? "").trim());
     let idCol = -1;
     let rateCol = -1;
+    let articleNumberCol = -1;
     for (let i = 0; i < rawHeaders.length; i++) {
       const norm = rawHeaders[i].toLowerCase();
       if (idCol === -1 && ID_HEADERS.has(norm)) idCol = i;
       if (rateCol === -1 && RATE_HEADERS.has(norm)) rateCol = i;
+      if (articleNumberCol === -1 && ARTICLE_NUMBER_HEADERS.has(norm))
+        articleNumberCol = i;
     }
 
     const missingCols: string[] = [];
@@ -276,8 +289,41 @@ export async function POST(
       );
     }
 
-    // Walk the body rows, partition into (id, rate) updates / skips / errors.
+    // Load the customer's default discount rate. Rows without an ID whose rate
+    // matches the default get skipped (the user kept the row at the default,
+    // so no override is needed).
+    const { data: defaultRow, error: defaultErr } = await adminClient
+      .from("customer_default_discounts")
+      .select("discount_rate")
+      .eq("tenant_id", tenantId)
+      .eq("customer_id", customerId)
+      .maybeSingle<{ discount_rate: number | string | null }>();
+
+    if (defaultErr) {
+      console.error(
+        "Error loading customer default discount for import:",
+        defaultErr.message
+      );
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Standardrabatt konnte nicht geladen werden.",
+        },
+        { status: 500 }
+      );
+    }
+
+    const defaultRateRaw = defaultRow?.discount_rate ?? null;
+    const customerDefaultRate =
+      defaultRateRaw === null
+        ? null
+        : typeof defaultRateRaw === "number"
+        ? defaultRateRaw
+        : Number(defaultRateRaw);
+
+    // Walk the body rows, partition into (id, rate) updates / inserts / skips / errors.
     let updated = 0;
+    let inserted = 0;
     let skipped = 0;
     let totalErrors = 0;
     const errors: string[] = [];
@@ -287,23 +333,23 @@ export async function POST(
       id: string;
       rate: number;
     }
-    const plans: UpdatePlan[] = [];
+    interface InsertPlan {
+      rowIndex: number;
+      articleNumber: string;
+      rate: number;
+    }
+    const updatePlans: UpdatePlan[] = [];
+    const insertPlans: InsertPlan[] = [];
 
     for (let i = 1; i < rawData.length; i++) {
       const excelRow = i + 1; // 1-based, matches Excel UI
       const cols = rawData[i];
       const rawId = String(cols[idCol] ?? "").trim();
       const rawRate = cols[rateCol];
-
-      if (rawId.length === 0) {
-        skipped++;
-        continue;
-      }
-      if (!UUID_REGEX.test(rawId)) {
-        totalErrors++;
-        addError(errors, `Zeile ${excelRow}: Ungueltige ID.`);
-        continue;
-      }
+      const rawArticleNumber =
+        articleNumberCol >= 0
+          ? String(cols[articleNumberCol] ?? "").trim()
+          : "";
 
       // BUG-3: Excel cells formatted as "15%" store the underlying value
       // as 0.15. Detect percentage formatting via the cell's `.z` style and
@@ -318,6 +364,29 @@ export async function POST(
           : rawRate;
 
       const parsedRate = parseRate(rateInput);
+
+      // Case A: row has an ID → existing override, UPDATE flow.
+      if (rawId.length > 0) {
+        if (!UUID_REGEX.test(rawId)) {
+          totalErrors++;
+          addError(errors, `Zeile ${excelRow}: Ungueltige ID.`);
+          continue;
+        }
+        if (parsedRate === "blank") {
+          skipped++;
+          continue;
+        }
+        if (parsedRate === "invalid") {
+          totalErrors++;
+          addError(errors, `Zeile ${excelRow}: Ungueltiger Rabattsatz.`);
+          continue;
+        }
+        updatePlans.push({ rowIndex: excelRow, id: rawId, rate: parsedRate });
+        continue;
+      }
+
+      // Case B: no ID → potential INSERT.
+      // Skip silently when rate is blank (no rate, no override needed).
       if (parsedRate === "blank") {
         skipped++;
         continue;
@@ -327,91 +396,193 @@ export async function POST(
         addError(errors, `Zeile ${excelRow}: Ungueltiger Rabattsatz.`);
         continue;
       }
+      // Without an article_number we cannot resolve the target article.
+      if (rawArticleNumber.length === 0) {
+        // No article number column or empty cell — silently skip rather than
+        // erroring (legacy files without the column should keep working).
+        skipped++;
+        continue;
+      }
+      // If the rate equals the customer default, the user kept the row at the
+      // default; no override needed.
+      if (
+        customerDefaultRate !== null &&
+        Math.abs(parsedRate - customerDefaultRate) < 1e-6
+      ) {
+        skipped++;
+        continue;
+      }
 
-      plans.push({ rowIndex: excelRow, id: rawId, rate: parsedRate });
-    }
-
-    // If nothing to update, return early.
-    if (plans.length === 0) {
-      return NextResponse.json({
-        success: true,
-        data: { updated, skipped, errors, total_errors: totalErrors },
+      insertPlans.push({
+        rowIndex: excelRow,
+        articleNumber: rawArticleNumber,
+        rate: parsedRate,
       });
     }
 
-    // Confirm which IDs actually exist in THIS tenant for THIS customer.
-    // Tenant scoping is enforced here: IDs from other tenants will simply not
-    // appear in the result set.
-    const planIds = plans.map((p) => p.id);
-    const { data: existingRows, error: lookupError } = await adminClient
-      .from("customer_article_discounts")
-      .select("id")
-      .eq("tenant_id", tenantId)
-      .eq("customer_id", customerId)
-      .in("id", planIds);
-
-    if (lookupError) {
-      console.error(
-        "Error looking up existing discount overrides for import:",
-        lookupError.message
-      );
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Datenbankfehler beim Pruefen der Datensaetze.",
+    // If nothing to update or insert, return early.
+    if (updatePlans.length === 0 && insertPlans.length === 0) {
+      return NextResponse.json({
+        success: true,
+        data: {
+          updated,
+          inserted,
+          skipped,
+          errors,
+          total_errors: totalErrors,
         },
-        { status: 500 }
-      );
+      });
     }
 
-    const validIdSet = new Set<string>(
-      (existingRows ?? []).map((r) => (r as { id: string }).id)
-    );
-
-    // Now do the actual UPDATEs (one per row to stay simple; max sizes are
-    // realistic single-customer scales — a few thousand at most).
     const nowIso = new Date().toISOString();
 
-    for (const plan of plans) {
-      if (!validIdSet.has(plan.id)) {
-        totalErrors++;
-        addError(
-          errors,
-          `Zeile ${plan.rowIndex}: Datensatz nicht gefunden.`
-        );
-        continue;
-      }
-
-      const { error: updateError } = await adminClient
+    // --- UPDATES (existing overrides identified by record ID) ---
+    if (updatePlans.length > 0) {
+      const planIds = updatePlans.map((p) => p.id);
+      const { data: existingRows, error: lookupError } = await adminClient
         .from("customer_article_discounts")
-        .update({
-          discount_rate: plan.rate,
-          updated_at: nowIso,
-        })
-        .eq("id", plan.id)
+        .select("id")
         .eq("tenant_id", tenantId)
-        .eq("customer_id", customerId);
+        .eq("customer_id", customerId)
+        .in("id", planIds);
 
-      if (updateError) {
+      if (lookupError) {
         console.error(
-          `Error updating discount override id=${plan.id}:`,
-          updateError.message
+          "Error looking up existing discount overrides for import:",
+          lookupError.message
         );
-        totalErrors++;
-        addError(
-          errors,
-          `Zeile ${plan.rowIndex}: Update fehlgeschlagen.`
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Datenbankfehler beim Pruefen der Datensaetze.",
+          },
+          { status: 500 }
         );
-        continue;
       }
 
-      updated++;
+      const validIdSet = new Set<string>(
+        (existingRows ?? []).map((r) => (r as { id: string }).id)
+      );
+
+      for (const plan of updatePlans) {
+        if (!validIdSet.has(plan.id)) {
+          totalErrors++;
+          addError(
+            errors,
+            `Zeile ${plan.rowIndex}: Datensatz nicht gefunden.`
+          );
+          continue;
+        }
+
+        const { error: updateError } = await adminClient
+          .from("customer_article_discounts")
+          .update({
+            discount_rate: plan.rate,
+            updated_at: nowIso,
+          })
+          .eq("id", plan.id)
+          .eq("tenant_id", tenantId)
+          .eq("customer_id", customerId);
+
+        if (updateError) {
+          console.error(
+            `Error updating discount override id=${plan.id}:`,
+            updateError.message
+          );
+          totalErrors++;
+          addError(
+            errors,
+            `Zeile ${plan.rowIndex}: Update fehlgeschlagen.`
+          );
+          continue;
+        }
+
+        updated++;
+      }
+    }
+
+    // --- INSERTS (new overrides resolved by Article Number) ---
+    if (insertPlans.length > 0) {
+      const distinctNumbers = Array.from(
+        new Set(insertPlans.map((p) => p.articleNumber))
+      );
+      const { data: articleRows, error: articleErr } = await adminClient
+        .from("article_catalog")
+        .select("id, article_number")
+        .eq("tenant_id", tenantId)
+        .in("article_number", distinctNumbers);
+
+      if (articleErr) {
+        console.error(
+          "Error looking up articles for discount import insert:",
+          articleErr.message
+        );
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Datenbankfehler beim Pruefen der Artikel.",
+          },
+          { status: 500 }
+        );
+      }
+
+      const articleIdByNumber = new Map<string, string>();
+      for (const row of (articleRows ?? []) as {
+        id: string;
+        article_number: string;
+      }[]) {
+        articleIdByNumber.set(row.article_number, row.id);
+      }
+
+      // Upsert one row at a time. The (tenant_id, customer_id, article_id)
+      // tuple is constrained unique by migration 054, so concurrent uploads
+      // collapse cleanly to the latest write.
+      for (const plan of insertPlans) {
+        const articleId = articleIdByNumber.get(plan.articleNumber);
+        if (!articleId) {
+          totalErrors++;
+          addError(
+            errors,
+            `Zeile ${plan.rowIndex}: Artikel "${plan.articleNumber}" nicht gefunden.`
+          );
+          continue;
+        }
+
+        const { error: upsertError } = await adminClient
+          .from("customer_article_discounts")
+          .upsert(
+            {
+              tenant_id: tenantId,
+              customer_id: customerId,
+              article_id: articleId,
+              discount_rate: plan.rate,
+              updated_at: nowIso,
+            },
+            { onConflict: "tenant_id,customer_id,article_id" }
+          );
+
+        if (upsertError) {
+          console.error(
+            `Error inserting discount override for article ${plan.articleNumber}:`,
+            upsertError.message
+          );
+          totalErrors++;
+          addError(
+            errors,
+            `Zeile ${plan.rowIndex}: Anlegen fehlgeschlagen.`
+          );
+          continue;
+        }
+
+        inserted++;
+      }
     }
 
     return NextResponse.json({
       success: true,
       data: {
         updated,
+        inserted,
         skipped,
         errors,
         total_errors: totalErrors,

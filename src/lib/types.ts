@@ -1299,9 +1299,11 @@ export interface CustomerDiscountTableResponse {
  * error (invalid ID, invalid rate, non-existent record).
  */
 export interface DiscountImportResult {
-  /** Rows successfully UPDATEd. */
+  /** Rows successfully UPDATEd (existing overrides). */
   updated: number;
-  /** Rows ignored silently (blank ID or blank rate). */
+  /** Rows that created a new override (ID empty, Article Number resolved, rate ≠ default). */
+  inserted?: number;
+  /** Rows ignored silently (blank ID or blank rate, or rate equals customer default). */
   skipped: number;
   /** Row-level error messages, e.g. "Zeile 5: Ungueltiger Rabattsatz". */
   errors: string[];

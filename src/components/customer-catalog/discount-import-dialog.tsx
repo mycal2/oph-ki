@@ -149,10 +149,10 @@ export function DiscountImportDialog({
         <DialogHeader>
           <DialogTitle>Rabatte importieren</DialogTitle>
           <DialogDescription>
-            Excel-Datei (.xlsx) mit den Spalten <strong>ID</strong> und{" "}
-            <strong>Discount Rate (%)</strong> hochladen. Nur bestehende
-            Datensaetze werden aktualisiert — neue Overrides muessen ueber die
-            Oberflaeche angelegt werden.
+            Excel-Datei (.xlsx) hochladen. Zeilen mit <strong>ID</strong> werden
+            aktualisiert; Zeilen ohne ID werden neu angelegt, sofern{" "}
+            <strong>Article Number</strong> und ein vom Kundenstandard
+            abweichender <strong>Discount Rate (%)</strong> vorhanden sind.
           </DialogDescription>
         </DialogHeader>
 
@@ -276,6 +276,14 @@ export function DiscountImportDialog({
               >
                 {formatNumber(result.updated)} aktualisiert
               </Badge>
+              {(result.inserted ?? 0) > 0 && (
+                <Badge
+                  variant="secondary"
+                  className="text-green-700 bg-green-50 hover:bg-green-50"
+                >
+                  {formatNumber(result.inserted ?? 0)} neu angelegt
+                </Badge>
+              )}
               {result.skipped > 0 && (
                 <Badge
                   variant="secondary"
@@ -311,11 +319,13 @@ export function DiscountImportDialog({
             )}
 
             {result.updated === 0 &&
+              (result.inserted ?? 0) === 0 &&
               result.total_errors === 0 &&
               result.skipped > 0 && (
                 <p className="text-sm text-muted-foreground">
-                  Es wurden keine Datensaetze aktualisiert. Stellen Sie sicher,
-                  dass die zu aendernden Zeilen eine ID besitzen.
+                  Es wurden keine Datensaetze geaendert. Aenderungen ohne ID
+                  benoetigen eine gueltige Artikelnummer und einen Rabattsatz,
+                  der vom Kundenstandard abweicht.
                 </p>
               )}
 
