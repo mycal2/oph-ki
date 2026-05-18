@@ -87,6 +87,17 @@ Every feature spec touches `features/INDEX.md` and bumps "Next Available ID". Wi
 
 `npm run lint` is currently broken (Next 16 + ESLint 9 legacy-config incompatibility) — skipped in CI until the lint setup is migrated to flat config.
 
+### Supabase Branching (staged — not yet activated)
+
+`supabase/config.toml` is committed and ready. To activate per-PR isolated databases:
+
+1. Upgrade the Supabase org's plan to **Pro** ($25/mo): https://supabase.com/dashboard/org/_/billing
+2. Enable Branching on the **dev** project (`ocrqzesxmalebpikutwv`): https://supabase.com/dashboard/project/ocrqzesxmalebpikutwv/branches
+3. Connect the GitHub repo (`IDS-online/oph-ki`) via the same page; pick `main` as the production branch and `supabase/migrations` as the migration folder
+4. Authorise the Supabase ↔ Vercel integration so PR previews receive branch-specific env vars
+
+Until activated, all devs share the dev Supabase (`ocrqzesxmalebpikutwv`) — fine for solo work, friction once a 2nd dev joins.
+
 ## Feature Tracking
 
 All features tracked in `features/INDEX.md`. Every skill reads it at start and updates it when done. Feature specs live in `features/OPH-X-name.md`.
