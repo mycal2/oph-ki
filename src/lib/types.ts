@@ -327,6 +327,16 @@ export interface CanonicalLineItem {
    */
   discounted_price?: number | null;
   /**
+   * OPH-110: Discount rate in percent (0–100) that was applied.
+   * Populated by priceLookupForOrder() on successful resolution.
+   */
+  discount_rate?: number | null;
+  /**
+   * OPH-110: Article RRP used for the calculation. Stored so the review UI
+   * can recalculate discounted_price when the user overrides discount_rate.
+   */
+  rrp?: number | null;
+  /**
    * OPH-108: Resolution outcome of the price-lookup step for this line item.
    * Absent when price lookup was skipped (flag disabled or feature off for tenant).
    */

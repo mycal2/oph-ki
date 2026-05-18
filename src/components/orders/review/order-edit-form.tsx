@@ -441,7 +441,7 @@ interface LineItemRowProps {
   onChange: (patch: Partial<CanonicalLineItem>) => void;
   onRemove: () => void;
   parseNum: (val: string) => number | null;
-  /** OPH-109: show the read-only discounted_price line when the tenant has the price-lookup add-on. */
+  /** OPH-110: show Rabatt (%) editable + Rabattierter Preis read-only when flag active. */
   showDiscountedPrice?: boolean;
 }
 
@@ -451,6 +451,10 @@ const discountedPriceFormatter = new Intl.NumberFormat("de-DE", {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
+
+function roundPrice(value: number): number {
+  return Math.round(value * 10000) / 10000;
+}
 
 function LineItemRow({
   item,
@@ -645,13 +649,43 @@ function LineItemRow({
       </div>
 
       {showDiscountedPrice && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1 border-t">
-          <span className="font-medium">Rabattierter Preis:</span>
-          <span className="tabular-nums">
-            {typeof item.discounted_price === "number"
-              ? discountedPriceFormatter.format(item.discounted_price)
-              : "—"}
-          </span>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t">
+          <div className="space-y-1">
+            <Label htmlFor={`line-${index}-discount`} className="text-xs">
+              Rabatt (%)
+            </Label>
+            <Input
+              id={`line-${index}-discount`}
+              type="text"
+              inputMode="decimal"
+              value={item.discount_rate !== null && item.discount_rate !== undefined
+                ? String(item.discount_rate).replace(".", ",")
+                : ""}
+              onChange={(e) => {
+                const raw = e.target.value.replace(",", ".");
+                const rate = parseNum(raw);
+                if (rate === null) {
+                  onChange({ discount_rate: null, discounted_price: null });
+                } else {
+                  const newPrice = (item.rrp !== null && item.rrp !== undefined)
+                    ? roundPrice(item.rrp * (1 - rate / 100))
+                    : null;
+                  onChange({ discount_rate: rate, discounted_price: newPrice });
+                }
+              }}
+              placeholder="z.B. 25,00"
+              className="h-8 text-sm"
+              aria-label={`Rabatt Position ${item.position}`}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Rabattierter Preis</Label>
+            <div className="flex h-8 items-center rounded-md border border-input bg-muted/40 px-3 text-sm tabular-nums text-muted-foreground">
+              {typeof item.discounted_price === "number"
+                ? discountedPriceFormatter.format(item.discounted_price)
+                : "—"}
+            </div>
+          </div>
         </div>
       )}
     </div>

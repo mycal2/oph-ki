@@ -311,6 +311,8 @@ export async function priceLookupForOrder(input: PriceLookupInput): Promise<Pric
     return {
       ...item,
       discounted_price: discounted,
+      discount_rate: effectiveRate,
+      rrp: article.rrp,
       price_lookup_reason: "ok",
     };
   });
