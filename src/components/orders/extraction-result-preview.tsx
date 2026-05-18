@@ -38,6 +38,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { CanonicalOrderData, ExtractionStatus } from "@/lib/types";
+import { usePriceLookupEnabled } from "@/hooks/use-price-lookup-enabled";
 
 interface ExtractionResultPreviewProps {
   extractionStatus: ExtractionStatus | null;
@@ -70,8 +71,8 @@ function formatDate(isoDate: string | null, includeTime = false): string {
   }
 }
 
-function formatCurrency(amount: number | null, currency: string | null): string {
-  if (amount === null) return "-";
+function formatCurrency(amount: number | null | undefined, currency: string | null, nullPlaceholder = "-"): string {
+  if (amount === null || amount === undefined) return nullPlaceholder;
   const curr = currency ?? "EUR";
   try {
     return new Intl.NumberFormat("de-DE", {
@@ -120,6 +121,8 @@ export function ExtractionResultPreview({
   orderId,
   orderStatus,
 }: ExtractionResultPreviewProps) {
+  const { enabled: priceLookupEnabled } = usePriceLookupEnabled();
+
   // Waiting state: order uploaded but extraction hasn't started yet
   if (!extractionStatus && (orderStatus === "uploaded" || orderStatus === "processing")) {
     return (
@@ -485,6 +488,16 @@ export function ExtractionResultPreview({
                       <th className="px-3 py-2 text-right font-medium text-muted-foreground hidden md:table-cell">
                         Einzelpreis
                       </th>
+                      {priceLookupEnabled && (
+                        <th className="px-3 py-2 text-right font-medium text-muted-foreground hidden md:table-cell">
+                          Rabatt (%)
+                        </th>
+                      )}
+                      {priceLookupEnabled && (
+                        <th className="px-3 py-2 text-right font-medium text-muted-foreground hidden md:table-cell">
+                          Rabattierter Preis
+                        </th>
+                      )}
                       <th className="px-3 py-2 text-right font-medium text-muted-foreground hidden sm:table-cell">
                         Gesamt
                       </th>
@@ -556,6 +569,18 @@ export function ExtractionResultPreview({
                         <td className="px-3 py-2 text-right hidden md:table-cell whitespace-nowrap">
                           {formatCurrency(item.unit_price, item.currency ?? order.currency)}
                         </td>
+                        {priceLookupEnabled && (
+                          <td className="px-3 py-2 text-right hidden md:table-cell whitespace-nowrap tabular-nums">
+                            {item.discount_rate !== null && item.discount_rate !== undefined
+                              ? item.discount_rate.toFixed(2).replace(".", ",") + " %"
+                              : "—"}
+                          </td>
+                        )}
+                        {priceLookupEnabled && (
+                          <td className="px-3 py-2 text-right hidden md:table-cell whitespace-nowrap">
+                            {formatCurrency(item.discounted_price, item.currency ?? order.currency, "—")}
+                          </td>
+                        )}
                         <td className="px-3 py-2 text-right hidden sm:table-cell whitespace-nowrap font-medium">
                           {formatCurrency(item.total_price, item.currency ?? order.currency)}
                         </td>
@@ -566,7 +591,7 @@ export function ExtractionResultPreview({
                     <tfoot>
                       <tr className="bg-muted/30 font-medium">
                         <td
-                          colSpan={6}
+                          colSpan={priceLookupEnabled ? 8 : 6}
                           className="px-3 py-2 text-right hidden sm:table-cell"
                         >
                           Gesamt

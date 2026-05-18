@@ -120,6 +120,7 @@ Eine mandantenfähige SaaS-Plattform ("Order Intelligence Platform"), die Dental
 | P1 | OPH-107: Discount Rate Excel Export & Import | Planned |
 | P1 | OPH-108: Price Lookup in AI Extraction | Planned |
 | P1 | OPH-109: Discounted Price ERP Export Variable | Planned |
+| P1 | OPH-110: Discount & Net Price Columns in Order Line-Item Views | In Progress |
 
 ## Success Metrics
 - Bearbeitungszeit pro Bestellung: von ~15 Min. manuell auf < 3 Min. mit System

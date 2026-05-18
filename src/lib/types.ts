@@ -327,6 +327,16 @@ export interface CanonicalLineItem {
    */
   discounted_price?: number | null;
   /**
+   * OPH-110: Discount rate in percent (0–100) that was applied.
+   * Populated by priceLookupForOrder() on successful resolution.
+   */
+  discount_rate?: number | null;
+  /**
+   * OPH-110: Article RRP used for the calculation. Stored so the review UI
+   * can recalculate discounted_price when the user overrides discount_rate.
+   */
+  rrp?: number | null;
+  /**
    * OPH-108: Resolution outcome of the price-lookup step for this line item.
    * Absent when price lookup was skipped (flag disabled or feature off for tenant).
    */
@@ -1289,12 +1299,16 @@ export interface CustomerDiscountTableResponse {
  * error (invalid ID, invalid rate, non-existent record).
  */
 export interface DiscountImportResult {
-  /** Rows successfully UPDATEd. */
+  /** Rows successfully UPDATEd (existing overrides). */
   updated: number;
-  /** Rows ignored silently (blank ID or blank rate). */
+  /** Rows that created a new override (ID empty, Article Number resolved, rate ≠ default). */
+  inserted?: number;
+  /** Rows ignored silently (blank ID or blank rate, or rate equals customer default). */
   skipped: number;
   /** Row-level error messages, e.g. "Zeile 5: Ungueltiger Rabattsatz". */
   errors: string[];
   /** Total number of errored rows (may exceed errors.length when the list is capped). */
   total_errors: number;
+  /** Count of RRP edits in the file that were ignored — RRP must be edited in the article catalog. */
+  rrp_changes_ignored?: number;
 }
