@@ -1,6 +1,6 @@
 # OPH-65: Tolerant Article Number Matching (Whitespace, Hyphens, Optional Leading Zeros)
 
-## Status: In Progress
+## Status: Deployed
 **Created:** 2026-04-15
 **Last Updated:** 2026-04-15
 
@@ -200,4 +200,8 @@ Customer number matching: same two passes, leading-zero stripping always ON (no 
 5. For a different order, confirm that an exact catalog match still shows the violet "KI-Vorschlag" badge (no regression).
 
 ## Deployment
-_To be added by /deploy_
+
+- **Production:** https://oph-ki.ids.online — Deployed 2026-05-11
+- **Staging:** https://oph-ki-staging.ids.online — Deployed 2026-05-11
+- **Dev:** https://oph-ki-dev.ids.online — Deployed 2026-05-11
+- Migration `044_oph65_tolerant_article_matching` (column `dealers.strip_leading_zeros_in_article_numbers`)

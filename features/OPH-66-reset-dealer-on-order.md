@@ -1,6 +1,6 @@
 # OPH-66: Reset Dealer Recognition on an Order
 
-## Status: In Progress
+## Status: Deployed
 **Created:** 2026-04-15
 **Last Updated:** 2026-04-15
 
@@ -208,4 +208,8 @@ supabase/migrations/[new].sql
 _To be added by /qa_
 
 ## Deployment
-_To be added by /deploy_
+
+- **Production:** https://oph-ki.ids.online — Deployed 2026-05-11
+- **Staging:** https://oph-ki-staging.ids.online — Deployed 2026-05-11
+- **Dev:** https://oph-ki-dev.ids.online — Deployed 2026-05-11
+- Migration `045_oph66_dealer_reset_columns` (columns `orders.dealer_reset_by`, `orders.dealer_reset_at`)

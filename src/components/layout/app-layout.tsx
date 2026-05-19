@@ -18,7 +18,7 @@ export function AppLayout({ children, defaultSidebarOpen = true }: AppLayoutProp
         <div className="flex min-h-svh flex-1 flex-col">
           <TopNavigation />
           <main className="flex-1 bg-secondary/50">
-            <div className="container mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8">
+            <div className="container mx-auto max-w-screen-2xl px-4 py-6 md:px-6 md:py-8">
               {children}
             </div>
           </main>

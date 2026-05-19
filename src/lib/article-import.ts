@@ -66,6 +66,13 @@ const COLUMN_MAP: Record<string, string> = {
   "suchbegriffe": "keywords",
   "aliase": "keywords",
   "suchbegriffe / aliase": "keywords",
+  // OPH-105: rrp / UVP
+  "rrp": "rrp",
+  "uvp": "rrp",
+  "uvp (€)": "rrp",
+  "uvp €": "rrp",
+  "preis": "rrp",
+  "preisempfehlung": "rrp",
 };
 
 export interface ParsedArticleRow {
@@ -79,6 +86,8 @@ export interface ParsedArticleRow {
   ref_no: string | null;
   gtin: string | null;
   keywords: string | null;
+  /** OPH-105: Optional recommended retail price (UVP) in EUR. */
+  rrp: number | null;
 }
 
 export interface ParseResult {
@@ -242,6 +251,33 @@ export function parseArticleFile(buffer: Buffer, filename: string): ParseResult 
       return val.length > 0 ? val.substring(0, maxLen) : null;
     };
 
+    // OPH-105: parse optional rrp/UVP column.
+    // Accepts both German ("12,50") and English ("12.50") decimal separators.
+    // Blank/non-numeric → null. Negative → row-level error, skip row.
+    let rrp: number | null = null;
+    const rrpIdx = fieldIndexes["rrp"];
+    if (rrpIdx !== undefined) {
+      const rawRrp = String(cols[rrpIdx] ?? "").trim();
+      if (rawRrp.length > 0) {
+        // Normalize: remove thousands separators (dots when followed by 3 digits)
+        // then convert comma to dot. Accept plain numbers like "12", "12.5", "12,50".
+        const normalized = rawRrp
+          .replace(/[€\s]/g, "")
+          .replace(/\.(?=\d{3}(\D|$))/g, "") // strip thousands dots like 1.234,56
+          .replace(/,/, ".");
+        const parsed = Number(normalized);
+        if (!Number.isFinite(parsed)) {
+          errors.push(`Zeile ${i + 1}: UVP "${rawRrp}" ist keine gueltige Zahl — uebersprungen.`);
+          continue;
+        }
+        if (parsed < 0) {
+          errors.push(`Zeile ${i + 1}: UVP muss >= 0 sein — uebersprungen.`);
+          continue;
+        }
+        rrp = parsed;
+      }
+    }
+
     rowMap.set(articleNumber.toLowerCase(), {
       article_number: articleNumber,
       name: articleName,
@@ -253,6 +289,7 @@ export function parseArticleFile(buffer: Buffer, filename: string): ParseResult 
       ref_no: getField("ref_no", 200),
       gtin: getField("gtin", 50),
       keywords: getField("keywords", 1000),
+      rrp,
     });
   }
 

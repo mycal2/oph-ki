@@ -41,6 +41,73 @@ docs/
 
 - `/dealerrule` - Generate structured extraction hints for dealer profiles. Analyzes example order documents (PDF, Excel, CSV) to create precise hints that guide the AI extraction engine. Also creates dealer documentation in `dealerrules/`.
 
+## Multi-Developer Workflow (PR-based, CI-gated)
+
+`main` is protected: direct pushes are blocked, every change ships through a pull request.
+
+### Branch naming
+
+- `feat/OPH-X-short-name` — new features
+- `fix/OPH-X-short-name` — bug fixes
+- `chore/short-name` — non-feature work (CI, deps, docs only)
+- `refactor/OPH-X-short-name` — refactors
+
+### Per-change flow
+
+```bash
+git checkout main && git pull
+git checkout -b feat/OPH-111-something
+# make changes, commit (commit messages still follow `type(OPH-X): description`)
+git push -u origin feat/OPH-111-something
+gh pr create   # PR template auto-loads from .github/pull_request_template.md
+```
+
+### Merge gates (set on `main` branch protection)
+
+- 1 approving review required
+- `Build` CI check must be green (runs `npm run build` — includes TypeScript typecheck)
+- Branch must be up to date with `main` before merge
+- Force pushes and deletions disabled
+- Admins are NOT exempt — applies to everyone
+
+### Conflict avoidance for `features/INDEX.md` and the OPH-X counter
+
+Every feature spec touches `features/INDEX.md` and bumps "Next Available ID". With multiple PRs in flight you will get merge conflicts. Mitigation:
+
+- Reserve the next OPH-X ID in the PR *title* the moment you open the PR. Don't wait — even an empty PR with just the title reserves the slot for reviewers.
+- If two PRs both grab the same ID, the second to merge updates `INDEX.md` to take the next one.
+- `INDEX.md` conflicts are always trivial to resolve: keep both rows, take the higher "Next Available ID".
+
+### CI
+
+`.github/workflows/ci.yml` runs on every PR + push to `main`:
+
+- `npm ci`
+- `npm run build` (TypeScript typecheck included)
+
+`npm run lint` is currently broken (Next 16 + ESLint 9 legacy-config incompatibility) — skipped in CI until the lint setup is migrated to flat config.
+
+### Supabase Branching (active)
+
+Per-PR isolated databases are live. The parent project is the **dev** Supabase (`ocrqzesxmalebpikutwv`); branches are clones of dev with the PR's migrations applied. Staging and prod are not touched.
+
+**How it works for devs:**
+
+- Open a PR against `main`. If the PR touches `supabase/migrations/`, Supabase auto-creates an ephemeral branch DB (clone of dev + PR migrations applied).
+- The corresponding Vercel preview deployment gets `SUPABASE_URL` / `SUPABASE_ANON_KEY` auto-injected by the Supabase ↔ Vercel integration, pointing at the branch DB.
+- Open the Vercel preview URL → you're talking to your own sandbox. Edits don't leak back to dev.
+- When the PR merges or closes, the branch DB is torn down automatically.
+
+**Toggle behaviour** (set on the org-level Supabase Integrations page):
+
+- `Automatic branching`: ON — every qualifying PR gets a DB
+- `Supabase changes only`: ON — only PRs touching `supabase/` create branches. UI-only PRs share the dev DB. Flip OFF if you want every PR to have its own sandbox (costs more).
+- `Deploy to production`: ON — when a PR merges to `main`, its migrations auto-apply to the dev Supabase. Staging + prod still get migrations applied manually via Supabase MCP (per the `/deploy` skill).
+
+**Cost reality**: $25/mo Pro plan + $0.01344/hr per active branch. Idle branches auto-pause. Realistic budget for 2–4 devs is ~$30–60/mo.
+
+**Verifying via MCP**: `mcp__supabase__list_branches` on `ocrqzesxmalebpikutwv` returns the live branch list. The `main` branch is always present and represents production.
+
 ## Feature Tracking
 
 All features tracked in `features/INDEX.md`. Every skill reads it at start and updates it when done. Feature specs live in `features/OPH-X-name.md`.
@@ -56,10 +123,10 @@ All features tracked in `features/INDEX.md`. Every skill reads it at start and u
 ## Build & Test Commands
 
 ```bash
-npm run dev        # Development server (localhost:3000)
-npm run build      # Production build
-npm run lint       # ESLint
+npm run dev        # Development server (http://localhost:3003)
+npm run build      # Production build (TypeScript typecheck included)
 npm run start      # Production server
+# npm run lint     # Currently broken — Next 16 + ESLint 9 flat-config migration pending
 ```
 
 ## Product Context

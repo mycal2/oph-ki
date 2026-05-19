@@ -14,6 +14,18 @@
 - Check existing components before building: `git ls-files src/components/`
 - Check existing APIs before building: `git ls-files src/app/api/`
 
+## Branch & PR Workflow (mandatory — `main` is protected)
+- NEVER commit directly to `main`. All work lands via pull request.
+- Branch naming: `feat/OPH-X-short-name`, `fix/OPH-X-short-name`, `chore/short-name`, `refactor/OPH-X-short-name`.
+- Start every change from up-to-date `main`:
+  ```
+  git checkout main && git pull && git checkout -b feat/OPH-X-...
+  ```
+- Push the branch and open a PR via `gh pr create` — the template at `.github/pull_request_template.md` auto-loads.
+- The `Build` GitHub Actions check must be green before merging (runs `npm ci` + `npm run build`).
+- 1 reviewer approval required before merge. Merge via the GitHub UI ("Squash and merge" recommended).
+- When ID-reserving in `features/INDEX.md`, expect merge conflicts with concurrent PRs — resolve by keeping both new entries and taking the higher "Next Available ID".
+
 ## Human-in-the-Loop
 - Always ask for user approval before finalizing deliverables
 - Present options using clear choices rather than open-ended questions

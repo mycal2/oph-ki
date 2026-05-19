@@ -134,10 +134,24 @@ export function useAutoSave({
     [saveNow]
   );
 
+  // OPH-110: Save immediately, cancelling any pending debounce. Used by the
+  // explicit "Speichern" button so the user gets instant feedback.
+  const saveImmediately = useCallback(
+    async (data: CanonicalOrderData): Promise<string | null> => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      return saveNow(data);
+    },
+    [saveNow]
+  );
+
   return {
     status,
     error,
     scheduleSave,
     flush,
+    saveImmediately,
   };
 }

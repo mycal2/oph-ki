@@ -129,6 +129,7 @@ export function PreviewPageContent({ token }: PreviewPageContentProps) {
               lineItems={data.lineItems}
               totalAmount={data.totalAmount}
               currency={data.currency}
+              priceLookupEnabled={data.priceLookupEnabled}
             />
           )}
 

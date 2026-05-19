@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { UploadCloud } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +13,7 @@ interface FileDropzoneProps {
 const ACCEPTED = ".eml,.pdf,.xlsx,.xls,.csv,.xml";
 
 export function FileDropzone({ onFilesAdded, disabled }: FileDropzoneProps) {
+  const t = useTranslations("orders.upload2");
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -63,7 +65,7 @@ export function FileDropzone({ onFilesAdded, disabled }: FileDropzoneProps) {
     <div
       role="button"
       tabIndex={disabled ? -1 : 0}
-      aria-label="Dateien hier ablegen oder klicken um auszuwählen"
+      aria-label={t("dropzoneAriaLabel")}
       onClick={onClick}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") onClick();
@@ -88,13 +90,9 @@ export function FileDropzone({ onFilesAdded, disabled }: FileDropzoneProps) {
       />
       <div className="space-y-1">
         <p className="text-sm font-medium">
-          {isDragging
-            ? "Dateien hier ablegen"
-            : "Dateien hierher ziehen oder klicken zum Auswählen"}
+          {isDragging ? t("dropzoneActive") : t("dropzoneIdle")}
         </p>
-        <p className="text-xs text-muted-foreground">
-          .eml, .pdf, .xlsx, .xls, .csv, .xml · max. 25 MB · bis zu 10 Dateien
-        </p>
+        <p className="text-xs text-muted-foreground">{t("dropzoneHint")}</p>
       </div>
       <input
         ref={inputRef}

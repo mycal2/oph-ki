@@ -202,6 +202,8 @@ export async function POST(
         ref_no: parsed.data.ref_no ?? null,
         gtin: parsed.data.gtin ?? null,
         keywords: parsed.data.keywords ?? null,
+        // OPH-105: optional UVP (recommended retail price)
+        rrp: parsed.data.rrp ?? null,
       })
       .select("id")
       .single();

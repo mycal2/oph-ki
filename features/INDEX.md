@@ -76,15 +76,15 @@
 | OPH-62 | Article Catalog Bulk Delete | In Review | [OPH-62-article-catalog-bulk-delete.md](OPH-62-article-catalog-bulk-delete.md) | 2026-03-31 |
 | OPH-63 | Per-Tenant Email Forwarding | Deployed | [OPH-63-per-tenant-email-forwarding.md](OPH-63-per-tenant-email-forwarding.md) | 2026-04-09 |
 | OPH-64 | Admin: Reset Artikelstamm / Kundenstamm for Tenant | In Progress | [OPH-64-admin-catalog-reset.md](OPH-64-admin-catalog-reset.md) | 2026-04-14 |
-| OPH-65 | Tolerant Article Number Matching (Whitespace, Hyphens, Optional Leading Zeros) | In Progress | [OPH-65-tolerant-article-matching.md](OPH-65-tolerant-article-matching.md) | 2026-04-15 |
-| OPH-66 | Reset Dealer Recognition on an Order | In Progress | [OPH-66-reset-dealer-on-order.md](OPH-66-reset-dealer-on-order.md) | 2026-04-15 |
+| OPH-65 | Tolerant Article Number Matching (Whitespace, Hyphens, Optional Leading Zeros) | Deployed | [OPH-65-tolerant-article-matching.md](OPH-65-tolerant-article-matching.md) | 2026-04-15 |
+| OPH-66 | Reset Dealer Recognition on an Order | Deployed | [OPH-66-reset-dealer-on-order.md](OPH-66-reset-dealer-on-order.md) | 2026-04-15 |
 | OPH-67 | Tenant User Dashboard | Planned | [OPH-67-tenant-dashboard.md](OPH-67-tenant-dashboard.md) | 2026-04-16 |
 | OPH-68 | Dealer Filter Dropdown on Orders Page | In Progress | [OPH-68-dealer-filter-orders.md](OPH-68-dealer-filter-orders.md) | 2026-04-15 |
 | OPH-69 | Image Extraction from Inbound Emails | In Progress | [OPH-69-image-extraction-from-emails.md](OPH-69-image-extraction-from-emails.md) | 2026-04-16 |
 | OPH-70 | Inline Email Body Text Preview in Dokument-Vorschau | In Progress | [OPH-70-email-body-text-preview.md](OPH-70-email-body-text-preview.md) | 2026-04-16 |
 | OPH-71 | Excel File Preview in Dokument-Vorschau | In Progress | [OPH-71-excel-preview.md](OPH-71-excel-preview.md) | 2026-04-17 |
 | OPH-72 | Salesforce App: Per-Tenant Subdomain Routing & Layout (SF-1) | In Review | [OPH-72-salesforce-subdomain-routing.md](OPH-72-salesforce-subdomain-routing.md) | 2026-04-17 |
-| OPH-73 | Salesforce App: Sales Rep Role & Tenant Feature Flag (SF-2) | In Progress | [OPH-73-salesforce-role-feature-flag.md](OPH-73-salesforce-role-feature-flag.md) | 2026-04-17 |
+| OPH-73 | Salesforce App: Sales Rep Role & Tenant Feature Flag (SF-2) | Deployed | [OPH-73-salesforce-role-feature-flag.md](OPH-73-salesforce-role-feature-flag.md) | 2026-04-17 |
 | OPH-74 | Salesforce App: Sales Rep User Management in OPH (SF-3) | In Review | [OPH-74-salesforce-user-management.md](OPH-74-salesforce-user-management.md) | 2026-04-17 |
 | OPH-75 | Salesforce App: Magic Link Authentication (SF-4) | In Progress | [OPH-75-salesforce-magic-link-auth.md](OPH-75-salesforce-magic-link-auth.md) | 2026-04-17 |
 | OPH-76 | Salesforce App: Article Search & Browse (SF-5) | In Progress | [OPH-76-salesforce-article-search.md](OPH-76-salesforce-article-search.md) | 2026-04-17 |
@@ -109,11 +109,19 @@
 | OPH-95 | XML Order File Support (Ingestion, Extraction & Table Preview) | Deployed | [OPH-95-xml-order-file-support.md](OPH-95-xml-order-file-support.md) | 2026-04-23 |
 | OPH-96 | Order Review Locking (Concurrent Edit Prevention) | In Progress | [OPH-96-order-review-locking.md](OPH-96-order-review-locking.md) | 2026-04-27 |
 | OPH-97 | Platform Admin: Generate Copyable Invite Link | Deployed | [OPH-97-admin-invite-link-copy.md](OPH-97-admin-invite-link-copy.md) | 2026-05-06 |
-| OPH-98 | i18n Infrastructure (next-intl, translation files, locale resolution) | In Progress | [OPH-98-i18n-infrastructure.md](OPH-98-i18n-infrastructure.md) | 2026-05-07 |
-| OPH-99 | Tenant-Level Language Preference | In Progress | [OPH-99-tenant-language-preference.md](OPH-99-tenant-language-preference.md) | 2026-05-07 |
-| OPH-100 | User-Level Language Override | In Review | [OPH-100-user-language-override.md](OPH-100-user-language-override.md) | 2026-05-07 |
+| OPH-98 | i18n Infrastructure (next-intl, translation files, locale resolution) | Deployed | [OPH-98-i18n-infrastructure.md](OPH-98-i18n-infrastructure.md) | 2026-05-07 |
+| OPH-99 | Tenant-Level Language Preference | Deployed | [OPH-99-tenant-language-preference.md](OPH-99-tenant-language-preference.md) | 2026-05-07 |
+| OPH-100 | User-Level Language Override | Deployed | [OPH-100-user-language-override.md](OPH-100-user-language-override.md) | 2026-05-07 |
 | OPH-101 | Full i18n Coverage (Tenant + Salesforce App) | In Progress | [OPH-101-full-i18n-coverage.md](OPH-101-full-i18n-coverage.md) | 2026-05-08 |
-| OPH-102 | Invite Link Expiration UX | In Review | [OPH-102-invite-link-expiration.md](OPH-102-invite-link-expiration.md) | 2026-05-11 |
+| OPH-102 | Invite Link Expiration UX | Deployed | [OPH-102-invite-link-expiration.md](OPH-102-invite-link-expiration.md) | 2026-05-11 |
+| OPH-103 | Localized Date Picker (Replace Native `<input type="date">`) | In Review | [OPH-103-localized-date-picker.md](OPH-103-localized-date-picker.md) | 2026-05-11 |
+| OPH-104 | Tenant Price Lookup Feature Flag | In Review | [OPH-104-price-lookup-feature-flag.md](OPH-104-price-lookup-feature-flag.md) | 2026-05-17 |
+| OPH-105 | Article RRP (Recommended Retail Price) Field | In Progress | [OPH-105-article-rrp-field.md](OPH-105-article-rrp-field.md) | 2026-05-17 |
+| OPH-106 | Customer Discount Rates Management | In Review | [OPH-106-customer-discount-rates.md](OPH-106-customer-discount-rates.md) | 2026-05-17 |
+| OPH-107 | Discount Rate Excel Export & Import | In Review | [OPH-107-discount-rate-excel-export-import.md](OPH-107-discount-rate-excel-export-import.md) | 2026-05-17 |
+| OPH-108 | Price Lookup in AI Extraction | In Progress | [OPH-108-price-lookup-in-extraction.md](OPH-108-price-lookup-in-extraction.md) | 2026-05-17 |
+| OPH-109 | Discounted Price ERP Export Variable | In Progress | [OPH-109-discounted-price-erp-variable.md](OPH-109-discounted-price-erp-variable.md) | 2026-05-17 |
+| OPH-110 | Discount & Net Price Columns in Order Line-Item Views | In Progress | [OPH-110-discount-columns-order-views.md](OPH-110-discount-columns-order-views.md) | 2026-05-18 |
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-103
+## Next Available ID: OPH-111

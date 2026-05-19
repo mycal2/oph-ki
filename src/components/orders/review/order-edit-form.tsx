@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Plus, Trash2, AlertTriangle, ChevronDown, ChevronUp, Sparkles, ArrowRightLeft } from "lucide-react";
+import { Plus, Trash2, AlertTriangle, ChevronDown, ChevronUp, Sparkles, ArrowRightLeft, Save, Loader2 } from "lucide-react";
+import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -22,6 +24,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
+import { usePriceLookupEnabled } from "@/hooks/use-price-lookup-enabled";
 import type {
   CanonicalOrderData,
   CanonicalOrder,
@@ -30,11 +33,35 @@ import type {
   CanonicalSender,
 } from "@/lib/types";
 
+/**
+ * OPH-109: Formats a discounted price for display in the review UI.
+ * Returns "—" when null/undefined (matches the existing nullable-field convention).
+ */
+function formatDiscountedPrice(
+  amount: number | null | undefined,
+  currency: string | null
+): string {
+  if (amount === null || amount === undefined) return "—";
+  const curr = currency ?? "EUR";
+  try {
+    return new Intl.NumberFormat("de-DE", {
+      style: "currency",
+      currency: curr,
+    }).format(amount);
+  } catch {
+    return `${amount.toFixed(2)} ${curr}`;
+  }
+}
+
 interface OrderEditFormProps {
   data: CanonicalOrderData;
   onChange: (data: CanonicalOrderData) => void;
   /** OPH-96: Disable all inputs when order is locked by another user. */
   disabled?: boolean;
+  /** OPH-110: Explicit save handler — saves immediately. */
+  onSave?: () => void;
+  /** OPH-110: Whether a save is currently in flight. */
+  isSaving?: boolean;
 }
 
 /** Creates an empty address object. */
@@ -68,9 +95,14 @@ function newLineItem(position: number): CanonicalLineItem {
  * Contains header fields, line items table, address sections, totals, and notes.
  * All changes are passed to the parent via onChange for auto-save.
  */
-export function OrderEditForm({ data, onChange, disabled }: OrderEditFormProps) {
+export function OrderEditForm({ data, onChange, disabled, onSave, isSaving }: OrderEditFormProps) {
   const [deliveryOpen, setDeliveryOpen] = useState(false);
   const [billingOpen, setBillingOpen] = useState(false);
+
+  // OPH-109: Show the "Rabattierter Preis" column only when the tenant has
+  // the Price Lookup add-on enabled. Hook returns `null` while loading; we
+  // gate conservatively and treat null as "do not show yet".
+  const { enabled: priceLookupEnabled } = usePriceLookupEnabled();
 
   const order = data.order;
   const confidence = data.extraction_metadata.confidence_score;
@@ -197,15 +229,16 @@ export function OrderEditForm({ data, onChange, disabled }: OrderEditFormProps) 
           </div>
           <div className="space-y-2">
             <Label htmlFor="review-order-date">Bestelldatum</Label>
-            <Input
-              id="review-order-date"
-              type="date"
-              value={order.order_date ?? ""}
-              onChange={(e) =>
+            <DatePicker
+              value={order.order_date ? new Date(order.order_date) : undefined}
+              onChange={(date) =>
                 updateOrder({
-                  order_date: e.target.value || null,
+                  order_date: date ? format(date, "yyyy-MM-dd") : null,
                 })
               }
+              ariaLabel="Bestelldatum"
+              className="w-full"
+              disabled={disabled}
             />
           </div>
         </div>
@@ -325,6 +358,7 @@ export function OrderEditForm({ data, onChange, disabled }: OrderEditFormProps) 
                   onChange={(patch) => updateLineItem(index, patch)}
                   onRemove={() => removeLineItem(index)}
                   parseNum={parseNum}
+                  showDiscountedPrice={priceLookupEnabled === true}
                 />
               ))}
             </div>
@@ -397,6 +431,27 @@ export function OrderEditForm({ data, onChange, disabled }: OrderEditFormProps) 
             rows={3}
           />
         </div>
+
+        {/* OPH-110: Explicit Speichern button at the bottom of the form. */}
+        {onSave && (
+          <div className="flex justify-end pt-2 border-t">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onSave}
+              disabled={disabled || isSaving}
+              className="gap-1.5"
+            >
+              {isSaving ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Save className="h-3.5 w-3.5" />
+              )}
+              Speichern
+            </Button>
+          </div>
+        )}
         </fieldset>
       </CardContent>
     </Card>
@@ -411,9 +466,29 @@ interface LineItemRowProps {
   onChange: (patch: Partial<CanonicalLineItem>) => void;
   onRemove: () => void;
   parseNum: (val: string) => number | null;
+  /** OPH-110: show Rabatt (%) editable + Rabattierter Preis read-only when flag active. */
+  showDiscountedPrice?: boolean;
 }
 
-function LineItemRow({ item, index, onChange, onRemove, parseNum }: LineItemRowProps) {
+const discountedPriceFormatter = new Intl.NumberFormat("de-DE", {
+  style: "currency",
+  currency: "EUR",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+function roundPrice(value: number): number {
+  return Math.round(value * 10000) / 10000;
+}
+
+function LineItemRow({
+  item,
+  index,
+  onChange,
+  onRemove,
+  parseNum,
+  showDiscountedPrice = false,
+}: LineItemRowProps) {
   return (
     <div className="border rounded-md p-3 space-y-3">
       <div className="flex items-center justify-between">
@@ -597,6 +672,47 @@ function LineItemRow({ item, index, onChange, onRemove, parseNum }: LineItemRowP
           />
         </div>
       </div>
+
+      {showDiscountedPrice && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t">
+          <div className="space-y-1">
+            <Label htmlFor={`line-${index}-discount`} className="text-xs">
+              Rabatt (%)
+            </Label>
+            <Input
+              id={`line-${index}-discount`}
+              type="text"
+              inputMode="decimal"
+              value={item.discount_rate !== null && item.discount_rate !== undefined
+                ? String(item.discount_rate).replace(".", ",")
+                : ""}
+              onChange={(e) => {
+                const raw = e.target.value.replace(",", ".");
+                const rate = parseNum(raw);
+                if (rate === null) {
+                  onChange({ discount_rate: null, discounted_price: null });
+                } else {
+                  const newPrice = (item.rrp !== null && item.rrp !== undefined)
+                    ? roundPrice(item.rrp * (1 - rate / 100))
+                    : null;
+                  onChange({ discount_rate: rate, discounted_price: newPrice });
+                }
+              }}
+              placeholder="z.B. 25,00"
+              className="h-8 text-sm"
+              aria-label={`Rabatt Position ${item.position}`}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Rabattierter Preis</Label>
+            <div className="flex h-8 items-center rounded-md border border-input bg-muted/40 px-3 text-sm tabular-nums text-muted-foreground">
+              {typeof item.discounted_price === "number"
+                ? discountedPriceFormatter.format(item.discounted_price)
+                : "—"}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

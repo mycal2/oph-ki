@@ -1,6 +1,6 @@
 # OPH-102: Invite Link Expiration UX
 
-## Status: In Review
+## Status: Deployed
 **Created:** 2026-05-11
 **Last Updated:** 2026-05-11
 
@@ -122,4 +122,8 @@ No Critical or High bugs. Implementation is minimal, well-scoped, and consistent
 **Note for future improvement (out of scope):** Consider hoisting both `URL_ERROR_KEYS` sets (login-form and salesforce-login-form) into a shared module if the list grows further — currently acceptable as two small enums.
 
 ## Deployment
-_To be added by /deploy_
+
+- **Production:** https://oph-ki.ids.online — Deployed 2026-05-11
+- **Staging:** https://oph-ki-staging.ids.online — Deployed 2026-05-11
+- **Dev:** https://oph-ki-dev.ids.online — Deployed 2026-05-11
+- No DB migration. i18n strings + 2 component edits.

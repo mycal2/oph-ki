@@ -11,10 +11,19 @@ interface LineItemsTableProps {
   lineItems: CanonicalLineItem[];
   totalAmount: number | null;
   currency: string | null;
+  /**
+   * OPH-109: When true, render the "Rabattierter Preis" column populated
+   * from `discounted_price` on each line item. Hidden entirely otherwise.
+   */
+  priceLookupEnabled?: boolean;
 }
 
-function formatCurrency(amount: number | null, currency: string | null): string {
-  if (amount === null) return "-";
+function formatCurrency(
+  amount: number | null | undefined,
+  currency: string | null,
+  nullPlaceholder: string = "-"
+): string {
+  if (amount === null || amount === undefined) return nullPlaceholder;
   const curr = currency ?? "EUR";
   try {
     return new Intl.NumberFormat("de-DE", {
@@ -29,8 +38,16 @@ function formatCurrency(amount: number | null, currency: string | null): string 
 /**
  * OPH-16: Read-only line items table for the magic-link preview page.
  * Displays article number, description, quantity, unit price, and total.
+ *
+ * OPH-109: Optionally displays a "Rabattierter Preis" column when the
+ * tenant has the price-lookup add-on enabled.
  */
-export function LineItemsTable({ lineItems, totalAmount, currency }: LineItemsTableProps) {
+export function LineItemsTable({
+  lineItems,
+  totalAmount,
+  currency,
+  priceLookupEnabled = false,
+}: LineItemsTableProps) {
   return (
     <Card>
       <CardHeader>
@@ -62,6 +79,16 @@ export function LineItemsTable({ lineItems, totalAmount, currency }: LineItemsTa
                 <th className="hidden px-3 py-2 text-right font-medium text-muted-foreground md:table-cell">
                   Einzelpreis
                 </th>
+                {priceLookupEnabled && (
+                  <th className="hidden px-3 py-2 text-right font-medium text-muted-foreground md:table-cell">
+                    Rabatt (%)
+                  </th>
+                )}
+                {priceLookupEnabled && (
+                  <th className="hidden px-3 py-2 text-right font-medium text-muted-foreground md:table-cell">
+                    Rabattierter Preis
+                  </th>
+                )}
                 <th className="hidden px-3 py-2 text-right font-medium text-muted-foreground sm:table-cell">
                   Gesamt
                 </th>
@@ -101,6 +128,18 @@ export function LineItemsTable({ lineItems, totalAmount, currency }: LineItemsTa
                   <td className="hidden whitespace-nowrap px-3 py-2 text-right md:table-cell">
                     {formatCurrency(item.unit_price, item.currency ?? currency)}
                   </td>
+                  {priceLookupEnabled && (
+                    <td className="hidden whitespace-nowrap px-3 py-2 text-right md:table-cell tabular-nums">
+                      {item.discount_rate !== null && item.discount_rate !== undefined
+                        ? item.discount_rate.toFixed(2).replace(".", ",") + " %"
+                        : "—"}
+                    </td>
+                  )}
+                  {priceLookupEnabled && (
+                    <td className="hidden whitespace-nowrap px-3 py-2 text-right md:table-cell">
+                      {formatCurrency(item.discounted_price, item.currency ?? currency, "—")}
+                    </td>
+                  )}
                   <td className="hidden whitespace-nowrap px-3 py-2 text-right font-medium sm:table-cell">
                     {formatCurrency(item.total_price, item.currency ?? currency)}
                   </td>
@@ -111,7 +150,7 @@ export function LineItemsTable({ lineItems, totalAmount, currency }: LineItemsTa
               <tfoot>
                 <tr className="bg-muted/30 font-medium">
                   <td
-                    colSpan={6}
+                    colSpan={priceLookupEnabled ? 8 : 6}
                     className="hidden px-3 py-2 text-right sm:table-cell"
                   >
                     Gesamt

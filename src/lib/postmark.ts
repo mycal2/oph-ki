@@ -689,8 +689,10 @@ export async function sendOrderResultEmail(params: {
   }>;
   csvContent: string;
   attachmentFilename?: string;
+  /** OPH-108: When set, render a Klärung notice and adjust the subject/headline. */
+  clarificationNote?: string | null;
 }): Promise<void> {
-  const { serverApiToken, toEmail, toName, orderId, siteUrl, isReExtraction, emailSubject, customerNumber, confidenceScore, orderSummary, lineItems, csvContent, attachmentFilename } = params;
+  const { serverApiToken, toEmail, toName, orderId, siteUrl, isReExtraction, emailSubject, customerNumber, confidenceScore, orderSummary, lineItems, csvContent, attachmentFilename, clarificationNote } = params;
 
   const fromAddress = resolveSenderAddress(siteUrl);
   if (!fromAddress) return;
@@ -703,6 +705,8 @@ export async function sendOrderResultEmail(params: {
 
   const subjectLabel = orderSummary.orderNumber ?? orderId.slice(0, 8);
   const updatedSuffix = isReExtraction ? " (aktualisiert)" : "";
+  const isClarification =
+    typeof clarificationNote === "string" && clarificationNote.trim().length > 0;
 
   // Build extraction warnings
   const warnings: string[] = [];
@@ -786,10 +790,28 @@ export async function sendOrderResultEmail(params: {
     </div>`;
   }
 
+  // OPH-108: Klärung block — rendered above warnings when the order needs review.
+  let clarificationHtml = "";
+  if (isClarification) {
+    const noteLines = clarificationNote!.split("\n").map((line) => esc(line)).join("<br>");
+    clarificationHtml = `
+    <div style="background:#fef2f2;border:1px solid #ef4444;border-radius:6px;padding:12px 16px;margin-bottom:20px">
+      <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#991b1b">Klärung erforderlich</p>
+      <p style="margin:0;font-size:13px;color:#7f1d1d;white-space:pre-wrap">${noteLines}</p>
+    </div>`;
+  }
+
+  const headline = isClarification
+    ? `Bestellung benötigt Klärung${updatedSuffix}`
+    : `Bestellung extrahiert${updatedSuffix}`;
+  const subhead = isClarification
+    ? "Die Bestelldaten wurden extrahiert, einige Positionen benötigen jedoch eine Klärung."
+    : "Die Bestelldaten wurden erfolgreich extrahiert.";
+
   const htmlBody = wrapHtmlEmail(siteUrl, `
-    <h2 style="margin:0 0 8px;font-size:18px;color:#111827">Bestellung extrahiert${updatedSuffix}</h2>
-    <p style="margin:0 0 24px;color:#6b7280;font-size:14px">Die Bestelldaten wurden erfolgreich extrahiert.</p>
-    ${warningsHtml}${emailSubject ? `
+    <h2 style="margin:0 0 8px;font-size:18px;color:#111827">${headline}</h2>
+    <p style="margin:0 0 24px;color:#6b7280;font-size:14px">${subhead}</p>
+    ${clarificationHtml}${warningsHtml}${emailSubject ? `
     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:10px 14px;margin-bottom:16px">
       <p style="margin:0;font-size:12px;color:#6b7280;font-weight:600">Original E-Mail</p>
       <p style="margin:4px 0 0;font-size:13px;color:#374151">Betreff: ${esc(emailSubject)}</p>
@@ -816,10 +838,26 @@ export async function sendOrderResultEmail(params: {
     ? `  Extraktionssicherheit: ${Math.round(confidenceScore * 100)} %`
     : "";
 
+  const clarificationTextBlock = isClarification
+    ? [
+        "",
+        "  KLÄRUNG ERFORDERLICH:",
+        ...clarificationNote!
+          .split("\n")
+          .map((line) => `    ${line}`),
+        "",
+      ]
+    : [];
+
+  const headlineText = isClarification
+    ? `Die Bestelldaten wurden extrahiert, einige Positionen benötigen jedoch eine Klärung${updatedSuffix}.`
+    : `Die Bestelldaten wurden erfolgreich extrahiert${updatedSuffix}.`;
+
   const textBody = [
     `Hallo ${toName || toEmail},`,
     "",
-    `Die Bestelldaten wurden erfolgreich extrahiert${updatedSuffix}.`,
+    headlineText,
+    ...clarificationTextBlock,
     ...(emailSubject ? ["", `  Original E-Mail`, `  Betreff: ${emailSubject}`] : []),
     "",
     `  Bestellnummer:  ${orderSummary.orderNumber ?? "–"}`,

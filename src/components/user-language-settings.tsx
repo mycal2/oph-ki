@@ -18,6 +18,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -53,6 +63,7 @@ export function UserLanguageSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSavedDialog, setShowSavedDialog] = useState(false);
 
   const fetchLocale = useCallback(async () => {
     try {
@@ -96,13 +107,17 @@ export function UserLanguageSettings() {
 
       setSavedLocale(json.data.preferred_locale);
       setSelectedLocale(json.data.preferred_locale);
-      toast.success(t("saveSuccess"));
+      setShowSavedDialog(true);
     } catch {
       toast.error(t("saveConnectionError"));
     } finally {
       setIsSaving(false);
     }
   }, [selectedLocale, t]);
+
+  const handleReload = useCallback(() => {
+    window.location.reload();
+  }, []);
 
   const handleSelectChange = useCallback((value: string) => {
     setSelectedLocale(value === NOT_SET_VALUE ? null : (value as "de" | "en"));
@@ -112,8 +127,9 @@ export function UserLanguageSettings() {
   const selectValue = selectedLocale ?? NOT_SET_VALUE;
 
   return (
-    <Card className="max-w-lg">
-      <CardHeader>
+    <>
+      <Card className="max-w-lg">
+        <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Languages className="h-5 w-5" />
           {t("title")}
@@ -181,5 +197,23 @@ export function UserLanguageSettings() {
         )}
       </CardContent>
     </Card>
+
+    <AlertDialog open={showSavedDialog} onOpenChange={setShowSavedDialog}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t("savedDialogTitle")}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {t("savedDialogDescription")}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{t("savedDialogLater")}</AlertDialogCancel>
+          <AlertDialogAction onClick={handleReload}>
+            {t("savedDialogReload")}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  </>
   );
 }

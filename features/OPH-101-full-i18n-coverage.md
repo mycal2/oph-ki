@@ -1,8 +1,8 @@
 # OPH-101: Full i18n Coverage
 
-## Status: Planned
+## Status: In Progress
 **Created:** 2026-05-08
-**Last Updated:** 2026-05-08
+**Last Updated:** 2026-05-11
 
 ## Dependencies
 - Requires: OPH-98 (i18n Infrastructure — next-intl, useTranslations, message JSON files, locale resolution)
@@ -281,8 +281,42 @@ No other new packages needed. `next-intl` is already installed and fully configu
 6. Final QA pass: verify every in-scope page renders in English
 ```
 
+## Progress
+
+| Batch | Scope | Status | Notes |
+|---|---|---|---|
+| 0 | Foundation — `eslint-plugin-i18next`, glossary, parity check, message-file scaffold | ✅ Deployed (2026-05-11) | `i18next/no-literal-string` enabled at warn level, excludes `/admin/*`, `messages/`, tests, `*.d.ts`. `docs/i18n-glossary.md` locked with 17 canonical DE→EN terms. DE/EN parity verified. |
+| 1 | Layout & Navigation — sidebar, top nav, user menu, env banner, tenant-context-required | ✅ Deployed (2026-05-11) | 5 components migrated to `useTranslations("layout.*")`. |
+| 2 | Tenant Dashboard + Orders list + Upload | ⏳ Pending | ~10 files. |
+| 3 | Order Review + Detail screens | ⏳ Pending | ~12 files. Heaviest batch. |
+| 4 | Order Export + Dealer + Preview screens | ⏳ Pending | ~8 files. |
+| 5 | Settings — profile, team, notifications, data protection, inbound email | ⏳ Pending | ~10 files. |
+| 6 | Admin catalogs — articles, customers, dealers | ⏳ Pending | ~8 files. |
+| 7 | Salesforce App — 11 components | ✅ Deployed (2026-05-11) | All SF surfaces migrated to `useTranslations("salesforce.*")`. |
+
+**Done so far:** Batches 0, 1, 7 (foundation + layout + Salesforce App).
+**Remaining:** Batches 2–6 (~45 tenant-side OPH files).
+
+### Per-Batch Workflow (when resuming)
+Each pending batch is its own focused session:
+1. `/frontend oph-101 batch <N>` — implement
+2. `npx tsc --noEmit` + DE/EN key-parity check
+3. Manually smoke-test the affected pages in DE + EN
+4. Commit: `feat(OPH-101): Batch <N> — <scope>`
+5. `/deploy dev`
+
+Status changes to **Deployed** only after all batches 2–6 are complete.
+
 ## QA Test Results
-_To be added by /qa_
+_To be added by /qa once all batches are complete_
 
 ## Deployment
-_To be added by /deploy_
+
+### Batches 0, 1, 7 (Foundation + Layout + Salesforce App)
+- **Production:** https://oph-ki.ids.online — Deployed 2026-05-11
+- **Staging:** https://oph-ki-staging.ids.online — Deployed 2026-05-11
+- **Dev:** https://oph-ki-dev.ids.online — Deployed 2026-05-11
+- No DB migration. Commit `8d490e4 feat(OPH-101): Batches 0+1+7 — foundation, layout & Salesforce App i18n`.
+
+### Batches 2–6 (Tenant-side pages)
+_Pending — to be deployed batch-by-batch._
