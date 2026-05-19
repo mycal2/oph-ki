@@ -87,16 +87,26 @@ Every feature spec touches `features/INDEX.md` and bumps "Next Available ID". Wi
 
 `npm run lint` is currently broken (Next 16 + ESLint 9 legacy-config incompatibility) — skipped in CI until the lint setup is migrated to flat config.
 
-### Supabase Branching (staged — not yet activated)
+### Supabase Branching (active)
 
-`supabase/config.toml` is committed and ready. To activate per-PR isolated databases:
+Per-PR isolated databases are live. The parent project is the **dev** Supabase (`ocrqzesxmalebpikutwv`); branches are clones of dev with the PR's migrations applied. Staging and prod are not touched.
 
-1. Upgrade the Supabase org's plan to **Pro** ($25/mo): https://supabase.com/dashboard/org/_/billing
-2. Enable Branching on the **dev** project (`ocrqzesxmalebpikutwv`): https://supabase.com/dashboard/project/ocrqzesxmalebpikutwv/branches
-3. Connect the GitHub repo (`IDS-online/oph-ki`) via the same page; pick `main` as the production branch and `supabase/migrations` as the migration folder
-4. Authorise the Supabase ↔ Vercel integration so PR previews receive branch-specific env vars
+**How it works for devs:**
 
-Until activated, all devs share the dev Supabase (`ocrqzesxmalebpikutwv`) — fine for solo work, friction once a 2nd dev joins.
+- Open a PR against `main`. If the PR touches `supabase/migrations/`, Supabase auto-creates an ephemeral branch DB (clone of dev + PR migrations applied).
+- The corresponding Vercel preview deployment gets `SUPABASE_URL` / `SUPABASE_ANON_KEY` auto-injected by the Supabase ↔ Vercel integration, pointing at the branch DB.
+- Open the Vercel preview URL → you're talking to your own sandbox. Edits don't leak back to dev.
+- When the PR merges or closes, the branch DB is torn down automatically.
+
+**Toggle behaviour** (set on the org-level Supabase Integrations page):
+
+- `Automatic branching`: ON — every qualifying PR gets a DB
+- `Supabase changes only`: ON — only PRs touching `supabase/` create branches. UI-only PRs share the dev DB. Flip OFF if you want every PR to have its own sandbox (costs more).
+- `Deploy to production`: ON — when a PR merges to `main`, its migrations auto-apply to the dev Supabase. Staging + prod still get migrations applied manually via Supabase MCP (per the `/deploy` skill).
+
+**Cost reality**: $25/mo Pro plan + $0.01344/hr per active branch. Idle branches auto-pause. Realistic budget for 2–4 devs is ~$30–60/mo.
+
+**Verifying via MCP**: `mcp__supabase__list_branches` on `ocrqzesxmalebpikutwv` returns the live branch list. The `main` branch is always present and represents production.
 
 ## Feature Tracking
 
