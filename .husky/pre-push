@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+# Runs before `git push` — catches TypeScript errors before they reach CI.
+# Skip with `git push --no-verify` if you really need to (e.g. docs-only branch).
+
+echo "› Running TypeScript typecheck before push…"
+npm run typecheck

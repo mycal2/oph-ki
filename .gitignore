@@ -53,3 +53,6 @@ supabase/.temp/
 # build output captures (temporary)
 .build-output.txt
 .tsc-output.txt
+
+# transient screenshots shared during AI-assisted debugging
+docs/screenshots/

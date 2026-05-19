@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Plus,
   Upload,
@@ -91,6 +92,17 @@ export function ArticleCatalogPage({
   useEffect(() => {
     setSelectedIds(new Set());
   }, [search]);
+
+  // OPH-110: Honour ?search= on first paint so deep-links from the Rabatte
+  // tab ("RRP fehlt — im Artikelkatalog ergaenzen") land on the right row.
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const initial = searchParams.get("search");
+    if (initial && initial !== search) {
+      setSearch(initial);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Clear selection when page changes
   useEffect(() => {

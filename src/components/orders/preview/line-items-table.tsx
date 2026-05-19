@@ -81,6 +81,11 @@ export function LineItemsTable({
                 </th>
                 {priceLookupEnabled && (
                   <th className="hidden px-3 py-2 text-right font-medium text-muted-foreground md:table-cell">
+                    Rabatt (%)
+                  </th>
+                )}
+                {priceLookupEnabled && (
+                  <th className="hidden px-3 py-2 text-right font-medium text-muted-foreground md:table-cell">
                     Rabattierter Preis
                   </th>
                 )}
@@ -124,8 +129,14 @@ export function LineItemsTable({
                     {formatCurrency(item.unit_price, item.currency ?? currency)}
                   </td>
                   {priceLookupEnabled && (
+                    <td className="hidden whitespace-nowrap px-3 py-2 text-right md:table-cell tabular-nums">
+                      {item.discount_rate !== null && item.discount_rate !== undefined
+                        ? item.discount_rate.toFixed(2).replace(".", ",") + " %"
+                        : "—"}
+                    </td>
+                  )}
+                  {priceLookupEnabled && (
                     <td className="hidden whitespace-nowrap px-3 py-2 text-right md:table-cell">
-                      {/* OPH-109: em-dash for null per spec. */}
                       {formatCurrency(item.discounted_price, item.currency ?? currency, "—")}
                     </td>
                   )}
@@ -139,7 +150,7 @@ export function LineItemsTable({
               <tfoot>
                 <tr className="bg-muted/30 font-medium">
                   <td
-                    colSpan={priceLookupEnabled ? 7 : 6}
+                    colSpan={priceLookupEnabled ? 8 : 6}
                     className="hidden px-3 py-2 text-right sm:table-cell"
                   >
                     Gesamt
