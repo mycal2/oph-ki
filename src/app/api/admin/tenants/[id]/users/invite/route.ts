@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { requirePlatformAdmin, isErrorResponse, checkAdminRateLimit } from "@/lib/admin-auth";
 import { adminInviteUserSchema } from "@/lib/validations";
 import { sendInviteEmail } from "@/lib/postmark";
-import { wrapConfirmLink } from "@/lib/auth/wrap-confirm-link";
+import { wrapConfirmLink, wrapCodeLink } from "@/lib/auth/wrap-confirm-link";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -150,6 +150,8 @@ export async function POST(
 
     const actionLink = linkData?.properties?.action_link;
     const hashedToken = linkData?.properties?.hashed_token;
+    // OPH-113: 6-digit code from Supabase, sent in email body as Defender-detonation fallback.
+    const otpCode = linkData?.properties?.email_otp;
     if (!actionLink || !hashedToken) {
       console.error("Invite: Missing action_link or hashed_token from generateLink.");
       await rollback("missing action_link / hashed_token");
@@ -166,6 +168,16 @@ export async function POST(
     const wrappedInviteLink = wrapConfirmLink({
       siteUrl,
       hashedToken,
+      type: "invite",
+      next: "/invite/accept",
+      email, // OPH-113: enables /auth/code fallback on token-already-used.
+    });
+
+    // OPH-113: Code-entry fallback link for users whose email security
+    // (Microsoft Defender Plan 2 URL detonation) consumed the primary link.
+    const codeLink = wrapCodeLink({
+      siteUrl,
+      email,
       type: "invite",
       next: "/invite/accept",
     });
@@ -210,6 +222,8 @@ export async function POST(
       toEmail: email,
       inviteLink: wrappedInviteLink,
       tenantName: tenant.name as string,
+      otpCode,
+      codeLink,
       siteUrl,
     });
 

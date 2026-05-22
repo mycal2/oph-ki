@@ -1,6 +1,6 @@
 # OPH-112: Safelink Hardening — Forgot Password + SF Magic Link
 
-## Status: In Progress
+## Status: Deployed
 
 ## Created: 2026-05-22
 

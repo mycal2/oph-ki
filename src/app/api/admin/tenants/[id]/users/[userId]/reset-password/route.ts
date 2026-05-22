@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { requirePlatformAdmin, isErrorResponse, checkAdminRateLimit } from "@/lib/admin-auth";
 import { sendPasswordResetEmail } from "@/lib/postmark";
-import { wrapConfirmLink } from "@/lib/auth/wrap-confirm-link";
+import { wrapConfirmLink, wrapCodeLink } from "@/lib/auth/wrap-confirm-link";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -110,6 +110,8 @@ export async function POST(
     // the single-use token before the user clicks. /auth/confirm GET shows
     // a click-to-confirm page; only the user-triggered POST consumes.
     const hashedToken = linkData?.properties?.hashed_token;
+    // OPH-113: 6-digit code from Supabase, sent in email body as Defender-detonation fallback.
+    const otpCode = linkData?.properties?.email_otp;
     if (!hashedToken) {
       console.error("Password reset: No hashed_token returned from generateLink.");
       return NextResponse.json(
@@ -121,6 +123,15 @@ export async function POST(
     const actionLink = wrapConfirmLink({
       siteUrl,
       hashedToken,
+      type: "recovery",
+      next: "/reset-password",
+      email: authUser.email,
+    });
+
+    // OPH-113: Code-entry fallback link for users behind URL detonation.
+    const codeLink = wrapCodeLink({
+      siteUrl,
+      email: authUser.email,
       type: "recovery",
       next: "/reset-password",
     });
@@ -140,6 +151,8 @@ export async function POST(
       toEmail: authUser.email,
       resetLink: actionLink,
       siteUrl,
+      otpCode,
+      codeLink,
     });
 
     return NextResponse.json({ success: true });
