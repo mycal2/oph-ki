@@ -40,6 +40,7 @@ const SUPPORTED_TYPES = new Set([
   "email_change",
   "email",
   "signup",
+  "magiclink",
 ]);
 
 export default async function ConfirmPage({ searchParams }: PageProps) {
@@ -51,14 +52,20 @@ export default async function ConfirmPage({ searchParams }: PageProps) {
     redirect("/login?error=invalid_invite_link");
   }
 
-  const isRecovery = type === "recovery";
-  const headline = isRecovery
-    ? "Passwort zurücksetzen"
-    : "Einladung annehmen";
-  const description = isRecovery
-    ? "Klicken Sie auf den Button, um zur Passwort-Eingabe zu gelangen."
-    : "Klicken Sie auf den Button, um Ihre Einladung anzunehmen und Ihr Passwort festzulegen.";
-  const buttonLabel = isRecovery ? "Weiter" : "Einladung annehmen";
+  // Per-type labels — defaults to invite wording.
+  let headline = "Einladung annehmen";
+  let description = "Klicken Sie auf den Button, um Ihre Einladung anzunehmen und Ihr Passwort festzulegen.";
+  let buttonLabel = "Einladung annehmen";
+
+  if (type === "recovery") {
+    headline = "Passwort zurücksetzen";
+    description = "Klicken Sie auf den Button, um zur Passwort-Eingabe zu gelangen.";
+    buttonLabel = "Weiter";
+  } else if (type === "magiclink") {
+    headline = "Anmelden";
+    description = "Klicken Sie auf den Button, um sich anzumelden.";
+    buttonLabel = "Anmelden";
+  }
 
   return (
     <AuthLayout>

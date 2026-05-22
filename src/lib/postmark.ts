@@ -1313,3 +1313,54 @@ export async function sendForwardedEmail(params: {
     `Forward email to ${toEmail}`
   );
 }
+
+/**
+ * OPH-112: Sends the Salesforce App magic-link login email via Postmark.
+ *
+ * Replaces the previous Supabase-direct `signInWithOtp` flow so that the
+ * link routes through /auth/confirm (click-to-confirm page) and survives
+ * corporate email scanners (Defender, Mimecast, etc.).
+ */
+export async function sendSalesforceMagicLinkEmail(params: {
+  serverApiToken: string;
+  toEmail: string;
+  magicLink: string;
+  tenantName: string;
+  siteUrl: string;
+}): Promise<void> {
+  const { serverApiToken, toEmail, magicLink, tenantName, siteUrl } = params;
+
+  const fromAddress = resolveSenderAddress(siteUrl);
+  if (!fromAddress) return;
+
+  const textBody = [
+    `Hallo,`,
+    "",
+    `Sie haben einen Anmeldelink für die ${tenantName} Außendienst-App angefordert.`,
+    "",
+    "Klicken Sie auf den folgenden Link. Auf der folgenden Seite müssen Sie noch einmal bestätigen, um sich anzumelden:",
+    magicLink,
+    "",
+    "Der Link ist einmalig verwendbar und läuft nach 1 Stunde ab.",
+    "",
+    "Falls Sie diese Anfrage nicht erwartet haben, können Sie diese E-Mail ignorieren.",
+    "",
+    "Mit freundlichen Grüßen,",
+    "Ihr Order Intelligence Team",
+  ].join("\n");
+
+  const htmlBody = wrapHtmlEmail(siteUrl, `
+    <h2 style="margin:0 0 8px;font-size:18px;color:#111827">Anmelden bei ${esc(tenantName)}</h2>
+    <p style="margin:0 0 20px;color:#6b7280;font-size:14px">Sie haben einen Anmeldelink für die <strong>${esc(tenantName)}</strong> Außendienst-App angefordert. Klicken Sie auf den Button und bestätigen Sie auf der folgenden Seite, um sich anzumelden.</p>
+    <a href="${esc(magicLink)}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500">Anmelden</a>
+    <p style="margin:20px 0 0;color:#9ca3af;font-size:12px">Der Link ist einmalig verwendbar und läuft nach 1 Stunde ab. Falls Sie diese Anfrage nicht erwartet haben, können Sie diese E-Mail ignorieren.</p>
+  `);
+
+  await postmarkFetchWithRetry(serverApiToken, {
+    From: fromAddress,
+    To: toEmail,
+    Subject: `Ihr Anmeldelink für ${tenantName} Außendienst`,
+    HtmlBody: htmlBody,
+    TextBody: textBody,
+  }, `Salesforce magic-link email to ${toEmail}`);
+}
