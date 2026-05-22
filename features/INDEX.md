@@ -115,14 +115,14 @@
 | OPH-101 | Full i18n Coverage (Tenant + Salesforce App) | In Progress | [OPH-101-full-i18n-coverage.md](OPH-101-full-i18n-coverage.md) | 2026-05-08 |
 | OPH-102 | Invite Link Expiration UX | Deployed | [OPH-102-invite-link-expiration.md](OPH-102-invite-link-expiration.md) | 2026-05-11 |
 | OPH-103 | Localized Date Picker (Replace Native `<input type="date">`) | In Review | [OPH-103-localized-date-picker.md](OPH-103-localized-date-picker.md) | 2026-05-11 |
-| OPH-104 | Tenant Price Lookup Feature Flag | In Review | [OPH-104-price-lookup-feature-flag.md](OPH-104-price-lookup-feature-flag.md) | 2026-05-17 |
-| OPH-105 | Article RRP (Recommended Retail Price) Field | In Progress | [OPH-105-article-rrp-field.md](OPH-105-article-rrp-field.md) | 2026-05-17 |
-| OPH-106 | Customer Discount Rates Management | In Review | [OPH-106-customer-discount-rates.md](OPH-106-customer-discount-rates.md) | 2026-05-17 |
-| OPH-107 | Discount Rate Excel Export & Import | In Review | [OPH-107-discount-rate-excel-export-import.md](OPH-107-discount-rate-excel-export-import.md) | 2026-05-17 |
-| OPH-108 | Price Lookup in AI Extraction | In Progress | [OPH-108-price-lookup-in-extraction.md](OPH-108-price-lookup-in-extraction.md) | 2026-05-17 |
-| OPH-109 | Discounted Price ERP Export Variable | In Progress | [OPH-109-discounted-price-erp-variable.md](OPH-109-discounted-price-erp-variable.md) | 2026-05-17 |
-| OPH-110 | Discount & Net Price Columns in Order Line-Item Views | In Progress | [OPH-110-discount-columns-order-views.md](OPH-110-discount-columns-order-views.md) | 2026-05-18 |
-| OPH-111 | Invite & Reset Link Prefetch Hardening (Defender / Mimecast safe) | In Progress | [OPH-111-invite-link-prefetch-hardening.md](OPH-111-invite-link-prefetch-hardening.md) | 2026-05-22 |
+| OPH-104 | Tenant Price Lookup Feature Flag | Deployed | [OPH-104-price-lookup-feature-flag.md](OPH-104-price-lookup-feature-flag.md) | 2026-05-17 |
+| OPH-105 | Article RRP (Recommended Retail Price) Field | Deployed | [OPH-105-article-rrp-field.md](OPH-105-article-rrp-field.md) | 2026-05-17 |
+| OPH-106 | Customer Discount Rates Management | Deployed | [OPH-106-customer-discount-rates.md](OPH-106-customer-discount-rates.md) | 2026-05-17 |
+| OPH-107 | Discount Rate Excel Export & Import | Deployed | [OPH-107-discount-rate-excel-export-import.md](OPH-107-discount-rate-excel-export-import.md) | 2026-05-17 |
+| OPH-108 | Price Lookup in AI Extraction | Deployed | [OPH-108-price-lookup-in-extraction.md](OPH-108-price-lookup-in-extraction.md) | 2026-05-17 |
+| OPH-109 | Discounted Price ERP Export Variable | Deployed | [OPH-109-discounted-price-erp-variable.md](OPH-109-discounted-price-erp-variable.md) | 2026-05-17 |
+| OPH-110 | Discount & Net Price Columns in Order Line-Item Views | Deployed | [OPH-110-discount-columns-order-views.md](OPH-110-discount-columns-order-views.md) | 2026-05-18 |
+| OPH-111 | Invite & Reset Link Prefetch Hardening (Defender / Mimecast safe) | Deployed | [OPH-111-invite-link-prefetch-hardening.md](OPH-111-invite-link-prefetch-hardening.md) | 2026-05-22 |
 <!-- Add features above this line -->
 
 ## Next Available ID: OPH-112

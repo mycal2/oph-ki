@@ -1,6 +1,6 @@
 # OPH-111: Invite & Reset Link Prefetch Hardening (Microsoft Defender / Mimecast safe)
 
-## Status: In Progress
+## Status: Deployed
 
 ## Created: 2026-05-22
 

@@ -1,6 +1,6 @@
 # OPH-110: Discount & Net Price Columns in Order Line-Item Views
 
-## Status: In Progress
+## Status: Deployed
 
 ## Created: 2026-05-18
 
