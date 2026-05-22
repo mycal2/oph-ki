@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { requirePlatformAdmin, isErrorResponse, checkAdminRateLimit } from "@/lib/admin-auth";
 import { sendResendInviteEmail } from "@/lib/postmark";
+import { wrapConfirmLink } from "@/lib/auth/wrap-confirm-link";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -128,10 +129,15 @@ export async function POST(
       );
     }
 
-    // Wrap the Supabase token in a URL on our own domain — see /auth/confirm.
-    const wrappedInviteLink =
-      `${siteUrl}/auth/confirm?token_hash=${encodeURIComponent(hashedToken)}` +
-      `&type=invite&next=${encodeURIComponent("/invite/accept")}`;
+    // OPH-111: Wrap the Supabase token in a URL on our own domain. /auth/confirm
+    // shows a click-to-confirm page so email-prefetch scanners (Defender,
+    // Mimecast, etc.) don't burn the single-use token before the user clicks.
+    const wrappedInviteLink = wrapConfirmLink({
+      siteUrl,
+      hashedToken,
+      type: "invite",
+      next: "/invite/accept",
+    });
 
     // OPH-97: Skip email and return the link for the admin to forward manually.
     if (generateLinkOnly) {

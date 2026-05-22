@@ -122,6 +122,7 @@
 | OPH-108 | Price Lookup in AI Extraction | In Progress | [OPH-108-price-lookup-in-extraction.md](OPH-108-price-lookup-in-extraction.md) | 2026-05-17 |
 | OPH-109 | Discounted Price ERP Export Variable | In Progress | [OPH-109-discounted-price-erp-variable.md](OPH-109-discounted-price-erp-variable.md) | 2026-05-17 |
 | OPH-110 | Discount & Net Price Columns in Order Line-Item Views | In Progress | [OPH-110-discount-columns-order-views.md](OPH-110-discount-columns-order-views.md) | 2026-05-18 |
+| OPH-111 | Invite & Reset Link Prefetch Hardening (Defender / Mimecast safe) | In Progress | [OPH-111-invite-link-prefetch-hardening.md](OPH-111-invite-link-prefetch-hardening.md) | 2026-05-22 |
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-111
+## Next Available ID: OPH-112
