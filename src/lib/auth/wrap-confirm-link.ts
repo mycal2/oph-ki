@@ -19,7 +19,13 @@
  *
  * Used by every `generateLink` caller — see OPH-111 spec for the full list.
  */
-export type ConfirmLinkType = "invite" | "recovery" | "email_change" | "email" | "signup";
+export type ConfirmLinkType =
+  | "invite"
+  | "recovery"
+  | "email_change"
+  | "email"
+  | "signup"
+  | "magiclink";
 
 interface WrapConfirmLinkOptions {
   /** Public base URL, e.g. https://oph-ki.ids.online — no trailing slash. */

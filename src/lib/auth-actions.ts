@@ -2,7 +2,10 @@
 
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit, recordFailedAttempt, clearRateLimit } from "@/lib/rate-limit";
+import { wrapConfirmLink } from "@/lib/auth/wrap-confirm-link";
+import { sendPasswordResetEmail } from "@/lib/postmark";
 
 /**
  * Server actions for OPH-1: Multi-Tenant Auth.
@@ -124,6 +127,13 @@ export async function loginAction(
 
 /**
  * Send password reset email.
+ *
+ * OPH-112: Uses adminClient.generateLink + wrapConfirmLink + Postmark so that
+ * corporate email link-prefetch scanners (Defender, Mimecast, etc.) don't burn
+ * the single-use token before the user clicks. The link goes through
+ * /auth/confirm (click-to-confirm page), the same path as admin-triggered
+ * password resets (OPH-111).
+ *
  * Always returns success to avoid revealing whether the email exists.
  */
 export async function forgotPasswordAction(
@@ -133,15 +143,47 @@ export async function forgotPasswordAction(
     return { success: false, error: "E-Mail-Adresse ist erforderlich." };
   }
 
-  const supabase = await createClient();
-  const siteUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
-  await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${siteUrl}/reset-password`,
-  });
+  try {
+    const adminClient = createAdminClient();
+    const { data: linkData, error } = await adminClient.auth.admin.generateLink({
+      type: "recovery",
+      email,
+      options: {
+        redirectTo: `${siteUrl}/reset-password`,
+      },
+    });
 
-  // Always return success to not leak whether the email exists
+    // Silently succeed on any generateLink error (user not found, rate limit,
+    // etc.) — preserves enumeration protection.
+    if (error || !linkData?.properties?.hashed_token) {
+      return { success: true };
+    }
+
+    const resetLink = wrapConfirmLink({
+      siteUrl,
+      hashedToken: linkData.properties.hashed_token,
+      type: "recovery",
+      next: "/reset-password",
+    });
+
+    const postmarkToken = process.env.POSTMARK_SERVER_API_TOKEN;
+    if (postmarkToken) {
+      await sendPasswordResetEmail({
+        serverApiToken: postmarkToken,
+        toEmail: email,
+        resetLink,
+        siteUrl,
+      });
+    } else {
+      console.error("forgotPasswordAction: POSTMARK_SERVER_API_TOKEN not configured.");
+    }
+  } catch (err) {
+    // Catch-all to preserve enumeration protection — log but never surface.
+    console.error("forgotPasswordAction failed:", err);
+  }
+
   return { success: true };
 }
 

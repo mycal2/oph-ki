@@ -123,6 +123,7 @@
 | OPH-109 | Discounted Price ERP Export Variable | Deployed | [OPH-109-discounted-price-erp-variable.md](OPH-109-discounted-price-erp-variable.md) | 2026-05-17 |
 | OPH-110 | Discount & Net Price Columns in Order Line-Item Views | Deployed | [OPH-110-discount-columns-order-views.md](OPH-110-discount-columns-order-views.md) | 2026-05-18 |
 | OPH-111 | Invite & Reset Link Prefetch Hardening (Defender / Mimecast safe) | Deployed | [OPH-111-invite-link-prefetch-hardening.md](OPH-111-invite-link-prefetch-hardening.md) | 2026-05-22 |
+| OPH-112 | Safelink Hardening — Forgot Password + SF Magic Link | In Progress | [OPH-112-safelink-complete-coverage.md](OPH-112-safelink-complete-coverage.md) | 2026-05-22 |
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-112
+## Next Available ID: OPH-113
