@@ -1099,7 +1099,7 @@ export async function sendPasswordResetEmail(params: {
     "",
     "ein Administrator hat ein Zurücksetzen Ihres Passworts angefordert.",
     "",
-    "Klicken Sie auf den folgenden Link, um ein neues Passwort festzulegen:",
+    "Klicken Sie auf den folgenden Link. Auf der folgenden Seite müssen Sie noch einmal bestätigen, um zur Passwort-Eingabe zu gelangen:",
     resetLink,
     "",
     "Falls Sie diese Anfrage nicht erwartet haben, können Sie diese E-Mail ignorieren.",
@@ -1110,7 +1110,7 @@ export async function sendPasswordResetEmail(params: {
 
   const htmlBody = wrapHtmlEmail(siteUrl, `
     <h2 style="margin:0 0 8px;font-size:18px;color:#111827">Passwort zurücksetzen</h2>
-    <p style="margin:0 0 20px;color:#6b7280;font-size:14px">Ein Administrator hat ein Zurücksetzen Ihres Passworts angefordert. Klicken Sie auf den Button, um ein neues Passwort festzulegen.</p>
+    <p style="margin:0 0 20px;color:#6b7280;font-size:14px">Ein Administrator hat ein Zurücksetzen Ihres Passworts angefordert. Klicken Sie auf den Button und bestätigen Sie auf der folgenden Seite, um ein neues Passwort festzulegen.</p>
     <a href="${esc(resetLink)}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500">Neues Passwort festlegen</a>
     <p style="margin:20px 0 0;color:#9ca3af;font-size:12px">Falls Sie diese Anfrage nicht erwartet haben, können Sie diese E-Mail ignorieren.</p>
   `);
@@ -1146,7 +1146,7 @@ export async function sendResendInviteEmail(params: {
     "",
     "Sie wurden erneut eingeladen, die Order-Process Hub (OPH) zu nutzen.",
     "",
-    "Klicken Sie auf den folgenden Link, um Ihr Konto zu aktivieren:",
+    "Klicken Sie auf den folgenden Link. Auf der folgenden Seite müssen Sie noch einmal bestätigen, um Ihr Konto zu aktivieren:",
     inviteLink,
     "",
     "Mit freundlichen Grüßen,",
@@ -1155,7 +1155,7 @@ export async function sendResendInviteEmail(params: {
 
   const htmlBody = wrapHtmlEmail(siteUrl, `
     <h2 style="margin:0 0 8px;font-size:18px;color:#111827">Einladung zur Order-Process Hub (OPH)</h2>
-    <p style="margin:0 0 20px;color:#6b7280;font-size:14px">Sie wurden erneut eingeladen, die Order-Process Hub (OPH) zu nutzen. Klicken Sie auf den Button, um Ihr Konto zu aktivieren und ein Passwort festzulegen.</p>
+    <p style="margin:0 0 20px;color:#6b7280;font-size:14px">Sie wurden erneut eingeladen, die Order-Process Hub (OPH) zu nutzen. Klicken Sie auf den Button und bestätigen Sie auf der folgenden Seite, um Ihr Konto zu aktivieren und ein Passwort festzulegen.</p>
     <a href="${esc(inviteLink)}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500">Konto aktivieren</a>
   `);
 
@@ -1191,7 +1191,7 @@ export async function sendInviteEmail(params: {
     "",
     `Sie wurden eingeladen, dem Mandanten "${tenantName}" auf der Order-Process Hub (OPH) beizutreten.`,
     "",
-    "Klicken Sie auf den folgenden Link, um Ihr Konto zu aktivieren und ein Passwort festzulegen:",
+    "Klicken Sie auf den folgenden Link. Auf der folgenden Seite müssen Sie noch einmal bestätigen, um Ihr Konto zu aktivieren und ein Passwort festzulegen:",
     inviteLink,
     "",
     "Mit freundlichen Grüßen,",
@@ -1200,7 +1200,7 @@ export async function sendInviteEmail(params: {
 
   const htmlBody = wrapHtmlEmail(siteUrl, `
     <h2 style="margin:0 0 8px;font-size:18px;color:#111827">Einladung zur Order-Process Hub (OPH)</h2>
-    <p style="margin:0 0 20px;color:#6b7280;font-size:14px">Sie wurden eingeladen, dem Mandanten <strong>${esc(tenantName)}</strong> beizutreten. Klicken Sie auf den Button, um Ihr Konto zu aktivieren und ein Passwort festzulegen.</p>
+    <p style="margin:0 0 20px;color:#6b7280;font-size:14px">Sie wurden eingeladen, dem Mandanten <strong>${esc(tenantName)}</strong> beizutreten. Klicken Sie auf den Button und bestätigen Sie auf der folgenden Seite, um Ihr Konto zu aktivieren und ein Passwort festzulegen.</p>
     <a href="${esc(inviteLink)}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500">Konto aktivieren</a>
   `);
 
