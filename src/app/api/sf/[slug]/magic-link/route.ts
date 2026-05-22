@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { wrapConfirmLink } from "@/lib/auth/wrap-confirm-link";
+import { wrapConfirmLink, wrapCodeLink } from "@/lib/auth/wrap-confirm-link";
 import { sendSalesforceMagicLinkEmail } from "@/lib/postmark";
 
 /**
@@ -109,6 +109,9 @@ export async function POST(
       return genericSuccess;
     }
 
+    // OPH-113: 6-digit code from Supabase, sent in email body as Defender-detonation fallback.
+    const otpCode = linkData.properties.email_otp;
+
     // Convert absolute callbackUrl to a path for the `next` redirect.
     // Falls back to root if the URL is unparseable.
     let nextPath = "/";
@@ -124,6 +127,15 @@ export async function POST(
       hashedToken: linkData.properties.hashed_token,
       type: "magiclink",
       next: nextPath,
+      email,
+    });
+
+    // OPH-113: Code-entry fallback link for users behind URL detonation.
+    const codeLink = wrapCodeLink({
+      siteUrl,
+      email,
+      type: "magiclink",
+      next: nextPath,
     });
 
     // 6. Send via Postmark
@@ -135,6 +147,8 @@ export async function POST(
         magicLink,
         tenantName: (tenant.name as string) ?? "Außendienst",
         siteUrl,
+        otpCode,
+        codeLink,
       });
     } else {
       console.error("SF magic-link: POSTMARK_SERVER_API_TOKEN not configured.");

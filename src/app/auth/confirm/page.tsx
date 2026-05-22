@@ -31,6 +31,8 @@ interface PageProps {
     token_hash?: string;
     type?: string;
     next?: string;
+    /** OPH-113: passed through to /auth/code if token is already consumed. */
+    email?: string;
   }>;
 }
 
@@ -44,7 +46,7 @@ const SUPPORTED_TYPES = new Set([
 ]);
 
 export default async function ConfirmPage({ searchParams }: PageProps) {
-  const { token_hash, type, next } = await searchParams;
+  const { token_hash, type, next, email } = await searchParams;
 
   // Validate inputs at render time so a malformed prefetch GET also lands
   // on the login page (instead of rendering an unclickable form).
@@ -79,6 +81,8 @@ export default async function ConfirmPage({ searchParams }: PageProps) {
             <input type="hidden" name="token_hash" value={token_hash} />
             <input type="hidden" name="type" value={type} />
             <input type="hidden" name="next" value={next ?? "/"} />
+            {/* OPH-113: passed to /auth/code if token is already consumed. */}
+            <input type="hidden" name="email" value={email ?? ""} />
             <Button type="submit" className="w-full" size="lg">
               {buttonLabel}
             </Button>

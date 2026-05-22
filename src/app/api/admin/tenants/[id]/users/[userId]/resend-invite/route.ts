@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { requirePlatformAdmin, isErrorResponse, checkAdminRateLimit } from "@/lib/admin-auth";
 import { sendResendInviteEmail } from "@/lib/postmark";
-import { wrapConfirmLink } from "@/lib/auth/wrap-confirm-link";
+import { wrapConfirmLink, wrapCodeLink } from "@/lib/auth/wrap-confirm-link";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -121,6 +121,8 @@ export async function POST(
 
     const actionLink = linkData?.properties?.action_link;
     const hashedToken = linkData?.properties?.hashed_token;
+    // OPH-113: 6-digit code from Supabase, sent in email body as Defender-detonation fallback.
+    const otpCode = linkData?.properties?.email_otp;
     if (!actionLink || !hashedToken) {
       console.error("Resend invite: Missing action_link or hashed_token from generateLink.");
       return NextResponse.json(
@@ -135,6 +137,15 @@ export async function POST(
     const wrappedInviteLink = wrapConfirmLink({
       siteUrl,
       hashedToken,
+      type: "invite",
+      next: "/invite/accept",
+      email: authUser.email,
+    });
+
+    // OPH-113: Code-entry fallback link for users behind URL detonation.
+    const codeLink = wrapCodeLink({
+      siteUrl,
+      email: authUser.email,
       type: "invite",
       next: "/invite/accept",
     });
@@ -167,6 +178,8 @@ export async function POST(
 
     await sendResendInviteEmail({
       serverApiToken: postmarkToken,
+      otpCode,
+      codeLink,
       toEmail: authUser.email,
       inviteLink: wrappedInviteLink,
       siteUrl,

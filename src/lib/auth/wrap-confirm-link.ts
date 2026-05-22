@@ -36,6 +36,14 @@ interface WrapConfirmLinkOptions {
   type: ConfirmLinkType;
   /** Path the user is redirected to after successful confirmation. Should start with `/`. */
   next: string;
+  /**
+   * OPH-113: Recipient email. Included so that if the wrapped link's token is
+   * already consumed (Defender URL detonation), the server can redirect the
+   * user to `/auth/code` with email pre-filled for the OTP-code fallback.
+   * Optional for backwards compatibility, but should always be passed for new
+   * code paths.
+   */
+  email?: string;
 }
 
 export function wrapConfirmLink({
@@ -43,11 +51,51 @@ export function wrapConfirmLink({
   hashedToken,
   type,
   next,
+  email,
 }: WrapConfirmLinkOptions): string {
   const params = new URLSearchParams({
     token_hash: hashedToken,
     type,
     next,
   });
+  if (email) {
+    params.set("email", email);
+  }
   return `${siteUrl}/auth/confirm?${params.toString()}`;
+}
+
+interface WrapCodeLinkOptions {
+  /** Public base URL, e.g. https://oph-ki.ids.online — no trailing slash. */
+  siteUrl: string;
+  /** Recipient email (pre-fills the code page so user only types the 6-digit code). */
+  email: string;
+  /** Supabase OTP type — must match what was used when generating the code. */
+  type: ConfirmLinkType;
+  /** Path the user is redirected to after successful code verification. Should start with `/`. */
+  next: string;
+}
+
+/**
+ * OPH-113: Build a "Defender-resistant" link to the 6-digit code page.
+ *
+ * Used as a FALLBACK in invite/recovery/magic-link emails: when corporate
+ * URL-detonation (Microsoft Defender Plan 2) burns the primary `/auth/confirm`
+ * link before the user can click, the user can paste the 6-digit code from
+ * the email body into `/auth/code` and complete the flow.
+ *
+ * The page reads `email` and `type` from query params and pre-fills the form,
+ * so the user only needs to type the 6-digit code.
+ */
+export function wrapCodeLink({
+  siteUrl,
+  email,
+  type,
+  next,
+}: WrapCodeLinkOptions): string {
+  const params = new URLSearchParams({
+    email,
+    type,
+    next,
+  });
+  return `${siteUrl}/auth/code?${params.toString()}`;
 }

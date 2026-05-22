@@ -332,6 +332,41 @@ function resolveSenderAddress(siteUrl: string): string | null {
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 /**
+ * OPH-113: Render the 6-digit OTP code section for an email body, as both
+ * HTML and text fragments. The code is shown prominently as a fallback for
+ * users whose corporate email scanner (Microsoft Defender Plan 2 URL
+ * detonation) burns the primary link before they can click it.
+ *
+ * Returns empty strings when `otpCode` is missing so the templates can
+ * inline-call this helper without a guard.
+ */
+function renderOtpBlock(otpCode: string | undefined, codeLink: string | undefined): { html: string; text: string } {
+  if (!otpCode) return { html: "", text: "" };
+
+  // Format "482159" -> "482 159" for readability.
+  const formatted = otpCode.replace(/^(\d{3})(\d{3})$/, "$1 $2") || otpCode;
+
+  const text = [
+    "",
+    "Sollte der obige Link nicht funktionieren (z.B. weil E-Mail-Schutzsoftware ihn bereits geöffnet hat), verwenden Sie stattdessen den folgenden Code:",
+    "",
+    `   ${formatted}`,
+    ...(codeLink ? ["", `Code eingeben: ${codeLink}`] : []),
+  ].join("\n");
+
+  const html = `
+    <hr style="margin:24px 0;border:none;border-top:1px solid #e5e7eb" />
+    <p style="margin:0 0 8px;font-size:12px;color:#6b7280">Sollte der obige Link nicht funktionieren (z.B. weil E-Mail-Schutzsoftware ihn bereits geöffnet hat), verwenden Sie stattdessen den folgenden Code:</p>
+    <div style="text-align:center;margin:12px 0">
+      <span style="display:inline-block;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:28px;font-weight:600;letter-spacing:6px;color:#111827;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px 20px">${esc(formatted)}</span>
+    </div>
+    ${codeLink ? `<p style="margin:8px 0 0;text-align:center;font-size:13px"><a href="${esc(codeLink)}" style="color:#2563eb;text-decoration:none">Code eingeben →</a></p>` : ""}
+  `;
+
+  return { html, text };
+}
+
+/**
  * Wraps email content in a branded HTML layout with logo and footer.
  */
 function wrapHtmlEmail(siteUrl: string, bodyHtml: string): string {
@@ -1086,13 +1121,19 @@ export async function sendPasswordResetEmail(params: {
   toEmail: string;
   resetLink: string;
   siteUrl: string;
+  /** OPH-113: 6-digit OTP code from `linkData.properties.email_otp`. Fallback for users behind URL detonation. */
+  otpCode?: string;
+  /** OPH-113: Link to the code-entry page; pre-fills email + type. */
+  codeLink?: string;
 }): Promise<void> {
-  const { serverApiToken, toEmail, resetLink, siteUrl } = params;
+  const { serverApiToken, toEmail, resetLink, siteUrl, otpCode, codeLink } = params;
 
   const fromAddress = resolveSenderAddress(siteUrl);
   if (!fromAddress) {
     throw new Error("E-Mail-Absenderadresse konnte nicht ermittelt werden. POSTMARK_SENDER_EMAIL ist nicht konfiguriert.");
   }
+
+  const otpBlock = renderOtpBlock(otpCode, codeLink);
 
   const textBody = [
     `Hallo,`,
@@ -1101,6 +1142,7 @@ export async function sendPasswordResetEmail(params: {
     "",
     "Klicken Sie auf den folgenden Link. Auf der folgenden Seite müssen Sie noch einmal bestätigen, um zur Passwort-Eingabe zu gelangen:",
     resetLink,
+    otpBlock.text,
     "",
     "Falls Sie diese Anfrage nicht erwartet haben, können Sie diese E-Mail ignorieren.",
     "",
@@ -1112,6 +1154,7 @@ export async function sendPasswordResetEmail(params: {
     <h2 style="margin:0 0 8px;font-size:18px;color:#111827">Passwort zurücksetzen</h2>
     <p style="margin:0 0 20px;color:#6b7280;font-size:14px">Ein Administrator hat ein Zurücksetzen Ihres Passworts angefordert. Klicken Sie auf den Button und bestätigen Sie auf der folgenden Seite, um ein neues Passwort festzulegen.</p>
     <a href="${esc(resetLink)}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500">Neues Passwort festlegen</a>
+    ${otpBlock.html}
     <p style="margin:20px 0 0;color:#9ca3af;font-size:12px">Falls Sie diese Anfrage nicht erwartet haben, können Sie diese E-Mail ignorieren.</p>
   `);
 
@@ -1133,13 +1176,19 @@ export async function sendResendInviteEmail(params: {
   toEmail: string;
   inviteLink: string;
   siteUrl: string;
+  /** OPH-113: 6-digit OTP code from `linkData.properties.email_otp`. Fallback for users behind URL detonation. */
+  otpCode?: string;
+  /** OPH-113: Link to the code-entry page; pre-fills email + type. */
+  codeLink?: string;
 }): Promise<void> {
-  const { serverApiToken, toEmail, inviteLink, siteUrl } = params;
+  const { serverApiToken, toEmail, inviteLink, siteUrl, otpCode, codeLink } = params;
 
   const fromAddress = resolveSenderAddress(siteUrl);
   if (!fromAddress) {
     throw new Error("E-Mail-Absenderadresse konnte nicht ermittelt werden. POSTMARK_SENDER_EMAIL ist nicht konfiguriert.");
   }
+
+  const otpBlock = renderOtpBlock(otpCode, codeLink);
 
   const textBody = [
     `Hallo,`,
@@ -1148,6 +1197,7 @@ export async function sendResendInviteEmail(params: {
     "",
     "Klicken Sie auf den folgenden Link. Auf der folgenden Seite müssen Sie noch einmal bestätigen, um Ihr Konto zu aktivieren:",
     inviteLink,
+    otpBlock.text,
     "",
     "Mit freundlichen Grüßen,",
     "Ihr Order Intelligence Team",
@@ -1157,6 +1207,7 @@ export async function sendResendInviteEmail(params: {
     <h2 style="margin:0 0 8px;font-size:18px;color:#111827">Einladung zur Order-Process Hub (OPH)</h2>
     <p style="margin:0 0 20px;color:#6b7280;font-size:14px">Sie wurden erneut eingeladen, die Order-Process Hub (OPH) zu nutzen. Klicken Sie auf den Button und bestätigen Sie auf der folgenden Seite, um Ihr Konto zu aktivieren und ein Passwort festzulegen.</p>
     <a href="${esc(inviteLink)}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500">Konto aktivieren</a>
+    ${otpBlock.html}
   `);
 
   await postmarkFetchWithRetry(serverApiToken, {
@@ -1178,13 +1229,19 @@ export async function sendInviteEmail(params: {
   inviteLink: string;
   tenantName: string;
   siteUrl: string;
+  /** OPH-113: 6-digit OTP code from `linkData.properties.email_otp`. Fallback for users behind URL detonation. */
+  otpCode?: string;
+  /** OPH-113: Link to the code-entry page; pre-fills email + type. */
+  codeLink?: string;
 }): Promise<void> {
-  const { serverApiToken, toEmail, inviteLink, tenantName, siteUrl } = params;
+  const { serverApiToken, toEmail, inviteLink, tenantName, siteUrl, otpCode, codeLink } = params;
 
   const fromAddress = resolveSenderAddress(siteUrl);
   if (!fromAddress) {
     throw new Error("E-Mail-Absenderadresse konnte nicht ermittelt werden. POSTMARK_SENDER_EMAIL ist nicht konfiguriert.");
   }
+
+  const otpBlock = renderOtpBlock(otpCode, codeLink);
 
   const textBody = [
     `Hallo,`,
@@ -1193,6 +1250,7 @@ export async function sendInviteEmail(params: {
     "",
     "Klicken Sie auf den folgenden Link. Auf der folgenden Seite müssen Sie noch einmal bestätigen, um Ihr Konto zu aktivieren und ein Passwort festzulegen:",
     inviteLink,
+    otpBlock.text,
     "",
     "Mit freundlichen Grüßen,",
     "Ihr OPH Team",
@@ -1202,6 +1260,7 @@ export async function sendInviteEmail(params: {
     <h2 style="margin:0 0 8px;font-size:18px;color:#111827">Einladung zur Order-Process Hub (OPH)</h2>
     <p style="margin:0 0 20px;color:#6b7280;font-size:14px">Sie wurden eingeladen, dem Mandanten <strong>${esc(tenantName)}</strong> beizutreten. Klicken Sie auf den Button und bestätigen Sie auf der folgenden Seite, um Ihr Konto zu aktivieren und ein Passwort festzulegen.</p>
     <a href="${esc(inviteLink)}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500">Konto aktivieren</a>
+    ${otpBlock.html}
   `);
 
   await postmarkFetchWithRetry(serverApiToken, {
@@ -1327,11 +1386,17 @@ export async function sendSalesforceMagicLinkEmail(params: {
   magicLink: string;
   tenantName: string;
   siteUrl: string;
+  /** OPH-113: 6-digit OTP code from `linkData.properties.email_otp`. Fallback for users behind URL detonation. */
+  otpCode?: string;
+  /** OPH-113: Link to the code-entry page; pre-fills email + type. */
+  codeLink?: string;
 }): Promise<void> {
-  const { serverApiToken, toEmail, magicLink, tenantName, siteUrl } = params;
+  const { serverApiToken, toEmail, magicLink, tenantName, siteUrl, otpCode, codeLink } = params;
 
   const fromAddress = resolveSenderAddress(siteUrl);
   if (!fromAddress) return;
+
+  const otpBlock = renderOtpBlock(otpCode, codeLink);
 
   const textBody = [
     `Hallo,`,
@@ -1340,6 +1405,7 @@ export async function sendSalesforceMagicLinkEmail(params: {
     "",
     "Klicken Sie auf den folgenden Link. Auf der folgenden Seite müssen Sie noch einmal bestätigen, um sich anzumelden:",
     magicLink,
+    otpBlock.text,
     "",
     "Der Link ist einmalig verwendbar und läuft nach 1 Stunde ab.",
     "",
@@ -1353,6 +1419,7 @@ export async function sendSalesforceMagicLinkEmail(params: {
     <h2 style="margin:0 0 8px;font-size:18px;color:#111827">Anmelden bei ${esc(tenantName)}</h2>
     <p style="margin:0 0 20px;color:#6b7280;font-size:14px">Sie haben einen Anmeldelink für die <strong>${esc(tenantName)}</strong> Außendienst-App angefordert. Klicken Sie auf den Button und bestätigen Sie auf der folgenden Seite, um sich anzumelden.</p>
     <a href="${esc(magicLink)}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:500">Anmelden</a>
+    ${otpBlock.html}
     <p style="margin:20px 0 0;color:#9ca3af;font-size:12px">Der Link ist einmalig verwendbar und läuft nach 1 Stunde ab. Falls Sie diese Anfrage nicht erwartet haben, können Sie diese E-Mail ignorieren.</p>
   `);
 

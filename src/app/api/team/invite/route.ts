@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { inviteUserSchema } from "@/lib/validations";
 import { sendInviteEmail } from "@/lib/postmark";
-import { wrapConfirmLink } from "@/lib/auth/wrap-confirm-link";
+import { wrapConfirmLink, wrapCodeLink } from "@/lib/auth/wrap-confirm-link";
 import type { AppMetadata, ApiResponse } from "@/lib/types";
 
 /**
@@ -172,6 +172,8 @@ export async function POST(
     // email link-prefetch scanners (Defender, Mimecast, etc.) don't consume
     // the single-use token before the user clicks.
     const hashedToken = linkData?.properties?.hashed_token;
+    // OPH-113: 6-digit code from Supabase, sent in email body as Defender-detonation fallback.
+    const otpCode = linkData?.properties?.email_otp;
     if (!hashedToken) {
       console.error("Invite: No hashed_token returned from generateLink.");
       return NextResponse.json(
@@ -183,6 +185,15 @@ export async function POST(
     const actionLink = wrapConfirmLink({
       siteUrl,
       hashedToken,
+      type: "invite",
+      next: "/invite/accept",
+      email,
+    });
+
+    // OPH-113: Code-entry fallback link for users behind URL detonation.
+    const codeLink = wrapCodeLink({
+      siteUrl,
+      email,
       type: "invite",
       next: "/invite/accept",
     });
@@ -204,6 +215,8 @@ export async function POST(
         inviteLink: actionLink,
         tenantName,
         siteUrl,
+        otpCode,
+        codeLink,
       });
     } else {
       console.warn("POSTMARK_SERVER_API_TOKEN not configured — invite email not sent.");

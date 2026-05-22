@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkAdminRateLimit } from "@/lib/admin-auth";
 import { sendPasswordResetEmail } from "@/lib/postmark";
-import { wrapConfirmLink } from "@/lib/auth/wrap-confirm-link";
+import { wrapConfirmLink, wrapCodeLink } from "@/lib/auth/wrap-confirm-link";
 import type { AppMetadata, ApiResponse } from "@/lib/types";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -137,6 +137,8 @@ export async function POST(
     // email link-prefetch scanners (Defender, Mimecast, etc.) don't consume
     // the single-use token before the user clicks.
     const hashedToken = linkData?.properties?.hashed_token;
+    // OPH-113: 6-digit code from Supabase, sent in email body as Defender-detonation fallback.
+    const otpCode = linkData?.properties?.email_otp;
     if (!hashedToken) {
       return NextResponse.json(
         { success: false, error: "Passwort-Reset-Link konnte nicht generiert werden." },
@@ -147,6 +149,15 @@ export async function POST(
     const actionLink = wrapConfirmLink({
       siteUrl,
       hashedToken,
+      type: "recovery",
+      next: "/reset-password",
+      email: authUser.email,
+    });
+
+    // OPH-113: Code-entry fallback link for users behind URL detonation.
+    const codeLink = wrapCodeLink({
+      siteUrl,
+      email: authUser.email,
       type: "recovery",
       next: "/reset-password",
     });
@@ -164,6 +175,8 @@ export async function POST(
       toEmail: authUser.email,
       resetLink: actionLink,
       siteUrl,
+      otpCode,
+      codeLink,
     });
 
     return NextResponse.json({ success: true });

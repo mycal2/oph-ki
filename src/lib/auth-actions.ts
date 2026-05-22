@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit, recordFailedAttempt, clearRateLimit } from "@/lib/rate-limit";
-import { wrapConfirmLink } from "@/lib/auth/wrap-confirm-link";
+import { wrapConfirmLink, wrapCodeLink } from "@/lib/auth/wrap-confirm-link";
 import { sendPasswordResetEmail } from "@/lib/postmark";
 
 /**
@@ -166,6 +166,15 @@ export async function forgotPasswordAction(
       hashedToken: linkData.properties.hashed_token,
       type: "recovery",
       next: "/reset-password",
+      email,
+    });
+
+    // OPH-113: Code-entry fallback link for users behind URL detonation.
+    const codeLink = wrapCodeLink({
+      siteUrl,
+      email,
+      type: "recovery",
+      next: "/reset-password",
     });
 
     const postmarkToken = process.env.POSTMARK_SERVER_API_TOKEN;
@@ -175,6 +184,8 @@ export async function forgotPasswordAction(
         toEmail: email,
         resetLink,
         siteUrl,
+        otpCode: linkData.properties.email_otp,
+        codeLink,
       });
     } else {
       console.error("forgotPasswordAction: POSTMARK_SERVER_API_TOKEN not configured.");
