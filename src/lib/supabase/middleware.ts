@@ -94,6 +94,7 @@ export async function updateSession(request: NextRequest) {
     "/invite/accept",
     "/auth/callback",
     "/auth/confirm", // OPH-97: Token-hash invite link wrapper
+    "/auth/code", // OPH-113: OTP code-entry fallback page
     "/orders/preview", // OPH-16: Public magic-link preview page
   ];
   // Salesforce App login and auth callback are also public
@@ -171,6 +172,7 @@ export async function updateSession(request: NextRequest) {
     url.pathname !== "/reset-password" &&
     url.pathname !== "/auth/callback" &&
     url.pathname !== "/auth/confirm" &&
+    url.pathname !== "/auth/code" &&
     url.pathname !== "/invite/accept" &&
     !url.pathname.startsWith("/orders/preview")
   ) {
