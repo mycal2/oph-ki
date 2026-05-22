@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkAdminRateLimit } from "@/lib/admin-auth";
 import { sendPasswordResetEmail } from "@/lib/postmark";
+import { wrapConfirmLink } from "@/lib/auth/wrap-confirm-link";
 import type { AppMetadata, ApiResponse } from "@/lib/types";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -132,13 +133,23 @@ export async function POST(
       );
     }
 
-    const actionLink = linkData?.properties?.action_link;
-    if (!actionLink) {
+    // OPH-111: Wrap the Supabase token through /auth/confirm so that corporate
+    // email link-prefetch scanners (Defender, Mimecast, etc.) don't consume
+    // the single-use token before the user clicks.
+    const hashedToken = linkData?.properties?.hashed_token;
+    if (!hashedToken) {
       return NextResponse.json(
         { success: false, error: "Passwort-Reset-Link konnte nicht generiert werden." },
         { status: 500 }
       );
     }
+
+    const actionLink = wrapConfirmLink({
+      siteUrl,
+      hashedToken,
+      type: "recovery",
+      next: "/reset-password",
+    });
 
     const postmarkToken = process.env.POSTMARK_SERVER_API_TOKEN;
     if (!postmarkToken) {

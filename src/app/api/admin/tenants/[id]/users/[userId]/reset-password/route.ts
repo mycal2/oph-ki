@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { requirePlatformAdmin, isErrorResponse, checkAdminRateLimit } from "@/lib/admin-auth";
 import { sendPasswordResetEmail } from "@/lib/postmark";
+import { wrapConfirmLink } from "@/lib/auth/wrap-confirm-link";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -104,16 +105,25 @@ export async function POST(
       );
     }
 
-    // The generated action_link points to Supabase's verify endpoint.
-    // We need to extract the token and build a link through our auth callback.
-    const actionLink = linkData?.properties?.action_link;
-    if (!actionLink) {
-      console.error("Password reset: No action_link returned from generateLink.");
+    // OPH-111: Wrap the Supabase token through /auth/confirm so that corporate
+    // email link-prefetch scanners (Defender, Mimecast, etc.) don't consume
+    // the single-use token before the user clicks. /auth/confirm GET shows
+    // a click-to-confirm page; only the user-triggered POST consumes.
+    const hashedToken = linkData?.properties?.hashed_token;
+    if (!hashedToken) {
+      console.error("Password reset: No hashed_token returned from generateLink.");
       return NextResponse.json(
         { success: false, error: "Passwort-Reset-Link konnte nicht generiert werden." },
         { status: 500 }
       );
     }
+
+    const actionLink = wrapConfirmLink({
+      siteUrl,
+      hashedToken,
+      type: "recovery",
+      next: "/reset-password",
+    });
 
     // Send the recovery email via Postmark
     const postmarkToken = process.env.POSTMARK_SERVER_API_TOKEN;

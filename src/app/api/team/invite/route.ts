@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { inviteUserSchema } from "@/lib/validations";
 import { sendInviteEmail } from "@/lib/postmark";
+import { wrapConfirmLink } from "@/lib/auth/wrap-confirm-link";
 import type { AppMetadata, ApiResponse } from "@/lib/types";
 
 /**
@@ -167,15 +168,24 @@ export async function POST(
       app_metadata: appMetadataUpdate,
     });
 
-    // Send invite email via Postmark
-    const actionLink = linkData?.properties?.action_link;
-    if (!actionLink) {
-      console.error("Invite: No action_link returned from generateLink.");
+    // OPH-111: Wrap the Supabase token through /auth/confirm so that corporate
+    // email link-prefetch scanners (Defender, Mimecast, etc.) don't consume
+    // the single-use token before the user clicks.
+    const hashedToken = linkData?.properties?.hashed_token;
+    if (!hashedToken) {
+      console.error("Invite: No hashed_token returned from generateLink.");
       return NextResponse.json(
         { success: false, error: "Einladungslink konnte nicht generiert werden." },
         { status: 500 }
       );
     }
+
+    const actionLink = wrapConfirmLink({
+      siteUrl,
+      hashedToken,
+      type: "invite",
+      next: "/invite/accept",
+    });
 
     // Fetch tenant name for the email
     const { data: tenant } = await adminClient
