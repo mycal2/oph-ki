@@ -1,6 +1,6 @@
 # OPH-104: Tenant Price Lookup Feature Flag
 
-## Status: In Review
+## Status: Deployed
 **Created:** 2026-05-17
 **Last Updated:** 2026-05-17
 

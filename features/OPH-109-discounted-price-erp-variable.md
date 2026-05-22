@@ -1,6 +1,6 @@
 # OPH-109: Discounted Price ERP Export Variable
 
-## Status: Planned
+## Status: Deployed
 **Created:** 2026-05-17
 **Last Updated:** 2026-05-17
 

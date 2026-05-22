@@ -1,6 +1,6 @@
 # OPH-108: Price Lookup in AI Extraction
 
-## Status: In Progress
+## Status: Deployed
 **Created:** 2026-05-17
 **Last Updated:** 2026-05-17
 
