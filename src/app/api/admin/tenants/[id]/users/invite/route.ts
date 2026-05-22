@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { requirePlatformAdmin, isErrorResponse, checkAdminRateLimit } from "@/lib/admin-auth";
 import { adminInviteUserSchema } from "@/lib/validations";
 import { sendInviteEmail } from "@/lib/postmark";
+import { wrapConfirmLink } from "@/lib/auth/wrap-confirm-link";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -158,12 +159,16 @@ export async function POST(
       );
     }
 
-    // Wrap the Supabase token in a URL on our own domain. /auth/confirm calls
-    // verifyOtp server-side and then redirects to /invite/accept, so the user
-    // sees an oph-ki.ids.online link instead of <project>.supabase.co.
-    const wrappedInviteLink =
-      `${siteUrl}/auth/confirm?token_hash=${encodeURIComponent(hashedToken)}` +
-      `&type=invite&next=${encodeURIComponent("/invite/accept")}`;
+    // Wrap the Supabase token in a URL on our own domain. /auth/confirm shows
+    // a click-to-confirm page (OPH-111) so email-prefetch scanners don't burn
+    // the single-use token before the user clicks. After confirmation, the
+    // server action verifies and redirects to /invite/accept.
+    const wrappedInviteLink = wrapConfirmLink({
+      siteUrl,
+      hashedToken,
+      type: "invite",
+      next: "/invite/accept",
+    });
 
     // OPH-97: "Link generieren" mode -- skip Postmark, return the wrapped invite
     // link so the admin can forward it manually.
