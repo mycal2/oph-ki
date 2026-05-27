@@ -123,7 +123,8 @@ Eine mandantenfähige SaaS-Plattform ("Order Intelligence Platform"), die Dental
 | P1 | OPH-110: Discount & Net Price Columns in Order Line-Item Views | Deployed |
 | P1 | OPH-111: Invite & Reset Link Prefetch Hardening (Defender / Mimecast safe) | Deployed |
 | P1 | OPH-112: Safelink Hardening — Forgot Password + SF Magic Link | Deployed |
-| P1 | OPH-113: 6-Digit OTP Code Fallback for Defender-Resistant Auth | In Progress |
+| P1 | OPH-113: 6-Digit OTP Code Fallback for Defender-Resistant Auth | Deployed |
+| P1 | OPH-114: Chunked PDF Extraction for Large Orders | In Progress |
 
 ## Success Metrics
 - Bearbeitungszeit pro Bestellung: von ~15 Min. manuell auf < 3 Min. mit System

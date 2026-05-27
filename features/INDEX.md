@@ -124,7 +124,8 @@
 | OPH-110 | Discount & Net Price Columns in Order Line-Item Views | Deployed | [OPH-110-discount-columns-order-views.md](OPH-110-discount-columns-order-views.md) | 2026-05-18 |
 | OPH-111 | Invite & Reset Link Prefetch Hardening (Defender / Mimecast safe) | Deployed | [OPH-111-invite-link-prefetch-hardening.md](OPH-111-invite-link-prefetch-hardening.md) | 2026-05-22 |
 | OPH-112 | Safelink Hardening — Forgot Password + SF Magic Link | Deployed | [OPH-112-safelink-complete-coverage.md](OPH-112-safelink-complete-coverage.md) | 2026-05-22 |
-| OPH-113 | 6-Digit OTP Code Fallback for Defender-Resistant Auth | In Progress | [OPH-113-otp-code-defender-fallback.md](OPH-113-otp-code-defender-fallback.md) | 2026-05-22 |
+| OPH-113 | 6-Digit OTP Code Fallback for Defender-Resistant Auth | Deployed | [OPH-113-otp-code-defender-fallback.md](OPH-113-otp-code-defender-fallback.md) | 2026-05-22 |
+| OPH-114 | Chunked PDF Extraction for Large Orders | In Progress | [OPH-114-chunked-pdf-extraction.md](OPH-114-chunked-pdf-extraction.md) | 2026-05-27 |
 <!-- Add features above this line -->
 
-## Next Available ID: OPH-114
+## Next Available ID: OPH-115

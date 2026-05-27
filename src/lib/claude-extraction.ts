@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { ContentBlockParam } from "@anthropic-ai/sdk/resources/messages";
 import * as XLSX from "xlsx";
+import { PDFDocument } from "pdf-lib";
 import { parseEml } from "@/lib/eml-parser";
 import { sanitizeHints } from "@/lib/validations";
 import { isPeppolUblXml, parsePeppolXml } from "@/lib/peppol-xml-parser";
@@ -14,6 +15,11 @@ const MAX_OUTPUT_TOKENS = 32768;
 
 /** Excel files with more data rows than this are extracted in chunks. */
 const CHUNK_ROW_THRESHOLD = 200;
+
+/** OPH-114: PDFs with more pages than this are extracted in chunks. */
+const PDF_CHUNK_PAGE_THRESHOLD = 3;
+/** OPH-114: Number of pages per chunk in the chunked PDF extraction path. */
+const PDF_CHUNK_PAGES = 2;
 
 const DEFAULT_MODEL = "claude-sonnet-4-6";
 
@@ -403,6 +409,38 @@ export async function extractOrderData(
 
     switch (ext) {
       case "pdf": {
+        // OPH-114: Large PDFs (many pages → many line items) can exceed the
+        // MAX_OUTPUT_TOKENS cap on a single Claude call. Detect this via
+        // page count and route through chunked extraction (mirrors OPH-23
+        // for Excel). Falls back to single-call if pdf-lib can't parse.
+        let pageCount: number | null = null;
+        try {
+          const doc = await PDFDocument.load(file.content, { updateMetadata: false });
+          pageCount = doc.getPageCount();
+        } catch (err) {
+          console.warn(
+            `OPH-114: pdf-lib could not parse "${file.originalFilename}" — falling back to single-call extraction.`,
+            err instanceof Error ? err.message : err
+          );
+        }
+
+        if (pageCount !== null && pageCount > PDF_CHUNK_PAGE_THRESHOLD) {
+          console.log(
+            `OPH-114: PDF "${file.originalFilename}" has ${pageCount} pages (> ${PDF_CHUNK_PAGE_THRESHOLD}). Using chunked extraction.`
+          );
+          const pdfChunks = await splitPdfIntoPageChunks(file.content, PDF_CHUNK_PAGES);
+          return extractChunkedPdf({
+            anthropic,
+            model,
+            systemPrompt: SYSTEM_PROMPT,
+            baseContentBlocks: [...contentBlocks], // dealer context, email subject, any earlier files
+            pdfChunks,
+            filename: file.originalFilename,
+            input,
+            sourceFiles,
+          });
+        }
+
         contentBlocks.push({
           type: "document",
           source: {
@@ -887,6 +925,170 @@ async function extractChunkedExcel(params: {
     inputTokens: totalInputTokens,
     outputTokens: totalOutputTokens,
     // BUG-2 fix: Chunked path is Excel-only, so no EML subject, but return field for interface consistency.
+    parsedEmailSubject: null,
+  };
+}
+
+/**
+ * OPH-114: Split a PDF buffer into N-page chunks for chunked extraction.
+ *
+ * Uses pdf-lib to clone page subsets into separate PDF documents. Each chunk
+ * preserves the original page rendering (Claude sees the same visual content
+ * it would for the whole PDF).
+ *
+ * Last chunk may be smaller if the page count isn't a multiple of pagesPerChunk.
+ */
+async function splitPdfIntoPageChunks(
+  buffer: Buffer,
+  pagesPerChunk: number
+): Promise<Buffer[]> {
+  const src = await PDFDocument.load(buffer, { updateMetadata: false });
+  const totalPages = src.getPageCount();
+  const chunks: Buffer[] = [];
+
+  for (let start = 0; start < totalPages; start += pagesPerChunk) {
+    const dst = await PDFDocument.create();
+    const remaining = Math.min(pagesPerChunk, totalPages - start);
+    const indices = Array.from({ length: remaining }, (_, i) => start + i);
+    const pages = await dst.copyPages(src, indices);
+    pages.forEach((p) => dst.addPage(p));
+    const bytes = await dst.save();
+    chunks.push(Buffer.from(bytes));
+  }
+
+  return chunks;
+}
+
+/**
+ * OPH-114: Extract a large PDF order by splitting into page-range chunks and
+ * calling Claude for each chunk in parallel, then merging the results.
+ *
+ * Mirrors the structure of `extractChunkedExcel`: chunk 0 provides header data
+ * (order number, dealer, sender, addresses, totals, notes); all chunks
+ * contribute line items with renumbered positions. Token usage summed; min
+ * confidence taken across chunks.
+ */
+async function extractChunkedPdf(params: {
+  anthropic: Anthropic;
+  model: string;
+  systemPrompt: string;
+  /** Content blocks that are NOT this PDF (dealer context, email subject, earlier files). */
+  baseContentBlocks: ContentBlockParam[];
+  /** PDF data split into N-page chunks. */
+  pdfChunks: Buffer[];
+  filename: string;
+  input: ExtractionInput;
+  sourceFiles: string[];
+}): Promise<ExtractionResult> {
+  const { anthropic, model, systemPrompt, baseContentBlocks, pdfChunks, filename, input, sourceFiles } = params;
+
+  // Fire all chunk extractions in parallel.
+  const chunkPromises = pdfChunks.map((chunkBuf, chunkIdx) => {
+    const chunkLabel = `## PDF Document: ${filename} (Chunk ${chunkIdx + 1}/${pdfChunks.length})\n`;
+
+    const chunkContentBlocks: ContentBlockParam[] = [
+      ...baseContentBlocks,
+      { type: "text", text: chunkLabel },
+      {
+        type: "document",
+        source: {
+          type: "base64",
+          media_type: "application/pdf",
+          data: chunkBuf.toString("base64"),
+        },
+      },
+      {
+        type: "text",
+        text: `Extract the order data from the document(s) above. This is chunk ${chunkIdx + 1} of ${pdfChunks.length} from a large PDF order. Return ONLY valid JSON.`,
+      },
+    ];
+
+    return extractSingleChunk({ anthropic, model, systemPrompt, contentBlocks: chunkContentBlocks });
+  });
+
+  const chunkResults = await Promise.all(chunkPromises);
+
+  // Merge results — chunk 0 provides header info, all chunks contribute line items.
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
+  let minConfidence = 1;
+  let mergedLineItems: CanonicalOrderData["order"]["line_items"] = [];
+
+  const firstResult = chunkResults[0].parsed;
+  totalInputTokens += chunkResults[0].inputTokens;
+  totalOutputTokens += chunkResults[0].outputTokens;
+  minConfidence = Math.min(minConfidence, firstResult.extraction_metadata?.confidence_score ?? 0);
+
+  const firstItems = (firstResult.order.line_items ?? []).map((item, idx) => ({
+    position: item.position ?? idx + 1,
+    article_number: item.article_number ?? null,
+    dealer_article_number: item.dealer_article_number ?? null,
+    description: item.description ?? "",
+    quantity: item.quantity ?? 0,
+    unit: item.unit ?? null,
+    unit_price: item.unit_price ?? null,
+    total_price: item.total_price ?? null,
+    currency: item.currency ?? null,
+  }));
+  mergedLineItems = firstItems;
+
+  for (let i = 1; i < chunkResults.length; i++) {
+    const result = chunkResults[i];
+    totalInputTokens += result.inputTokens;
+    totalOutputTokens += result.outputTokens;
+    minConfidence = Math.min(minConfidence, result.parsed.extraction_metadata?.confidence_score ?? 0);
+
+    const positionOffset = mergedLineItems.length;
+    const chunkItems = (result.parsed.order.line_items ?? []).map((item, idx) => ({
+      position: positionOffset + idx + 1,
+      article_number: item.article_number ?? null,
+      dealer_article_number: item.dealer_article_number ?? null,
+      description: item.description ?? "",
+      quantity: item.quantity ?? 0,
+      unit: item.unit ?? null,
+      unit_price: item.unit_price ?? null,
+      total_price: item.total_price ?? null,
+      currency: item.currency ?? null,
+    }));
+    mergedLineItems = [...mergedLineItems, ...chunkItems];
+  }
+
+  const extractedData: CanonicalOrderData = {
+    document_language: firstResult.document_language?.toUpperCase() ?? null,
+    order: {
+      order_number: firstResult.order.order_number ?? null,
+      order_date: firstResult.order.order_date ?? null,
+      dealer: {
+        id: input.dealer?.id ?? null,
+        name: input.dealer?.name ?? firstResult.order.dealer?.name ?? null,
+      },
+      sender: firstResult.order.sender ?? null,
+      delivery_address: firstResult.order.delivery_address ?? null,
+      billing_address: firstResult.order.billing_address ?? null,
+      line_items: mergedLineItems,
+      total_amount: firstResult.order.total_amount ?? null,
+      currency: firstResult.order.currency ?? null,
+      notes: firstResult.order.notes ?? null,
+      email_subject: input.emailSubject ?? null,
+    },
+    extraction_metadata: {
+      schema_version: SCHEMA_VERSION,
+      confidence_score: minConfidence,
+      model,
+      extracted_at: new Date().toISOString(),
+      source_files: sourceFiles,
+      dealer_hints_applied: !!input.dealer?.extractionHints,
+      column_mapping_applied: !!input.columnMappingContext,
+      input_tokens: totalInputTokens,
+      output_tokens: totalOutputTokens,
+      chunks_used: pdfChunks.length,
+    },
+  };
+
+  return {
+    extractedData,
+    inputTokens: totalInputTokens,
+    outputTokens: totalOutputTokens,
     parsedEmailSubject: null,
   };
 }

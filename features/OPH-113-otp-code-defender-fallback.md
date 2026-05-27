@@ -1,6 +1,6 @@
 # OPH-113: 6-Digit OTP Code Fallback for Defender-Resistant Auth
 
-## Status: In Progress
+## Status: Deployed
 
 ## Created: 2026-05-22
 
